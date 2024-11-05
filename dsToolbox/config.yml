@@ -1,0 +1,65 @@
+General:
+  debug : True
+  log_level : info
+
+sql_server:
+  db_server : ****
+  db_name : ****
+  #db_port : 5432
+  #db_password : 123
+  #db_user : sa
+
+incorta_server:
+  #host : localhost
+  #port : 5432
+  user : ****
+  password : ****
+
+
+# key_vault_dictS : 
+#   ###sturcture:
+#   ### the name of dictionary (It is name of storage account name for azure blob storage aswell)
+#     ###key_vault_name : key_vault_name
+#     ###secret_name    : secret_name 
+
+# ###Azure blob storages:
+#   xxxxx:  
+#     key_vault_name : ****
+#     secret_name    : ****
+
+# ###deltaTable:
+#   deltaTable: 
+#     key_vault_name : ****
+#     secret_name    : ****
+
+# ###Webapi:
+#   webapi:         ##used by get_interpolated_pi_data and get_raw_pi_data functions:
+#     secret_name    : ****
+#     key_vault_name : ****
+
+# ###azure Synapse:
+#   azure_synapse: 
+#     key_vault_name: ****
+#     secret_name   : ****
+
+# synapse_cred_dict: 
+#   hostname      : ****
+#   database      : ****
+#   username      : ****
+#   driver_odbc   : ****
+#   driver        : ****
+#   port          : ****
+
+# azure_ml_appID:
+#   ****
+
+# KV_access_local:
+#   secret_TenantID               : ****
+#   secret_ClientID__prd          : ****
+#   secret_ClientSecret__Prd      : ****
+
+# pi_server:
+#   url               : *****
+#   grant_type        : *****
+#   client_id         : *****
+#   scope             : *****

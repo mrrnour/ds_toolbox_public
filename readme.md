@@ -1,0 +1,1 @@
+Based on open-source projects such as Pandas, Spark, Sklearn, and the Azure Storage Blob package, this framework offers abstracted functions for performing ETL such as loading and unloading data from different data sources and ML tasks on different platforms including Databricks, Azure ML and local systems

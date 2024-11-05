@@ -1,0 +1,32 @@
+[build-system]
+requires = [
+    "setuptools>=54",
+    "wheel",
+    # "pylint",
+
+    "pyyaml",
+    
+    # "azure-core",
+    # "azure-storage-blob",
+    # "azureml-core",
+    # "azure-keyvault",
+    # "azure-keyvault-keys",
+    # "azure-identity",
+    # # "azureml-mlflow", #quarantined in nexus
+    # # "azureml-sdk",    #quarantined in nexus
+
+    # # "mlflow",         #quarantined in nexus
+
+    # "matplotlib",
+    # "seaborn",
+    # "plotly",
+    # "plotly-express",
+    # "kaleido",
+
+    # "openpyxl",
+
+    # "pyodbc",
+
+    # "requests",
+]
+build-backend = "setuptools.build_meta"

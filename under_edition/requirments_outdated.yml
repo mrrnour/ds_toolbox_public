@@ -1,0 +1,42 @@
+name: dsToolbox
+
+dependencies:
+  - matplotlib
+  - seaborn
+  - plotly
+  - plotly-express
+
+  - pip:
+    - researchpy
+    - pyyaml
+    - pylint
+    - azure-core
+    - azure-storage-blob
+    - azureml-core
+    - azure-keyvault
+    - azure-keyvault-keys
+    - azure-identity
+    # - azureml-mlflow -quarantined in nexus
+    # - azureml-sdk    -quarantined in nexus
+
+    # - mlflow         -quarantined in nexus
+    - openpyxl
+    - kaleido
+
+
+# pip install matplotlib
+# pip install seaborn
+# pip install plotly
+# pip install plotly-express  
+# pip install researchpy
+# pip install pyyaml
+# pip install pylint
+# pip install azure-core
+# pip install azure-storage-blob
+# pip install azureml-core
+# pip install azure-keyvault
+# pip install azure-keyvault-keys
+# pip install azure-identity
+
+# pip install openpyxl
+# pip install kaleido

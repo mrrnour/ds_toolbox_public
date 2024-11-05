@@ -1,0 +1,5 @@
+include dsToolbox/*.yml
+include dsToolbox/*.py
+include dsToolbox/doc/*.html
+include dsToolbox/doc/*.xlsx
+include dsToolbox/doc/*.py
