@@ -531,12 +531,12 @@ def classifer_performance_batch(y_model,
                                       'precision',
                                       # 'roc_auc',  
                                       # 'aucpr',
-                                      ],
+                                      ]
                         ):
   confMats=plot_confusion_matrix2(y_model, map_lbls, outputFile=None)
 
   model_prob=y_model['prob'] #y_model[map_lbls.get(1)]
-  pos_label=1 
+  pos_label=1
   df_rp, thresholds= precision_recall_curve2(y_model['y_true'],
                                                       model_prob,
                                                       pos_label,
@@ -549,12 +549,12 @@ def classifer_performance_batch(y_model,
                                           outputFile=None
                                         )
 
-  out, df_gain_chart, df_lift_chart = gainNlift(y_model['y_true'],
-                                                model_prob,
-                                                pos_label,
-                                                outputFile=None,
-                                                groupNo = 25
-                                                )
+  # out, df_gain_chart, df_lift_chart = gainNlift(y_model['y_true'],
+  #                                               model_prob,
+  #                                               pos_label,
+  #                                               outputFile=None,
+  #                                               groupNo = 25
+  #                                               )
   
   scores= ml_scores(y_model, scores_names)
   return scores, confMats
@@ -751,7 +751,7 @@ def gainNlift(y, model_prob, pos_label, outputFile, groupNo=25):
     df_gain_chart=pd.DataFrame(out['gain'].tolist()+out['cum_case%'].tolist(),columns=['values'])
     df_gain_chart['x']=pd.Series(out['cum_case%'].tolist()*2)
     df_gain_chart['selection method']=pd.Series(['model']*row_no+['random']*row_no)
-    df_gain_chart=df_gain_chart.append(pd.DataFrame.from_dict({'values':[0,0],"x":[0,0],'selection method':['model','random']}), ignore_index=True)
+    df_gain_chart = pd.concat([df_gain_chart, pd.DataFrame.from_dict({'values':[0,0],"x":[0,0],'selection method':['model','random']})], ignore_index=True)
 
     df_lift_chart=pd.DataFrame(out['cum_lift'].tolist()+[1]*row_no,columns=['values'])
     df_lift_chart['x']=pd.Series(out['cum_case%'].tolist()*row_no)
@@ -1700,6 +1700,7 @@ def split_multiLabel_data(df_samples2, binarized_tags, random_state=None):
         return df_samples2, binarized_tags
 
 def evaluate_multiLabel(y_pred, y_true):
+    y_pred, y_true=unify_cols(y_pred, y_true, 'y_pred', 'y_true')
     y_model=pd.concat([y_true.melt(value_name='y_true').set_index('variable'),
                     y_pred.melt(value_name='y_pred').set_index('variable')],
                     axis=1).reset_index().rename(columns={'variable':'CV_Iteration'})
@@ -1849,7 +1850,7 @@ def evaluate_multiLabel(y_pred, y_true):
     #     blob_dict={
     #         "container": "undercarriage-wear-analysis",
     #         "blob": f"df_ml_comparison_regressors{output_suffix}.csv",
-    #         "storage_account": "kearlmachinemidasdata",
+    #         "storage_account": "machinemidasdata",
     #     },
     #     platform=platform,
     # )

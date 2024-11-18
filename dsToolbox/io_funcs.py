@@ -9,28 +9,28 @@ import yaml
 import dsToolbox.common_funcs   as cfuncs
 import dsToolbox.default_values as par
 
-__all__ = [ "query_synapse",
-           'query_synapse_db',
-           'query_synapse_local',
-          "query_deltaTable",
-          "query_template_run",
+# __all__ = [ "query_synapse",
+#            'query_synapse_db',
+#            'query_synapse_local',
+#           "query_deltaTable",
+#           "query_template_run",
           
-          "dbfs2blob",
-          "spark2deltaTable",
-          'deltaTable_check',
+#           "dbfs2blob",
+#           "spark2deltaTable",
+#           'deltaTable_check',
           
-          "blob2spark",            
-          "spark2blob",
-          "blob2pd",
-          "pd2blob",
-          "pd2blob_batch",
-          "blob_check",
-          'xls2blob',
+#           "blob2spark",            
+#           "spark2blob",
+#           "blob2pd",
+#           "pd2blob",
+#           "pd2blob_batch",
+#           "blob_check",
+#           'xls2blob',
           
-          "pi2pd_interpolate",
-          "pi2pd_rawData",
-          'pi2pd_seconds'
-          ]
+#           "pi2pd_interpolate",
+#           "pi2pd_rawData",
+#           'pi2pd_seconds'
+#           ]
 
 # upath="./dsToolbox/config.yml"
 # upath='./sql_template.yml'
@@ -1157,7 +1157,3 @@ def pi2pd_seconds(tags,
     end += dt.timedelta(days=1)
   # ret.drop_duplicates(inplace=True) 
   return ret
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# ---------------------------- ------------------------------------    

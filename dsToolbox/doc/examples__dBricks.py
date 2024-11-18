@@ -114,7 +114,7 @@ common_funcs.copy_ymls(dsToolbox, platform='databricks', destination=None)
 ##Step2- modification config.yml
 
 df_recovery_asB_date = io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                                                    'container'       :'kearlrecovery',
+                                                    'container'       :'recovery',
                                                     'blob'            :f'ml_exploring/recovery_15_new_nonAGG.parquet',
                                                     # 'blob'          :f'ml_exploring/recovery_15_new.parquet',
                                                     },
@@ -132,7 +132,7 @@ df_recovery_asB_date = io_funcs.blob2pd(blob_dict={'storage_account':'sadatascie
 CUSTOM_CONFIG_DICT = {
                       "key_vault_dictS": 
                           {'sadatasciencedmm': 
-                              {"key_vault_name": "kv-ds-kearlrecovery-prd", 
+                              {"key_vault_name": "kv-ds-recovery-prd", 
                               "secret_name": 'sadatasciencedmm'
                               }
                           }
@@ -140,13 +140,13 @@ CUSTOM_CONFIG_DICT = {
 ###or:
 CUSTOM_CONFIG_DICT = {
                       'storage_account':'sadatasciencedmm',
-                      "key_vault_name": "kv-ds-kearlrecovery-prd", 
+                      "key_vault_name": "kv-ds-recovery-prd", 
                       "secret_name": 'sadatasciencedmm',
                       }
 
 
 df_recovery_asB_date = io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                                                    'container'       :'kearlrecovery',
+                                                    'container'       :'recovery',
                                                     'blob'            :f'ml_exploring/recovery_15_new_nonAGG.parquet',
                                                     # 'blob'          :f'ml_exploring/recovery_15_new.parquet',
                                                     },
@@ -232,7 +232,7 @@ io_funcs.dbfs2blob(
 # COMMAND ----------
 
 df_recovery_asB_date = io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                                                    'container'       :'kearlrecovery',
+                                                    'container'       :'recovery',
                                                     'blob'            :f'ml_exploring/recovery_15_new_nonAGG.parquet',
                                                     # 'blob'          :f'ml_exploring/recovery_15_new.parquet',
                                                     },
@@ -245,14 +245,14 @@ df_recovery_asB_date = io_funcs.blob2pd(blob_dict={'storage_account':'sadatascie
 # COMMAND ----------
 
 udata_smp = io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                                          'container'       :'kearlrecovery',
+                                          'container'       :'recovery',
                                           'blob'            :f'ml_exploring/df_recovery_udata.parquet'
                                           },
                               verbose=True)
 
 # io_funcs.pd2blob(udata_smp,
 #         blob_dict={'storage_account':'sadatasciencedmm',
-#                   'container'       :'kearlrecovery',
+#                   'container'       :'recovery',
 #                   'blob'            :f'ml_exploring/df_recovery_udata.xlsx'
 #                   },
 #         platform='databricks',
@@ -266,7 +266,7 @@ io_funcs.xls2blob({'dataframe1':udata_smp.sample(1000),
                   'dataframe3':udata_smp.sample(1000),
                   },
         blob_dict={'storage_account':'sadatasciencedmm',
-                  'container'       :'kearlrecovery',
+                  'container'       :'recovery',
                   'blob'            :f'ml_exploring/df_recovery_udata.xlsx'
                   },
         platform='databricks',
@@ -275,7 +275,7 @@ io_funcs.xls2blob({'dataframe1':udata_smp.sample(1000),
 
 # io_funcs.pd2blob(udata_smp,
 #         blob_dict={'storage_account':'sadatasciencedmm',
-#                   'container'       :'kearlrecovery',
+#                   'container'       :'recovery',
 #                   'blob'            :f'ml_exploring/df_recovery_udata.csv'
 #                   },
 #         platform='databricks',
@@ -328,7 +328,7 @@ for file in ['sample_demonstrations_20231009.pkl',
             ]:
 
   io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                              'container':'kearlrecovery',
+                              'container':'recovery',
                               'blob': f'New folder/{file}'
                             },
                   platform='databricks',
@@ -382,7 +382,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from xgboost import XGBClassifier
 
 udata = io_funcs.blob2pd(blob_dict={'storage_account':'sadatasciencedmm',
-                                          'container'       :'kearlrecovery',
+                                          'container'       :'recovery',
                                           'blob'            :f'ml_exploring/df_recovery_udata.parquet'
                                           },
                               verbose=True)

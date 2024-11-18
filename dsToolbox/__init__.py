@@ -1,5 +1,5 @@
 
-# from dsToolbox import common_funcs
+# from dsToolbox import dsToolbox.common_funcs
 # from dsToolbox import io_funcs
 # from dsToolbox import ml_funcs
 # from dsToolbox import spark_funcs
