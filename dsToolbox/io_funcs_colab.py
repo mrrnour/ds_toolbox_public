@@ -4,7 +4,10 @@ def setup_github_colab(user_email, user_name, ssh_source='/content/drive/My Driv
     import os
     import shutil
     drive.mount('/content/drive/')
-    shutil.copytree(ssh_source, os.path.expanduser('~/.ssh'))
+    if not os.path.exists(os.path.expanduser('~/.ssh')):
+        shutil.copytree(ssh_source, os.path.expanduser('~/.ssh'))
+    else: 
+        "folder .ssh exists!"
     os.system(f'git config --global user.email "{user_email}"')
     os.system(f'git config --global user.name "{user_name}"')
     os.system('ssh -T git@github.com')
