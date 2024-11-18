@@ -1,7 +1,14 @@
+from google.colab import drive
 
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# ----------------------------copy files from kaggle------------------
+def setup_github_colab(user_email, user_name, ssh_source='/content/drive/My Drive/Colab Notebooks/.ssh'):
+    import os
+    import shutil
+    drive.mount('/content/drive/')
+    shutil.copytree(ssh_source, os.path.expanduser('~/.ssh'))
+    os.system(f'git config --global user.email "{user_email}"')
+    os.system(f'git config --global user.name "{user_name}"')
+    os.system('ssh -T git@github.com')
+
 def copy_kaggle_json_to_colab(kaggle_json_source):
     """
     Copies the Kaggle JSON file containing API credentials to the appropriate location on Colab.
@@ -11,7 +18,6 @@ def copy_kaggle_json_to_colab(kaggle_json_source):
     """
     import os
     import shutil
-    from google.colab import drive
     drive.mount('/content/drive/')
 
 
@@ -34,7 +40,6 @@ def download_and_extract_dataset(download_folder, zip_file_name, extract_folders
     import zipfile
     import os
     from tqdm import tqdm
-    from google.colab import drive
     drive.mount('/content/drive/')
 
     ##Download the dataset
