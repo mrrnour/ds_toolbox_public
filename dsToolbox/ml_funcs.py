@@ -531,13 +531,12 @@ def classifer_performance_batch(y_model,
                                       'precision',
                                       # 'roc_auc',  
                                       # 'aucpr',
-                                      ]
+                                      ],
                         ):
   confMats=plot_confusion_matrix2(y_model, map_lbls, outputFile=None)
 
-  model_prob=y_model[1] #y_model[map_lbls.get(1)]
-  pos_label=1 #map_lbls.get(1)  
-
+  model_prob=y_model['prob'] #y_model[map_lbls.get(1)]
+  pos_label=1 
   df_rp, thresholds= precision_recall_curve2(y_model['y_true'],
                                                       model_prob,
                                                       pos_label,
