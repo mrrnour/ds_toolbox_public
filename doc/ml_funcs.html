@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.0">
+<title>ml_funcs API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>ml_funcs</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="ml_funcs.binarizer"><code class="name flex">
+<span>def <span class="ident">binarizer</span></span>(<span>tags)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Convert a list of tags into a binary matrix representation.</p>
+<p>Parameters:
+tags (list of list of str): A list where each element is a list of tags.</p>
+<p>Returns:
+pd.DataFrame: A DataFrame with binary values indicating the presence of tags.
+Each column represents a unique tag, and each row corresponds
+to the input list of tags.</p>
+<p>Example:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; tags = [['tag1', 'tag2'], ['tag2', 'tag3'], ['tag1']]
+&gt;&gt;&gt; binarizer(tags)
+   tag1  tag2  tag3
+0     1     1     0
+1     0     1     1
+2     1     0     0
+</code></pre></div>
+</dd>
+<dt id="ml_funcs.class_weight2"><code class="name flex">
+<span>def <span class="ident">class_weight2</span></span>(<span>uclass_weight, y)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>crearte a numerical series of samples' weights based on class_weight dictionary
+Parameters:</p>
+<hr>
+<p>class_weight (dictionary) or “balanced” or None, default=None
+Weights associated with classes in the form {class_label: weight}. If not given, all classes are supposed to have weight one. For multi-output problems, a list of dicts can be provided in the same order as the columns of y.</p>
+<p>y (pandas dataframe/series) with [sample*1] format</p>
+<h2 id="returns">returns:</h2>
+<p>df_class_weight
+(pandas series) with [sample*1] format:
+weight of samples</p>
+<hr>
+<p>Author: Reza Nourzadeh</p></div>
+</dd>
+<dt id="ml_funcs.classifer_performance_batch"><code class="name flex">
+<span>def <span class="ident">classifer_performance_batch</span></span>(<span>y_model, map_lbls={0: 'Low Loss', 1: 'High Loss'}, scores_names=['accuracy', 'recall', 'precision'])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate the performance of a classifier model using various metrics.
+Parameters:
+y_model (dict): A dictionary containing the model's predictions and probabilities.
+Expected keys are 'y_true' for true labels and 'prob' for predicted probabilities.
+map_lbls (dict, optional): A dictionary mapping class labels to their descriptions. Default is {0: 'Low Loss', 1: 'High Loss'}.
+scores_names (list, optional): A list of score names to evaluate. Default is ['accuracy', 'recall', 'precision'].
+Returns:
+tuple: A tuple containing:
+- scores (dict): A dictionary of evaluated scores based on the provided score names.
+- confMats (dict): A dictionary containing confusion matrices for each class.</p></div>
+</dd>
+<dt id="ml_funcs.classifiers_template"><code class="name flex">
+<span>def <span class="ident">classifiers_template</span></span>(<span>y, random_state=10)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.evaluate_multiLabel"><code class="name flex">
+<span>def <span class="ident">evaluate_multiLabel</span></span>(<span>y_pred, y_true)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate multi-label classification performance.
+This function evaluates the performance of a multi-label classification model by calculating various metrics such as recall, precision, accuracy, AUC, F1 score, kappa, and MCC. It also computes macro, micro, and weighted averages of these metrics.
+Parameters:</p>
+<hr>
+<p>y_pred : pd.DataFrame
+Predicted labels for the multi-label classification.
+y_true : pd.DataFrame
+True labels for the multi-label classification.
+Returns:</p>
+<hr>
+<p>model_performance : dict
+A dictionary containing:
+- 'yScore': pd.DataFrame with calculated metrics for each label and overall averages.
+- 'accuracy_overall': float, accuracy score of selecting entire sets of tags.
+y_model : pd.DataFrame
+DataFrame containing the true and predicted labels along with the cross-validation iteration information.
+Notes:</p>
+<hr>
+<ul>
+<li>The function uses micro, macro, and weighted averages for evaluation.</li>
+<li>The overall accuracy is calculated using the subset accuracy method.</li>
+<li>The function assumes that the input dataframes <code>y_pred</code> and <code>y_true</code> have the same structure and columns.</li>
+</ul></div>
+</dd>
+<dt id="ml_funcs.feature_importance_batch"><code class="name flex">
+<span>def <span class="ident">feature_importance_batch</span></span>(<span>umodel, X, y)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate and plot feature importance for a given model and dataset.
+Parameters:
+umodel (object): The machine learning model or pipeline containing the model.
+X (pd.DataFrame): The input features for the model.
+y (pd.Series or np.array): The target variable.
+Returns:
+tuple: A tuple containing:
+- feature_importance (pd.Series or None): The importance of each feature, or None if the model is not tree-based.
+- sel_features (list): A list of selected features based on their importance.
+Notes:
+- This function currently supports only tree-based models, specifically XGBoost.
+- For XGBoost models, the function fits the model, plots the feature importance, and returns the importance values.
+- If the model is not tree-based, the function returns None for feature importance and all columns of X as selected features.</p></div>
+</dd>
+<dt id="ml_funcs.gainNlift"><code class="name flex">
+<span>def <span class="ident">gainNlift</span></span>(<span>y, model_prob, pos_label, outputFile, groupNo=25)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate and plot Gain and Lift charts for a given model's predictions.</p>
+<p>Parameters:
+y (pd.Series): True labels.
+model_prob (pd.Series): Predicted probabilities.
+pos_label (int): The label of the positive class.
+outputFile (list): List of file paths to save the Gain and Lift charts.
+groupNo (int): Number of groups to divide the data into for the charts.</p>
+<p>Returns:
+out (pd.DataFrame): DataFrame containing the gain and lift values.
+df_gain_chart (pd.DataFrame): DataFrame for the gain chart.
+df_lift_chart (pd.DataFrame): DataFrame for the lift chart.</p></div>
+</dd>
+<dt id="ml_funcs.hyperparameter_tuning"><code class="name flex">
+<span>def <span class="ident">hyperparameter_tuning</span></span>(<span>space: Dict[str, Union[float, int]], X: pandas.core.frame.DataFrame, y: pandas.core.series.Series, sk_fold, early_stopping_rounds: int = 50, Umetric: <built-in function callable> = &lt;function accuracy_score&gt;) ‑> Dict[str, Any]</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.learning_curve_early_stopping"><code class="name flex">
+<span>def <span class="ident">learning_curve_early_stopping</span></span>(<span>df_epochs, outputFile=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots the learning curve with early stopping for XGBoost models.
+This function visualizes the training and validation performance over epochs
+for cross-validation iterations, highlighting the point of early stopping.
+Parameters:
+df_epochs (pd.DataFrame): DataFrame containing the epochs data. It should include columns for epochs,
+CV_Iteration, and best_ntree, along with performance metrics for training
+and validation.
+outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
+Returns:
+None</p></div>
+</dd>
+<dt id="ml_funcs.ml_comparison"><code class="name flex">
+<span>def <span class="ident">ml_comparison</span></span>(<span>ml_models, X, y, scores_names, sk_fold, mapNames={}, plot=True, verbose=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compare multiple machine learning models using cross-validation and return their performance metrics.
+Parameters:</p>
+<hr>
+<p>ml_models : list
+List of machine learning models to be compared.
+X : array-like or DataFrame
+Feature matrix.
+y : array-like or Series
+Target vector.
+scores_names : list
+List of scoring metrics to evaluate the models.
+sk_fold : int or cross-validation generator
+Number of folds or cross-validation generator.
+mapNames : dict, optional
+Dictionary mapping model indices to custom names. Default is an empty dictionary.
+plot : bool, optional
+If True, plot the comparison results. Default is True.
+verbose : bool, optional
+If True, print detailed information during the process. Default is True.
+Returns:</p>
+<hr>
+<p>metrics_all : DataFrame
+DataFrame containing the performance metrics of all models.</p></div>
+</dd>
+<dt id="ml_funcs.ml_comparison_plot"><code class="name flex">
+<span>def <span class="ident">ml_comparison_plot</span></span>(<span>metrics_all, outputFile=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generates a comparison box plot for machine learning model metrics.
+Parameters:
+metrics_all (pd.DataFrame): DataFrame containing the metrics for different models.
+The DataFrame should have columns such as 'CV', 'model', 'elapsed_time', 'Feature_nos', and other metric columns.
+outputFile (str, optional): Path to save the output plot. If None, the plot will not be saved. Default is None.
+Returns:
+None: The function displays the plot and optionally saves it to the specified file.
+Notes:
+- The function filters out rows where the 'CV' column contains "CV_scores_Mean", "CV_scores_STD", or "scores_all".
+- If the 'model' column is present in the DataFrame, it is used as the hue for the plot; otherwise, 'CV' is used.
+- The function creates a box plot using seaborn to compare the metrics.
+- The x-axis labels are rotated for better readability.
+- The plot is displayed with a grid and without outliers.
+- If an output file path is provided, the plot is saved to that location.</p></div>
+</dd>
+<dt id="ml_funcs.ml_prediction"><code class="name flex">
+<span>def <span class="ident">ml_prediction</span></span>(<span>ml_model, X, y, sk_fold, X_test=None, y_test=None, callbacks=None, verbose=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Perform machine learning prediction with cross-validation and optional early stopping.
+Parameters:</p>
+<hr>
+<p>ml_model : object
+The machine learning model to be used for prediction. Can be a single model or a pipeline.
+X : pandas.DataFrame
+The feature matrix for training.
+y : pandas.Series
+The target vector for training.
+sk_fold : object or list
+Cross-validation splitting strategy. Can be an instance of StratifiedKFold, TimeSeriesSplit, or a list containing validation data.
+X_test : pandas.DataFrame, optional
+The feature matrix for testing. Default is None.
+y_test : pandas.Series, optional
+The target vector for testing. Default is None.
+callbacks : list, optional
+List of callback functions for early stopping. Default is None.
+verbose : bool, optional
+If True, print progress messages. Default is False.
+Returns:</p>
+<hr>
+<p>y_model : pandas.DataFrame
+DataFrame containing predictions and true values for each cross-validation iteration.
+ml_models : list
+List of fitted machine learning models for each cross-validation iteration.
+df_epochs : pandas.DataFrame or None
+DataFrame containing epoch information for models with early stopping, or None if early stopping is not used.</p></div>
+</dd>
+<dt id="ml_funcs.ml_prediction_sub_epochs"><code class="name flex">
+<span>def <span class="ident">ml_prediction_sub_epochs</span></span>(<span>model)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.ml_prediction_xValNest"><code class="name flex">
+<span>def <span class="ident">ml_prediction_xValNest</span></span>(<span>ml_model, X, y, outter_fold, inner_fold)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Perform nested cross-validation for a given machine learning model.
+Parameters:
+ml_model : object
+The machine learning model to be used for training and prediction.
+X : pandas.DataFrame
+The input features for the model.
+y : pandas.Series
+The target variable.
+outter_fold : object
+The outer cross-validation fold (e.g., KFold or StratifiedKFold).
+inner_fold : object
+The inner cross-validation fold (e.g., KFold or StratifiedKFold).
+Returns:
+y_model : pandas.DataFrame
+DataFrame containing the predicted probabilities, predicted class,
+true class, and cross-validation iteration for each test sample.
+df_epochs : pandas.DataFrame
+DataFrame containing the epochs information for each cross-validation iteration.</p></div>
+</dd>
+<dt id="ml_funcs.ml_scores"><code class="name flex">
+<span>def <span class="ident">ml_scores</span></span>(<span>y_model, scores_names)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate various machine learning evaluation scores for a given model.
+Parameters:
+y_model (pd.DataFrame): DataFrame containing the true labels and predicted labels.
+It must have columns 'y_true' and 'y_pred'. If 'CV_Iteration'
+column is not present, it will be added with a default value 'All_data'.
+scores_names (list): List of score names to be calculated. The score names should be keys
+in the <code>metric_dict</code> which maps to the corresponding scoring functions.
+Returns:
+pd.DataFrame: DataFrame containing the calculated scores for each cross-validation iteration,
+along with the mean and standard deviation of the scores across iterations,
+and the overall scores for the entire dataset.</p></div>
+</dd>
+<dt id="ml_funcs.ml_scores_crossvalidate"><code class="name flex">
+<span>def <span class="ident">ml_scores_crossvalidate</span></span>(<span>**kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Perform cross-validation on a given estimator and return the results as a DataFrame.
+This function uses scikit-learn's <code>cross_validate</code> to perform cross-validation on the provided estimator
+and returns the results in a pandas DataFrame. The DataFrame includes the mean and standard deviation
+of the cross-validation scores.
+Parameters:
+**kwargs:
+Keyword arguments to be passed to <code>sklearn.model_selection.cross_validate</code>. These typically include:
+- estimator: The object to use to fit the data.
+- X: The data to fit.
+- y: The target variable to try to predict.
+- scoring: A single string or a callable to evaluate the predictions on the test set.
+- cv: Determines the cross-validation splitting strategy.
+- return_train_score: Whether to include train scores.
+Returns:
+pandas.DataFrame:
+A DataFrame containing the cross-validation results. The DataFrame includes the mean and standard
+deviation of the cross-validation scores, with the keys 'CV_scores_Mean' and 'CV_scores_STD' respectively.
+The 'fit_time' and 'score_time' columns are removed from the results.</p></div>
+</dd>
+<dt id="ml_funcs.ml_tuner"><code class="name flex">
+<span>def <span class="ident">ml_tuner</span></span>(<span>trial, sk_model, model_params, X, y, sk_fold, var_in_model_params, Umetric='auc', use_early_Stopping=False, early_stopping_rounds=300, use_callbacks=False)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.pca_explainedVar"><code class="name flex">
+<span>def <span class="ident">pca_explainedVar</span></span>(<span>pcaML)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>calcluate and plot Variance Explained VS number of features for PCA</p>
+<h2 id="todo-add-screeplot">TODO: add screeplot</h2>
+<h2 id="parameters">Parameters:</h2>
+<p>pcaML (float): Percentage of variance explained by each of the selected components.</p>
+<p>outputFile (string):
+the location of the plot</p>
+<h2 id="returns">returns:</h2>
+<p>var
+(float)
+cumulative varaince explained</p>
+<hr>
+<p>Author: Reza Nourzadeh</p></div>
+</dd>
+<dt id="ml_funcs.pca_important_features"><code class="name flex">
+<span>def <span class="ident">pca_important_features</span></span>(<span>transformed_features, components_, columns)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.pca_ortho_rotation"><code class="name flex">
+<span>def <span class="ident">pca_ortho_rotation</span></span>(<span>lam, method='varimax', gamma=None, eps=1e-06, itermax=100)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="todo-document-it">TODO: document it</h2>
+<h2 id="a-varimax-rotation-is-a-change-of-coordinates-used-in-principal-component-analysis1-pca-that-maximizes-the-sum-of-the-variances-of-the-squared-loadings">A VARIMAX rotation is a change of coordinates used in principal component analysis1 (PCA) that maximizes the sum of the variances of the squared loadings</h2>
+<h2 id="httpsgithubcomrossfadelyconsommeblobmasterconsommerotate_factorpy"><a href="https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py">https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py</a></h2>
+<p>Return orthogal rotation matrix
+TODO: - other types beyond</p></div>
+</dd>
+<dt id="ml_funcs.pdp_plot_batch"><code class="name flex">
+<span>def <span class="ident">pdp_plot_batch</span></span>(<span>X, umodel, sel_features)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generate partial dependence plots (PDP) and individual conditional expectation (ICE) plots for a given model and selected features.
+Parameters:
+X : array-like or DataFrame of shape (n_samples, n_features)
+The data to use for generating the plots.
+umodel : estimator object
+A fitted scikit-learn estimator (model) for which the partial dependence plots are to be computed.
+sel_features : list of str or list of int
+The features for which the partial dependence plots are to be generated. These can be specified by their names or column indices.
+Returns:
+None
+This function does not return any value. It generates and displays the partial dependence plots and individual conditional expectation plots.</p></div>
+</dd>
+<dt id="ml_funcs.plot_confusion_matrix2"><code class="name flex">
+<span>def <span class="ident">plot_confusion_matrix2</span></span>(<span>y_model, map_lbls, outputFile=None, ncol=3)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots confusion matrices for model predictions, optionally saving the plot to a file.
+Parameters:
+y_model (pd.DataFrame): DataFrame containing the true labels and predicted labels.
+It should have columns 'y_true' and 'y_pred'. Optionally, it can have a 'CV_Iteration' column for cross-validation iterations.
+map_lbls (dict): Dictionary mapping the original labels to the desired labels for the confusion matrix.
+outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
+ncol (int, optional): Number of columns for the subplot grid. Default is 3.
+Returns:
+pd.Series: A series of confusion matrices, indexed by the cross-validation iteration or 'All_data' if no cross-validation is used.</p></div>
+</dd>
+<dt id="ml_funcs.precision_recall_curve2"><code class="name flex">
+<span>def <span class="ident">precision_recall_curve2</span></span>(<span>y, model_prob, pos_label, outputFile=None, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots the precision-recall curve and calculates the area under the curve (AUC).
+Parameters:</p>
+<hr>
+<p>y : array-like of shape (n_samples,)
+True binary labels.
+model_prob : array-like of shape (n_samples,)
+Estimated probabilities or decision function.
+pos_label : int or str
+The label of the positive class.
+outputFile : str, optional
+If provided, the plot will be saved to this file.
+**kwargs : additional keyword arguments
+Additional arguments passed to <code>precision_recall_curve</code>.
+Returns:</p>
+<hr>
+<p>df_rp : pandas.DataFrame
+DataFrame containing precision, recall, and thresholds.
+idx : list
+List of indices used for setting x-ticks on the plot.</p></div>
+</dd>
+<dt id="ml_funcs.regressors_template"><code class="name flex">
+<span>def <span class="ident">regressors_template</span></span>(<span>random_state=10)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="ml_funcs.reliability_diagram"><code class="name flex">
+<span>def <span class="ident">reliability_diagram</span></span>(<span>y, model_prob, pos_label, outputFile, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots a reliability diagram to visualize the calibration of a probabilistic classifier.
+Parameters:</p>
+<hr>
+<p>y : array-like of shape (n_samples,)
+True labels of the data.
+model_prob : array-like of shape (n_samples,)
+Predicted probabilities of the positive class.
+pos_label : int or str
+The label of the positive class.
+outputFile : str or None
+The file path to save the plot. If None, the plot is not saved.
+**kwargs : additional keyword arguments
+Additional arguments to pass to the <code>calibration_curve</code> function.
+Returns:</p>
+<hr>
+<p>prob_true : array-like of shape (n_bins,)
+The true probabilities for each bin.
+prob_pred : array-like of shape (n_bins,)
+The predicted probabilities for each bin.
+prob_true_norm : array-like of shape (n_bins,)
+The true probabilities for each bin after normalization.
+prob_pred_norm : array-like of shape (n_bins,)
+The predicted probabilities for each bin after normalization.</p></div>
+</dd>
+<dt id="ml_funcs.roc_curve2"><code class="name flex">
+<span>def <span class="ident">roc_curve2</span></span>(<span>y, model_prob, pos_label, outputFile=None, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generates and plots the ROC curve for a given set of true labels and predicted probabilities.
+Parameters:</p>
+<hr>
+<p>y : array-like
+True binary labels.
+model_prob : array-like
+Target scores, can either be probability estimates of the positive class, confidence values, or non-thresholded measure of decisions.
+pos_label : int or str
+Label considered as positive and others are considered negative.
+outputFile : str, optional
+If provided, the plot will be saved to this file.
+**kwargs : dict, optional
+Additional keyword arguments to pass to <code>roc_auc_score</code>.
+Returns:</p>
+<hr>
+<p>df_roc : pandas.DataFrame
+DataFrame containing the false positive rate, true positive rate, and thresholds.
+model_auc : float
+Computed Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
+Notes:</p>
+<hr>
+<ul>
+<li>The function uses <code>roc_auc_score</code> from <code>sklearn.metrics</code> to compute the AUC.</li>
+<li>The ROC curve is plotted using <code>matplotlib</code>.</li>
+<li>The function can save the plot to a file if <code>outputFile</code> is provided.</li>
+</ul></div>
+</dd>
+<dt id="ml_funcs.shap_plots_batch"><code class="name flex">
+<span>def <span class="ident">shap_plots_batch</span></span>(<span>X, y, umodel, test_size=0.2, kmeans=None, random_state=100)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generates SHAP plots for a given model and dataset.
+Parameters:
+X (pd.DataFrame or np.ndarray): Feature matrix.
+y (pd.Series or np.ndarray): Target vector.
+umodel (object): The machine learning model to be used.
+test_size (float, optional): Proportion of the dataset to include in the test split. Default is 0.2.
+kmeans (int, optional): Number of clusters for KMeans summarization. If None, the whole training set is used. Default is None.
+random_state (int, optional): Random seed for reproducibility. Default is 100.
+Returns:
+shap_values (list): SHAP values for the test set.</p></div>
+</dd>
+<dt id="ml_funcs.split_multiLabel_data"><code class="name flex">
+<span>def <span class="ident">split_multiLabel_data</span></span>(<span>df_samples2, binarized_tags, random_state=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Splits multi-label data into training, evaluation, and test sets.
+Parameters:
+df_samples2 (pd.DataFrame): DataFrame containing the samples to be split.
+binarized_tags (pd.DataFrame): DataFrame containing the binarized tags corresponding to the samples.
+random_state (int, optional): Random seed for reproducibility. Defaults to None.
+Returns:
+tuple: A tuple containing:
+- pd.DataFrame: DataFrame with an additional 'Set' column indicating the split ('train', 'eval', 'test').
+- pd.DataFrame: DataFrame of binarized tags with an additional 'Set' column indicating the split.</p></div>
+</dd>
+<dt id="ml_funcs.split_multiLabel_data__index"><code class="name flex">
+<span>def <span class="ident">split_multiLabel_data__index</span></span>(<span>X, y, test_size, random_state=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Iteratively stratified train/test split</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>test_size</code></strong> :&ensp;<code>float, [0,1]</code></dt>
+<dd>the proportion of the dataset to include in the test split, the rest will be put in the train set</dd>
+<dt><strong><code>random_state</code></strong> :&ensp;<code>None | int | np.random.RandomState</code></dt>
+<dd>the random state seed (optional)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>X_train, y_train, X_test, y_test</code></dt>
+<dd>stratified division into train/test split</dd>
+</dl></div>
+</dd>
+<dt id="ml_funcs.unify_cols"><code class="name flex">
+<span>def <span class="ident">unify_cols</span></span>(<span>df1, df2, df1_name, df2_name)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Unifies the columns of two DataFrames by ensuring both DataFrames have the same columns.
+If one DataFrame has columns that the other does not, those columns are added to the other DataFrame with default values of 0.</p>
+<p>Parameters:
+df1 (pd.DataFrame): The first DataFrame.
+df2 (pd.DataFrame): The second DataFrame.
+df1_name (str): The name of the first DataFrame (used for printing messages).
+df2_name (str): The name of the second DataFrame (used for printing messages).</p>
+<p>Returns:
+tuple: A tuple containing the two DataFrames with unified columns (df1, df2).</p></div>
+</dd>
+<dt id="ml_funcs.xgb_tuner"><code class="name flex">
+<span>def <span class="ident">xgb_tuner</span></span>(<span>X_train, y_train, X_test, y_test, random_state, metric=&lt;function roc_auc_score&gt;, stepWise=True)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="ml_funcs.binarizer" href="#ml_funcs.binarizer">binarizer</a></code></li>
+<li><code><a title="ml_funcs.class_weight2" href="#ml_funcs.class_weight2">class_weight2</a></code></li>
+<li><code><a title="ml_funcs.classifer_performance_batch" href="#ml_funcs.classifer_performance_batch">classifer_performance_batch</a></code></li>
+<li><code><a title="ml_funcs.classifiers_template" href="#ml_funcs.classifiers_template">classifiers_template</a></code></li>
+<li><code><a title="ml_funcs.evaluate_multiLabel" href="#ml_funcs.evaluate_multiLabel">evaluate_multiLabel</a></code></li>
+<li><code><a title="ml_funcs.feature_importance_batch" href="#ml_funcs.feature_importance_batch">feature_importance_batch</a></code></li>
+<li><code><a title="ml_funcs.gainNlift" href="#ml_funcs.gainNlift">gainNlift</a></code></li>
+<li><code><a title="ml_funcs.hyperparameter_tuning" href="#ml_funcs.hyperparameter_tuning">hyperparameter_tuning</a></code></li>
+<li><code><a title="ml_funcs.learning_curve_early_stopping" href="#ml_funcs.learning_curve_early_stopping">learning_curve_early_stopping</a></code></li>
+<li><code><a title="ml_funcs.ml_comparison" href="#ml_funcs.ml_comparison">ml_comparison</a></code></li>
+<li><code><a title="ml_funcs.ml_comparison_plot" href="#ml_funcs.ml_comparison_plot">ml_comparison_plot</a></code></li>
+<li><code><a title="ml_funcs.ml_prediction" href="#ml_funcs.ml_prediction">ml_prediction</a></code></li>
+<li><code><a title="ml_funcs.ml_prediction_sub_epochs" href="#ml_funcs.ml_prediction_sub_epochs">ml_prediction_sub_epochs</a></code></li>
+<li><code><a title="ml_funcs.ml_prediction_xValNest" href="#ml_funcs.ml_prediction_xValNest">ml_prediction_xValNest</a></code></li>
+<li><code><a title="ml_funcs.ml_scores" href="#ml_funcs.ml_scores">ml_scores</a></code></li>
+<li><code><a title="ml_funcs.ml_scores_crossvalidate" href="#ml_funcs.ml_scores_crossvalidate">ml_scores_crossvalidate</a></code></li>
+<li><code><a title="ml_funcs.ml_tuner" href="#ml_funcs.ml_tuner">ml_tuner</a></code></li>
+<li><code><a title="ml_funcs.pca_explainedVar" href="#ml_funcs.pca_explainedVar">pca_explainedVar</a></code></li>
+<li><code><a title="ml_funcs.pca_important_features" href="#ml_funcs.pca_important_features">pca_important_features</a></code></li>
+<li><code><a title="ml_funcs.pca_ortho_rotation" href="#ml_funcs.pca_ortho_rotation">pca_ortho_rotation</a></code></li>
+<li><code><a title="ml_funcs.pdp_plot_batch" href="#ml_funcs.pdp_plot_batch">pdp_plot_batch</a></code></li>
+<li><code><a title="ml_funcs.plot_confusion_matrix2" href="#ml_funcs.plot_confusion_matrix2">plot_confusion_matrix2</a></code></li>
+<li><code><a title="ml_funcs.precision_recall_curve2" href="#ml_funcs.precision_recall_curve2">precision_recall_curve2</a></code></li>
+<li><code><a title="ml_funcs.regressors_template" href="#ml_funcs.regressors_template">regressors_template</a></code></li>
+<li><code><a title="ml_funcs.reliability_diagram" href="#ml_funcs.reliability_diagram">reliability_diagram</a></code></li>
+<li><code><a title="ml_funcs.roc_curve2" href="#ml_funcs.roc_curve2">roc_curve2</a></code></li>
+<li><code><a title="ml_funcs.shap_plots_batch" href="#ml_funcs.shap_plots_batch">shap_plots_batch</a></code></li>
+<li><code><a title="ml_funcs.split_multiLabel_data" href="#ml_funcs.split_multiLabel_data">split_multiLabel_data</a></code></li>
+<li><code><a title="ml_funcs.split_multiLabel_data__index" href="#ml_funcs.split_multiLabel_data__index">split_multiLabel_data__index</a></code></li>
+<li><code><a title="ml_funcs.unify_cols" href="#ml_funcs.unify_cols">unify_cols</a></code></li>
+<li><code><a title="ml_funcs.xgb_tuner" href="#ml_funcs.xgb_tuner">xgb_tuner</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.0</a>.</p>
+</footer>
+</body>
+</html>

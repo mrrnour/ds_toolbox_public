@@ -1,18 +1,20 @@
 ###### pdoc3
 import glob, os, sys
-upath = 'C:\\Users\\rnourzadeh\OneDrive - Alberta Pensions Services Corporation\\main_folder\\codes\\ds_toolbox_public\\dsToolbox'
+upath = 'D:\\Dropbox\\codes\\ds_toolbox_public'
 udesc_path = os.path.join(upath, 'doc')
 
-ufiles=['ml_funcs.py', 'io_funcs.py', 'io_funcs_msql_local.py', 'nlp_llm_funcs.py', 'spark_funcs.py']
+ufiles=['ml_funcs.py', 'io_funcs.py', 'io_funcs_msql_local.py', 'nlp_llm_funcs.py', 'spark_funcs.py', 'common_funcs.py']
 os.chdir(upath)
-sys.path.insert(1, os.path.dirname(os.path.dirname(upath)))
+sys.path.insert(1, upath)
 for ufile in  ufiles: ##glob.glob("*.py"):
-    file=os.path.join(upath, ufile)
+    file=os.path.join(upath, "dsToolbox", ufile)
     print(file)
     desc_file = os.path.join(udesc_path, ufile.replace('.py', '.html'))
     if os.path.exists(desc_file):
         os.remove(desc_file)
     os.system(f"pdoc3 --html --force -o {udesc_path} {file}")  
+    print("*"*150)
+    print("*"*150)
 
 #####local system:
 # conda activate dstoolbox 

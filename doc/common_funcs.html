@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.0">
+<title>common_funcs API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>common_funcs</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="common_funcs.cat2color_plotly"><code class="name flex">
+<span>def <span class="ident">cat2color_plotly</span></span>(<span>label_col, color_palette=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.cat2no"><code class="name flex">
+<span>def <span class="ident">cat2no</span></span>(<span>df)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>converts all categorical and object features of a dataframe (df) to cat.code</p>
+<h2 id="parameters">Parameters:</h2>
+<p>df(pandas dataframe) with [sample*features] format</p>
+<p>thresh(number): thersold value for variance of features</p>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.cellWeight"><code class="name flex">
+<span>def <span class="ident">cellWeight</span></span>(<span>df, axis=0)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.check_path"><code class="name flex">
+<span>def <span class="ident">check_path</span></span>(<span>path)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Raise exception if the file path doesn't exist.</p></div>
+</dd>
+<dt id="common_funcs.check_timestamps"><code class="name flex">
+<span>def <span class="ident">check_timestamps</span></span>(<span>start, end, format_required='%Y-%m-%d')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>validate the format required for the query</p></div>
+</dd>
+<dt id="common_funcs.chi2_contingency"><code class="name flex">
+<span>def <span class="ident">chi2_contingency</span></span>(<span>x, y)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Chi-square test of independence of variables in a contingency table.
+This function computes the chi-square statistic and p-value for the hypothesis test of independence of the observed frequencies in the contingency table.</p>
+<h2 id="parameters">Parameters:</h2>
+<p>x
+array of sample1</p>
+<p>y
+array of sample2</p>
+<h2 id="returns">returns:</h2>
+<p>p (float) :The p-value of the test</p>
+<h2 id="example">Example:</h2>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.compare_dfs"><code class="name flex">
+<span>def <span class="ident">compare_dfs</span></span>(<span>df1, df2, df_names=['df1', 'df2'])</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.compare_univar_fea"><code class="name flex">
+<span>def <span class="ident">compare_univar_fea</span></span>(<span>X, y, univar_fea_lst)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.copy_ymls"><code class="name flex">
+<span>def <span class="ident">copy_ymls</span></span>(<span>dsToolbox, platform='databricks', destination=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.corr_pointbiserial"><code class="name flex">
+<span>def <span class="ident">corr_pointbiserial</span></span>(<span>binary_data, continuous_data, data)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>computes the point biserial correlation of two pandas data frame columns</p>
+<h2 id="parameters">Parameters:</h2>
+<p>binary_data :list : name of dichotomous data column</p>
+<p>continuous_data: list : name of dichotomous data column</p>
+<p>data (pandas dataframe) with [sample*feature] format: dataframe where above columns come from</p>
+<h2 id="returns">returns:</h2>
+<h2 id="out-point-biserial-correlation">out :
+Point Biserial Correlation</h2>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.corrmap"><code class="name flex">
+<span>def <span class="ident">corrmap</span></span>(<span>df0, method='kendall', diagonal_plot=True, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>plot a correlation heatmap matrix</p>
+<h2 id="parameters">Parameters:</h2>
+<p>uData : (pandas dataframe) with [sample*features] format</p>
+<p>method : {‘pearson’, ‘kendall’, ‘spearman’} or callable
+pearson : standard correlation coefficient
+kendall : Kendall Tau correlation coefficient
+spearman : Spearman rank correlation
+callable: callable with input two 1d ndarray and returning a float.</p>
+<p>**kwargs: parameter of corr and seaborn heatmap: <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html">https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html</a></p>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.date2Num"><code class="name flex">
+<span>def <span class="ident">date2Num</span></span>(<span>df, dateCols)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>returns a new dataframe after deducing dates columns from the min dates of columns</p>
+<h2 id="parameters">Parameters:</h2>
+<p>df (pandas dataframe) with [sample*features] format</p>
+<p>datecols
+(a list of strings):: name of columns with date values</p>
+<h2 id="returns">returns:</h2>
+<p>df[dateCols]-eval(df[dateCols].min()[0])</p>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.datesList"><code class="name flex">
+<span>def <span class="ident">datesList</span></span>(<span>year_range=[2018, 2099], firstDate=None, lastDate=datetime.date(2024, 11, 22))</span>
+</code></dt>
+<dd>
+<div class="desc"><p>generates a list of first dates of months within a given range of years
+Params:
+<br>
+year_range(list):
+list of first and the last year+1
+<br>
+firstDate (string or datetime): if it is not given, it will be the first day and month of year_range[0]
+lastDate (string or datetime): if it is not given,
+it will be the current date
+Returns: python list</p></div>
+</dd>
+<dt id="common_funcs.discretizer"><code class="name flex">
+<span>def <span class="ident">discretizer</span></span>(<span>x, y, labels=['Q1', 'Q2', 'Q3', 'Q4'], method='cut')</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.explainedVar"><code class="name flex">
+<span>def <span class="ident">explainedVar</span></span>(<span>pcaML, outputFile)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>calcluate and plot Variance Explained VS number of features for PCA</p>
+<h2 id="todo-add-screeplot">TODO: add screeplot</h2>
+<h2 id="parameters">Parameters:</h2>
+<p>pcaML (float): Percentage of variance explained by each of the selected components.</p>
+<p>outputFile (string):
+the location of the plot</p>
+<h2 id="returns">returns:</h2>
+<p>var
+(float)
+cumulative varaince explained</p>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.extract_equation"><code class="name flex">
+<span>def <span class="ident">extract_equation</span></span>(<span>results_pars)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.extract_start_end"><code class="name flex">
+<span>def <span class="ident">extract_start_end</span></span>(<span>udates, ii)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.figures_to_html"><code class="name flex">
+<span>def <span class="ident">figures_to_html</span></span>(<span>figs, filename='dashboard.html')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>save a list of figures all to a single HTML file.</p></div>
+</dd>
+<dt id="common_funcs.find_low_variance"><code class="name flex">
+<span>def <span class="ident">find_low_variance</span></span>(<span>df, thresh=0.0)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>returns name of features
+with variance less than thersold</p>
+<h2 id="parameters">Parameters:</h2>
+<p>df(pandas dataframe) with [sample*features] format</p>
+<p>thresh(number): thersold value for variance of features</p>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.flattenList"><code class="name flex">
+<span>def <span class="ident">flattenList</span></span>(<span>ulist)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>makes a flat list out of list of lists</p>
+<h2 id="parameters">Parameters:</h2>
+<p>ulist: a list of nested lists</p>
+<h2 id="returns">returns:</h2>
+<p>results
+ulist: a list of flatten ulist</p>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.highcorr_finder"><code class="name flex">
+<span>def <span class="ident">highcorr_finder</span></span>(<span>corrMat, df_scores, thershold)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.hypothesis_test"><code class="name flex">
+<span>def <span class="ident">hypothesis_test</span></span>(<span>df, par, group, group_names)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.hypothesis_test_batch_pars"><code class="name flex">
+<span>def <span class="ident">hypothesis_test_batch_pars</span></span>(<span>df, pars, group, group_names)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.inWithReg"><code class="name flex">
+<span>def <span class="ident">inWithReg</span></span>(<span>regLst, LstAll)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>search regualr expression list in a list</p>
+<h2 id="parameters">Parameters:</h2>
+<p>regLst (list of strings with regx)</p>
+<p>LstAll (list of strings to be searched for regLst</p>
+<h2 id="returns">returns:</h2>
+<p>out: the subset of LstAll which met contains any subset of regLst</p>
+<p>ind: a list of True/False values of existence LstAll in any subset of regLst</p>
+<h2 id="example">Example:</h2>
+<pre><code>regLst=['.vol_flag$','fefefre','_date']
+LstAll=['bi_alt_account_id', 'snapshot_date', 'snapshot_year','tv_vol_flag', 'phone_vol_flag']
+out,ind=inWithReg(regLst,LstAll)
+out=['tv_vol_flag', 'phone_vol_flag', 'snapshot_date']
+ind=[False,  True, False,  True,  True]
+</code></pre>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.jitter"><code class="name flex">
+<span>def <span class="ident">jitter</span></span>(<span>a_series, noise_reduction=1000000)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.kruskalwallis2"><code class="name flex">
+<span>def <span class="ident">kruskalwallis2</span></span>(<span>x, y)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>calculate the Kruskal-Wallis H-test for independent samples</p>
+<h2 id="parameters">Parameters:</h2>
+<p>x
+array of observations
+y
+array of groups</p>
+<h2 id="returns">returns:</h2>
+<p>H-statistic
+(float)
+The Kruskal-Wallis H statistic, corrected for ties
+p-value
+(float)
+The p-value for the test using the assumption that H has a chi square distribution</p></div>
+</dd>
+<dt id="common_funcs.lag_plot"><code class="name flex">
+<span>def <span class="ident">lag_plot</span></span>(<span>x, y=None, nlags=24)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.merge_between"><code class="name flex">
+<span>def <span class="ident">merge_between</span></span>(<span>df1, df2, groupCol, closed='both')</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.movecol"><code class="name flex">
+<span>def <span class="ident">movecol</span></span>(<span>df, cols_to_move=[], ref_col='', place='After')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reorders a panda dataframe columns
+Parameters:</p>
+<hr>
+<p>df (pandas dataframe)
+cols_to_move:
+list of columns to move
+ref_col(string):
+name of a specific column to move
+cols_to_move columns to after/before it
+place(string) [options:"After","Before"]: cols_to_move columns will be move before/after it</p>
+<h2 id="returns">returns:</h2>
+<p>df (pandas dataframe)
+reordered dataframe</p>
+<hr>
+<p>Author:
+<a href="https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5">https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5</a></p></div>
+</dd>
+<dt id="common_funcs.null_per_column"><code class="name flex">
+<span>def <span class="ident">null_per_column</span></span>(<span>df)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.ortho_rotation"><code class="name flex">
+<span>def <span class="ident">ortho_rotation</span></span>(<span>lam, method='varimax', gamma=None, eps=1e-06, itermax=100)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="todo-document-it">TODO: document it</h2>
+<h2 id="a-varimax-rotation-is-a-change-of-coordinates-used-in-principal-component-analysis1-pca-that-maximizes-the-sum-of-the-variances-of-the-squared-loadings">A VARIMAX rotation is a change of coordinates used in principal component analysis1 (PCA) that maximizes the sum of the variances of the squared loadings</h2>
+<h2 id="httpsgithubcomrossfadelyconsommeblobmasterconsommerotate_factorpy"><a href="https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py">https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py</a></h2>
+<p>Return orthogal rotation matrix
+TODO: - other types beyond</p></div>
+</dd>
+<dt id="common_funcs.parse_sql_file"><code class="name flex">
+<span>def <span class="ident">parse_sql_file</span></span>(<span>file_name)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>read sql queries in a file</p>
+<h2 id="parameters">Parameters:</h2>
+<p>file (string): the location of sql file</p>
+<p>returns:
+A List Of Queries</p>
+<hr>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.pass_days"><code class="name flex">
+<span>def <span class="ident">pass_days</span></span>(<span>start_date, end_date)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.percent_agg"><code class="name flex">
+<span>def <span class="ident">percent_agg</span></span>(<span>df, grpby1, grpby2, sumCol)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.plot3D"><code class="name flex">
+<span>def <span class="ident">plot3D</span></span>(<span>udata, uY, xyzLabels, utitle, outPutFile)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>plot3d of udata</p>
+<h2 id="parameters">parameters:</h2>
+<p>udata : (pandas dataframe) with [sample*3] format</p>
+<p>uY (string):
+the name of columns which is used to color dot plot</p>
+<p>xyzLabels: the list of string
+labels of Axis X,Y,Z</p>
+<p>utitle (string):
+the title of graph</p>
+<p>outputFile (string):
+the location of the plot</p>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.plot_ccf"><code class="name flex">
+<span>def <span class="ident">plot_ccf</span></span>(<span>x, y, lags, ax=None, title='Cross-correlation', **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.plotly_group_stack"><code class="name flex">
+<span>def <span class="ident">plotly_group_stack</span></span>(<span>df_plot, col2grp, col2stack, col2c, date_col, title, color_palette=['#FD3216', '#00FE35', '#6A76FC', '#FED4C4', '#FE00CE', '#0DF9FF', '#F6F926', '#FF9616', '#479B55', '#EEA6FB', '#DC587D', '#D626FF', '#6E899C', '#00B5F7', '#B68E00', '#C9FBE5', '#FF0092', '#22FFA7', '#E3EE9E', '#86CE00', '#BC7196', '#7E7DCD', '#FC6955', '#E48F72'], patterns=['', '/'])</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.readableTime"><code class="name flex">
+<span>def <span class="ident">readableTime</span></span>(<span>time)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>convert time to day, hour, minutes, seconds</p>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.reduce_mem_usage"><code class="name flex">
+<span>def <span class="ident">reduce_mem_usage</span></span>(<span>df, obj2str_cols='all_columns', str2cat_cols='all_columns', verbose=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>iterate through all the columns of a dataframe and modify the data type
+to reduce memory usage.</p></div>
+</dd>
+<dt id="common_funcs.remove_extra_none"><code class="name flex">
+<span>def <span class="ident">remove_extra_none</span></span>(<span>nested_lst)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.retrieve_name"><code class="name flex">
+<span>def <span class="ident">retrieve_name</span></span>(<span>var)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.rle_encode"><code class="name flex">
+<span>def <span class="ident">rle_encode</span></span>(<span>data)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.sankey"><code class="name flex">
+<span>def <span class="ident">sankey</span></span>(<span>left, right, value, thershold, utitle, filename)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>create and plot a simplified sankey graph with only one source (left) and one target(right)</p>
+<h2 id="parameters">Parameters:</h2>
+<p>left (array, shape) [n_samples]
+the label of left column</p>
+<p>right (array, shape) [n_samples]
+the label of right column</p>
+<p>value (array, shape) [n_samples]
+the value of transaction</p>
+<p>thershold (float)
+to filter those transactions which have less value than thershold</p>
+<p>utitle (string):
+the title of the plot</p>
+<p>filename (string):
+the location of the plot</p>
+<h2 id="returns">returns:</h2>
+<p>tranactions(array, shape) [filtered n_samples*3]
+tranactions has three columns: left, right, value</p>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.save_plotly_fig"><code class="name flex">
+<span>def <span class="ident">save_plotly_fig</span></span>(<span>fig, fname_prefix, image_format='jpg')</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.split_sql_expressions_sub"><code class="name flex">
+<span>def <span class="ident">split_sql_expressions_sub</span></span>(<span>text)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>split sql queries based on ";"</p>
+<h2 id="parameters">Parameters:</h2>
+<p>text (string): (sql queries)</p>
+<p>returns:
+A List Of Queries</p>
+<hr>
+<hr>
+<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.subplot_plExpress"><code class="name flex">
+<span>def <span class="ident">subplot_plExpress</span></span>(<span>figs, sub_titles, main_title)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.unify_cols"><code class="name flex">
+<span>def <span class="ident">unify_cols</span></span>(<span>df1, df2, df1_name, df2_name)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="common_funcs.unique_list"><code class="name flex">
+<span>def <span class="ident">unique_list</span></span>(<span>seq)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get unique values from a list seq with saving the order of list elements
+Parameters:</p>
+<hr>
+<h2 id="seq-a-list-with-duplicates-elements">seq: a list with duplicates elements</h2>
+<p>out
+(list):
+A List With Unqiue Elements</p>
+<hr>
+<p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
+</dd>
+<dt id="common_funcs.worldCloud_graph"><code class="name flex">
+<span>def <span class="ident">worldCloud_graph</span></span>(<span>txtSeries_df, outputFile)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="common_funcs.cat2color_plotly" href="#common_funcs.cat2color_plotly">cat2color_plotly</a></code></li>
+<li><code><a title="common_funcs.cat2no" href="#common_funcs.cat2no">cat2no</a></code></li>
+<li><code><a title="common_funcs.cellWeight" href="#common_funcs.cellWeight">cellWeight</a></code></li>
+<li><code><a title="common_funcs.check_path" href="#common_funcs.check_path">check_path</a></code></li>
+<li><code><a title="common_funcs.check_timestamps" href="#common_funcs.check_timestamps">check_timestamps</a></code></li>
+<li><code><a title="common_funcs.chi2_contingency" href="#common_funcs.chi2_contingency">chi2_contingency</a></code></li>
+<li><code><a title="common_funcs.compare_dfs" href="#common_funcs.compare_dfs">compare_dfs</a></code></li>
+<li><code><a title="common_funcs.compare_univar_fea" href="#common_funcs.compare_univar_fea">compare_univar_fea</a></code></li>
+<li><code><a title="common_funcs.copy_ymls" href="#common_funcs.copy_ymls">copy_ymls</a></code></li>
+<li><code><a title="common_funcs.corr_pointbiserial" href="#common_funcs.corr_pointbiserial">corr_pointbiserial</a></code></li>
+<li><code><a title="common_funcs.corrmap" href="#common_funcs.corrmap">corrmap</a></code></li>
+<li><code><a title="common_funcs.date2Num" href="#common_funcs.date2Num">date2Num</a></code></li>
+<li><code><a title="common_funcs.datesList" href="#common_funcs.datesList">datesList</a></code></li>
+<li><code><a title="common_funcs.discretizer" href="#common_funcs.discretizer">discretizer</a></code></li>
+<li><code><a title="common_funcs.explainedVar" href="#common_funcs.explainedVar">explainedVar</a></code></li>
+<li><code><a title="common_funcs.extract_equation" href="#common_funcs.extract_equation">extract_equation</a></code></li>
+<li><code><a title="common_funcs.extract_start_end" href="#common_funcs.extract_start_end">extract_start_end</a></code></li>
+<li><code><a title="common_funcs.figures_to_html" href="#common_funcs.figures_to_html">figures_to_html</a></code></li>
+<li><code><a title="common_funcs.find_low_variance" href="#common_funcs.find_low_variance">find_low_variance</a></code></li>
+<li><code><a title="common_funcs.flattenList" href="#common_funcs.flattenList">flattenList</a></code></li>
+<li><code><a title="common_funcs.highcorr_finder" href="#common_funcs.highcorr_finder">highcorr_finder</a></code></li>
+<li><code><a title="common_funcs.hypothesis_test" href="#common_funcs.hypothesis_test">hypothesis_test</a></code></li>
+<li><code><a title="common_funcs.hypothesis_test_batch_pars" href="#common_funcs.hypothesis_test_batch_pars">hypothesis_test_batch_pars</a></code></li>
+<li><code><a title="common_funcs.inWithReg" href="#common_funcs.inWithReg">inWithReg</a></code></li>
+<li><code><a title="common_funcs.jitter" href="#common_funcs.jitter">jitter</a></code></li>
+<li><code><a title="common_funcs.kruskalwallis2" href="#common_funcs.kruskalwallis2">kruskalwallis2</a></code></li>
+<li><code><a title="common_funcs.lag_plot" href="#common_funcs.lag_plot">lag_plot</a></code></li>
+<li><code><a title="common_funcs.merge_between" href="#common_funcs.merge_between">merge_between</a></code></li>
+<li><code><a title="common_funcs.movecol" href="#common_funcs.movecol">movecol</a></code></li>
+<li><code><a title="common_funcs.null_per_column" href="#common_funcs.null_per_column">null_per_column</a></code></li>
+<li><code><a title="common_funcs.ortho_rotation" href="#common_funcs.ortho_rotation">ortho_rotation</a></code></li>
+<li><code><a title="common_funcs.parse_sql_file" href="#common_funcs.parse_sql_file">parse_sql_file</a></code></li>
+<li><code><a title="common_funcs.pass_days" href="#common_funcs.pass_days">pass_days</a></code></li>
+<li><code><a title="common_funcs.percent_agg" href="#common_funcs.percent_agg">percent_agg</a></code></li>
+<li><code><a title="common_funcs.plot3D" href="#common_funcs.plot3D">plot3D</a></code></li>
+<li><code><a title="common_funcs.plot_ccf" href="#common_funcs.plot_ccf">plot_ccf</a></code></li>
+<li><code><a title="common_funcs.plotly_group_stack" href="#common_funcs.plotly_group_stack">plotly_group_stack</a></code></li>
+<li><code><a title="common_funcs.readableTime" href="#common_funcs.readableTime">readableTime</a></code></li>
+<li><code><a title="common_funcs.reduce_mem_usage" href="#common_funcs.reduce_mem_usage">reduce_mem_usage</a></code></li>
+<li><code><a title="common_funcs.remove_extra_none" href="#common_funcs.remove_extra_none">remove_extra_none</a></code></li>
+<li><code><a title="common_funcs.retrieve_name" href="#common_funcs.retrieve_name">retrieve_name</a></code></li>
+<li><code><a title="common_funcs.rle_encode" href="#common_funcs.rle_encode">rle_encode</a></code></li>
+<li><code><a title="common_funcs.sankey" href="#common_funcs.sankey">sankey</a></code></li>
+<li><code><a title="common_funcs.save_plotly_fig" href="#common_funcs.save_plotly_fig">save_plotly_fig</a></code></li>
+<li><code><a title="common_funcs.split_sql_expressions_sub" href="#common_funcs.split_sql_expressions_sub">split_sql_expressions_sub</a></code></li>
+<li><code><a title="common_funcs.subplot_plExpress" href="#common_funcs.subplot_plExpress">subplot_plExpress</a></code></li>
+<li><code><a title="common_funcs.unify_cols" href="#common_funcs.unify_cols">unify_cols</a></code></li>
+<li><code><a title="common_funcs.unique_list" href="#common_funcs.unique_list">unique_list</a></code></li>
+<li><code><a title="common_funcs.worldCloud_graph" href="#common_funcs.worldCloud_graph">worldCloud_graph</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.0</a>.</p>
+</footer>
+</body>
+</html>
