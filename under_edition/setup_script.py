@@ -1,18 +1,23 @@
-# ###### pdoc3
-# import glob, os
-# upath = 'D:\\Dropbox\\codes\\ds_toolbox_public\\dsToolbox\\'
-# udesc_path = 'D:\\Dropbox\\codes\\ds_toolbox_public\\dsToolbox\\doc\\'
+###### pdoc3
+import glob, os, sys
+upath = 'C:\\Users\\rnourzadeh\OneDrive - Alberta Pensions Services Corporation\\main_folder\\codes\\ds_toolbox_public\\dsToolbox'
+udesc_path = os.path.join(upath, 'doc')
 
-# os.chdir(upath)
-# for file in glob.glob("*.py"):
-#     print(file)
-#     os.system(f"pdoc3 --html --force -o {udesc_path} {file}")  
-# !pdoc3 --html --force -o /dbfs/tmp/ ../io_funcs.py
+ufiles=['ml_funcs.py', 'io_funcs.py', 'io_funcs_msql_local.py', 'nlp_llm_funcs.py', 'spark_funcs.py']
+os.chdir(upath)
+sys.path.insert(1, os.path.dirname(os.path.dirname(upath)))
+for ufile in  ufiles: ##glob.glob("*.py"):
+    file=os.path.join(upath, ufile)
+    print(file)
+    desc_file = os.path.join(udesc_path, ufile.replace('.py', '.html'))
+    if os.path.exists(desc_file):
+        os.remove(desc_file)
+    os.system(f"pdoc3 --html --force -o {udesc_path} {file}")  
 
 #####local system:
 # conda activate dstoolbox 
 # echo Y | pip uninstall dsToolbox  
-# cd C:\Users\rnourza\main_folder\codes\dsToolbox
+# cd C:\Users\rnourza\main_folder\codes\dsToolbox,
 # rmdir /s /q dist build dsToolbox.egg-info 
 
 # pip install .

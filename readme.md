@@ -7,6 +7,8 @@
 
 `dstoolbox` is a comprehensive data science toolbox built on top of popular open-source frameworks such as Pandas, Spark, Scikit-learn, and the Azure Storage Blob package. It offers abstracted functions for  machine learning (ML)  an ETL processes.
 
+See doc folder for more information, example: [ml_funcs.html](./dsToolbox/doc/ml_funcs.html)
+
 ## Features ✨
 
 - 🔄 **ETL Made Easy**: Simplifies Extract, Transform, and Load (ETL) operations with utility functions for various data sources, including cloud and local storage.

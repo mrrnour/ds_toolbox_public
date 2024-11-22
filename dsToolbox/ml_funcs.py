@@ -267,6 +267,19 @@ def regressors_template(random_state=10):
   return regressors2
 
 def ml_scores(y_model, scores_names):
+  """
+  Calculate various machine learning evaluation scores for a given model.
+  Parameters:
+  y_model (pd.DataFrame): DataFrame containing the true labels and predicted labels. 
+              It must have columns 'y_true' and 'y_pred'. If 'CV_Iteration' 
+              column is not present, it will be added with a default value 'All_data'.
+  scores_names (list): List of score names to be calculated. The score names should be keys 
+             in the `metric_dict` which maps to the corresponding scoring functions.
+  Returns:
+  pd.DataFrame: DataFrame containing the calculated scores for each cross-validation iteration, 
+          along with the mean and standard deviation of the scores across iterations, 
+          and the overall scores for the entire dataset.
+  """
   ##TODO: add micro, macro, weighted  to the scores see   classification_report 
   if 'CV_Iteration' not in y_model.columns:
     y_model['CV_Iteration']='All_data'
@@ -313,6 +326,26 @@ def ml_scores(y_model, scores_names):
   return scores
 
 def ml_scores_crossvalidate(**kwargs):
+    """
+    Perform cross-validation on a given estimator and return the results as a DataFrame.
+    This function uses scikit-learn's `cross_validate` to perform cross-validation on the provided estimator
+    and returns the results in a pandas DataFrame. The DataFrame includes the mean and standard deviation
+    of the cross-validation scores.
+    Parameters:
+    **kwargs: 
+      Keyword arguments to be passed to `sklearn.model_selection.cross_validate`. These typically include:
+      - estimator: The object to use to fit the data.
+      - X: The data to fit.
+      - y: The target variable to try to predict.
+      - scoring: A single string or a callable to evaluate the predictions on the test set.
+      - cv: Determines the cross-validation splitting strategy.
+      - return_train_score: Whether to include train scores.
+    Returns:
+    pandas.DataFrame:
+      A DataFrame containing the cross-validation results. The DataFrame includes the mean and standard
+      deviation of the cross-validation scores, with the keys 'CV_scores_Mean' and 'CV_scores_STD' respectively.
+      The 'fit_time' and 'score_time' columns are removed from the results.
+    """
     from sklearn.model_selection import cross_validate
     ##NOTE: you can't use cross_validate for early stopping
     ####scoring for cross_validate
@@ -359,15 +392,36 @@ def ml_prediction_sub_epochs(model):
 
   return df_epochs
 
-def ml_prediction(ml_model, 
-                    X,
-                    y,
-                    sk_fold,  ##[X_val, y_val]
-                    X_test=None,
-                    y_test=None,
-                    callbacks=None,
-                    verbose=False,
-                    ):
+def ml_prediction(ml_model, X, y, sk_fold, X_test=None, y_test=None, callbacks=None, verbose=False):
+  """
+  Perform machine learning prediction with cross-validation and optional early stopping.
+  Parameters:
+  -----------
+  ml_model : object
+    The machine learning model to be used for prediction. Can be a single model or a pipeline.
+  X : pandas.DataFrame
+    The feature matrix for training.
+  y : pandas.Series
+    The target vector for training.
+  sk_fold : object or list
+    Cross-validation splitting strategy. Can be an instance of StratifiedKFold, TimeSeriesSplit, or a list containing validation data.
+  X_test : pandas.DataFrame, optional
+    The feature matrix for testing. Default is None.
+  y_test : pandas.Series, optional
+    The target vector for testing. Default is None.
+  callbacks : list, optional
+    List of callback functions for early stopping. Default is None.
+  verbose : bool, optional
+    If True, print progress messages. Default is False.
+  Returns:
+  --------
+  y_model : pandas.DataFrame
+    DataFrame containing predictions and true values for each cross-validation iteration.
+  ml_models : list
+    List of fitted machine learning models for each cross-validation iteration.
+  df_epochs : pandas.DataFrame or None
+    DataFrame containing epoch information for models with early stopping, or None if early stopping is not used.
+  """
   from sklearn.pipeline import Pipeline
   from sklearn.model_selection import StratifiedKFold
   from sklearn.model_selection import TimeSeriesSplit
@@ -465,6 +519,31 @@ def ml_comparison(ml_models,
                   plot=True,
                   verbose=True
                   ):
+  """
+  Compare multiple machine learning models using cross-validation and return their performance metrics.
+  Parameters:
+  -----------
+  ml_models : list
+    List of machine learning models to be compared.
+  X : array-like or DataFrame
+    Feature matrix.
+  y : array-like or Series
+    Target vector.
+  scores_names : list
+    List of scoring metrics to evaluate the models.
+  sk_fold : int or cross-validation generator
+    Number of folds or cross-validation generator.
+  mapNames : dict, optional
+    Dictionary mapping model indices to custom names. Default is an empty dictionary.
+  plot : bool, optional
+    If True, plot the comparison results. Default is True.
+  verbose : bool, optional
+    If True, print detailed information during the process. Default is True.
+  Returns:
+  --------
+  metrics_all : DataFrame
+    DataFrame containing the performance metrics of all models.
+  """
   import warnings
   from sklearn.pipeline import Pipeline
   import datetime as dt
@@ -533,6 +612,18 @@ def classifer_performance_batch(y_model,
                                       # 'aucpr',
                                       ]
                         ):
+  """
+  Evaluate the performance of a classifier model using various metrics.
+  Parameters:
+  y_model (dict): A dictionary containing the model's predictions and probabilities.
+          Expected keys are 'y_true' for true labels and 'prob' for predicted probabilities.
+  map_lbls (dict, optional): A dictionary mapping class labels to their descriptions. Default is {0: 'Low Loss', 1: 'High Loss'}.
+  scores_names (list, optional): A list of score names to evaluate. Default is ['accuracy', 'recall', 'precision'].
+  Returns:
+  tuple: A tuple containing:
+    - scores (dict): A dictionary of evaluated scores based on the provided score names.
+    - confMats (dict): A dictionary containing confusion matrices for each class.
+  """
   confMats=plot_confusion_matrix2(y_model, map_lbls, outputFile=None)
 
   model_prob=y_model['prob'] #y_model[map_lbls.get(1)]
@@ -559,12 +650,27 @@ def classifer_performance_batch(y_model,
   scores= ml_scores(y_model, scores_names)
   return scores, confMats
 
-def ml_prediction_xValNest(ml_model,
-                              X,
-                              y,
-                              outter_fold,
-                              inner_fold,
-                              ):
+def ml_prediction_xValNest(ml_model, X, y, outter_fold, inner_fold):
+  """
+  Perform nested cross-validation for a given machine learning model.
+  Parameters:
+  ml_model : object
+    The machine learning model to be used for training and prediction.
+  X : pandas.DataFrame
+    The input features for the model.
+  y : pandas.Series
+    The target variable.
+  outter_fold : object
+    The outer cross-validation fold (e.g., KFold or StratifiedKFold).
+  inner_fold : object
+    The inner cross-validation fold (e.g., KFold or StratifiedKFold).
+  Returns:
+  y_model : pandas.DataFrame
+    DataFrame containing the predicted probabilities, predicted class, 
+    true class, and cross-validation iteration for each test sample.
+  df_epochs : pandas.DataFrame
+    DataFrame containing the epochs information for each cross-validation iteration.
+  """
   from xgboost import XGBClassifier
   y_model=pd.DataFrame([])   
   df_epochs=pd.DataFrame([])   
@@ -628,6 +734,22 @@ sns.set_style("darkgrid")
 sns.set(rc = {'figure.figsize':(30,20)})
 
 def ml_comparison_plot(metrics_all, outputFile=None):
+    """
+    Generates a comparison box plot for machine learning model metrics.
+    Parameters:
+    metrics_all (pd.DataFrame): DataFrame containing the metrics for different models.
+                  The DataFrame should have columns such as 'CV', 'model', 'elapsed_time', 'Feature_nos', and other metric columns.
+    outputFile (str, optional): Path to save the output plot. If None, the plot will not be saved. Default is None.
+    Returns:
+    None: The function displays the plot and optionally saves it to the specified file.
+    Notes:
+    - The function filters out rows where the 'CV' column contains "CV_scores_Mean", "CV_scores_STD", or "scores_all".
+    - If the 'model' column is present in the DataFrame, it is used as the hue for the plot; otherwise, 'CV' is used.
+    - The function creates a box plot using seaborn to compare the metrics.
+    - The x-axis labels are rotated for better readability.
+    - The plot is displayed with a grid and without outliers.
+    - If an output file path is provided, the plot is saved to that location.
+    """
     ##---plot comparison box plot
     df_tmp=metrics_all.loc[~metrics_all['CV'].isin(["CV_scores_Mean",
                                                     "CV_scores_STD",
@@ -666,6 +788,18 @@ def ml_comparison_plot(metrics_all, outputFile=None):
       plt.close() 
  
 def learning_curve_early_stopping(df_epochs, outputFile=None):
+  """
+  Plots the learning curve with early stopping for XGBoost models.
+  This function visualizes the training and validation performance over epochs
+  for cross-validation iterations, highlighting the point of early stopping.
+  Parameters:
+  df_epochs (pd.DataFrame): DataFrame containing the epochs data. It should include columns for epochs, 
+                CV_Iteration, and best_ntree, along with performance metrics for training 
+                and validation.
+  outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
+  Returns:
+  None
+  """
   ###https://machinelearningmastery.com/avoid-overfitting-by-early-stopping-with-xgboost-in-python/
 
   ##TODO: it is only for xgb now (best_ntree)
@@ -717,6 +851,21 @@ def learning_curve_early_stopping(df_epochs, outputFile=None):
     plt.close('all')
 
 def gainNlift(y, model_prob, pos_label, outputFile, groupNo=25):
+    """
+    Calculate and plot Gain and Lift charts for a given model's predictions.
+    
+    Parameters:
+    y (pd.Series): True labels.
+    model_prob (pd.Series): Predicted probabilities.
+    pos_label (int): The label of the positive class.
+    outputFile (list): List of file paths to save the Gain and Lift charts.
+    groupNo (int): Number of groups to divide the data into for the charts.
+    
+    Returns:
+    out (pd.DataFrame): DataFrame containing the gain and lift values.
+    df_gain_chart (pd.DataFrame): DataFrame for the gain chart.
+    df_lift_chart (pd.DataFrame): DataFrame for the lift chart.
+    """
     ## Lift/cumulative gains charts aren't a good way to evaluate a model (as it cannot be used for comparison between ml_models), and are instead a means of evaluating the results where your resources are finite. Either because there's a cost to action each result (in a marketing scenario) or you want to ignore a certain number of guaranteed voters, and only action those that are on the fence. Where your model is very good, and has high classification accuracy for all results, you won't get much lift from ordering your results by confidence.(https://stackoverflow.com/questions/42699243/how-to-build-a-lift-chart-a-k-a-gains-chart-in-python)
 
     ## gain Interpretation:
@@ -792,6 +941,27 @@ def gainNlift(y, model_prob, pos_label, outputFile, groupNo=25):
     return out, df_gain_chart, df_lift_chart
   
 def precision_recall_curve2(y, model_prob, pos_label, outputFile=None, **kwargs):   
+    """
+    Plots the precision-recall curve and calculates the area under the curve (AUC).
+    Parameters:
+    -----------
+    y : array-like of shape (n_samples,)
+      True binary labels.
+    model_prob : array-like of shape (n_samples,)
+      Estimated probabilities or decision function.
+    pos_label : int or str
+      The label of the positive class.
+    outputFile : str, optional
+      If provided, the plot will be saved to this file.
+    **kwargs : additional keyword arguments
+      Additional arguments passed to `precision_recall_curve`.
+    Returns:
+    --------
+    df_rp : pandas.DataFrame
+      DataFrame containing precision, recall, and thresholds.
+    idx : list
+      List of indices used for setting x-ticks on the plot.
+    """
     from sklearn.metrics import precision_recall_curve, auc
     
     model_precision, model_recall, thresholds = precision_recall_curve(y_true=y, probas_pred=model_prob, pos_label=pos_label, **kwargs)
@@ -873,7 +1043,33 @@ def precision_recall_curve2(y, model_prob, pos_label, outputFile=None, **kwargs)
 
     return df_rp.drop(['style'],axis=1), idx 
 
-def roc_curve2(y, model_prob, pos_label, outputFile, **kwargs):
+def roc_curve2(y, model_prob, pos_label, outputFile=None, **kwargs):
+    """
+    Generates and plots the ROC curve for a given set of true labels and predicted probabilities.
+    Parameters:
+    -----------
+    y : array-like
+      True binary labels.
+    model_prob : array-like
+      Target scores, can either be probability estimates of the positive class, confidence values, or non-thresholded measure of decisions.
+    pos_label : int or str
+      Label considered as positive and others are considered negative.
+    outputFile : str, optional
+      If provided, the plot will be saved to this file.
+    **kwargs : dict, optional
+      Additional keyword arguments to pass to `roc_auc_score`.
+    Returns:
+    --------
+    df_roc : pandas.DataFrame
+      DataFrame containing the false positive rate, true positive rate, and thresholds.
+    model_auc : float
+      Computed Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
+    Notes:
+    ------
+    - The function uses `roc_auc_score` from `sklearn.metrics` to compute the AUC.
+    - The ROC curve is plotted using `matplotlib`.
+    - The function can save the plot to a file if `outputFile` is provided.
+    """
     ##TODO: add **kwargs to roc_curve, after sepration augs
     from sklearn.metrics import roc_auc_score
 
@@ -926,6 +1122,31 @@ def roc_curve2(y, model_prob, pos_label, outputFile, **kwargs):
     return df_roc, model_auc
   
 def reliability_diagram(y, model_prob, pos_label, outputFile, **kwargs):
+    """
+    Plots a reliability diagram to visualize the calibration of a probabilistic classifier.
+    Parameters:
+    -----------
+    y : array-like of shape (n_samples,)
+      True labels of the data.
+    model_prob : array-like of shape (n_samples,)
+      Predicted probabilities of the positive class.
+    pos_label : int or str
+      The label of the positive class.
+    outputFile : str or None
+      The file path to save the plot. If None, the plot is not saved.
+    **kwargs : additional keyword arguments
+      Additional arguments to pass to the `calibration_curve` function.
+    Returns:
+    --------
+    prob_true : array-like of shape (n_bins,)
+      The true probabilities for each bin.
+    prob_pred : array-like of shape (n_bins,)
+      The predicted probabilities for each bin.
+    prob_true_norm : array-like of shape (n_bins,)
+      The true probabilities for each bin after normalization.
+    prob_pred_norm : array-like of shape (n_bins,)
+      The predicted probabilities for each bin after normalization.
+    """
     from sklearn.calibration import calibration_curve
     prob_true, prob_pred= calibration_curve(y_true=y, y_prob=model_prob, n_bins=50, normalize=False, **kwargs)  # pos_label=pos_label, 
     prob_true_norm, prob_pred_norm= calibration_curve(y_true=y, y_prob=model_prob,  n_bins=50,normalize=True, **kwargs)  # pos_label=pos_label, 
@@ -947,6 +1168,17 @@ def reliability_diagram(y, model_prob, pos_label, outputFile, **kwargs):
     return prob_true, prob_pred, prob_true_norm, prob_pred_norm
 
 def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
+  """
+  Plots confusion matrices for model predictions, optionally saving the plot to a file.
+  Parameters:
+  y_model (pd.DataFrame): DataFrame containing the true labels and predicted labels. 
+              It should have columns 'y_true' and 'y_pred'. Optionally, it can have a 'CV_Iteration' column for cross-validation iterations.
+  map_lbls (dict): Dictionary mapping the original labels to the desired labels for the confusion matrix.
+  outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
+  ncol (int, optional): Number of columns for the subplot grid. Default is 3.
+  Returns:
+  pd.Series: A series of confusion matrices, indexed by the cross-validation iteration or 'All_data' if no cross-validation is used.
+  """
   ##y_model=pd.concat([y_true, y_pred],axis=1)
   
   from sklearn.metrics import confusion_matrix
@@ -1005,6 +1237,21 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
   return confMats
 
 def feature_importance_batch(umodel, X, y):
+    """
+    Calculate and plot feature importance for a given model and dataset.
+    Parameters:
+    umodel (object): The machine learning model or pipeline containing the model.
+    X (pd.DataFrame): The input features for the model.
+    y (pd.Series or np.array): The target variable.
+    Returns:
+    tuple: A tuple containing:
+      - feature_importance (pd.Series or None): The importance of each feature, or None if the model is not tree-based.
+      - sel_features (list): A list of selected features based on their importance.
+    Notes:
+    - This function currently supports only tree-based models, specifically XGBoost.
+    - For XGBoost models, the function fits the model, plots the feature importance, and returns the importance values.
+    - If the model is not tree-based, the function returns None for feature importance and all columns of X as selected features.
+    """
     from sklearn.pipeline import Pipeline
 
     umodel1 = umodel[-1] if isinstance(umodel, Pipeline) else umodel
@@ -1052,6 +1299,19 @@ def feature_importance_batch(umodel, X, y):
     return feature_importance, sel_features
 
 def pdp_plot_batch(X, umodel, sel_features):
+    """
+    Generate partial dependence plots (PDP) and individual conditional expectation (ICE) plots for a given model and selected features.
+    Parameters:
+    X : array-like or DataFrame of shape (n_samples, n_features)
+      The data to use for generating the plots.
+    umodel : estimator object
+      A fitted scikit-learn estimator (model) for which the partial dependence plots are to be computed.
+    sel_features : list of str or list of int
+      The features for which the partial dependence plots are to be generated. These can be specified by their names or column indices.
+    Returns:
+    None
+      This function does not return any value. It generates and displays the partial dependence plots and individual conditional expectation plots.
+    """
     # print('The scikit-learn version is {}.'.format(sklearn.__version__))
     from sklearn.inspection import PartialDependenceDisplay
 
@@ -1082,6 +1342,18 @@ def pdp_plot_batch(X, umodel, sel_features):
     )
 
 def shap_plots_batch(X, y, umodel, test_size=0.2, kmeans=None, random_state=100):
+    """
+    Generates SHAP plots for a given model and dataset.
+    Parameters:
+    X (pd.DataFrame or np.ndarray): Feature matrix.
+    y (pd.Series or np.ndarray): Target vector.
+    umodel (object): The machine learning model to be used.
+    test_size (float, optional): Proportion of the dataset to include in the test split. Default is 0.2.
+    kmeans (int, optional): Number of clusters for KMeans summarization. If None, the whole training set is used. Default is None.
+    random_state (int, optional): Random seed for reproducibility. Default is 100.
+    Returns:
+    shap_values (list): SHAP values for the test set.
+    """
     import shap
     from sklearn.model_selection import RandomizedSearchCV, train_test_split
 
@@ -1621,6 +1893,19 @@ def class_weight2(uclass_weight,y):
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 def unify_cols(df1, df2, df1_name, df2_name):
+    """
+    Unifies the columns of two DataFrames by ensuring both DataFrames have the same columns.
+    If one DataFrame has columns that the other does not, those columns are added to the other DataFrame with default values of 0.
+
+    Parameters:
+    df1 (pd.DataFrame): The first DataFrame.
+    df2 (pd.DataFrame): The second DataFrame.
+    df1_name (str): The name of the first DataFrame (used for printing messages).
+    df2_name (str): The name of the second DataFrame (used for printing messages).
+
+    Returns:
+    tuple: A tuple containing the two DataFrames with unified columns (df1, df2).
+    """
     df1.index=df2.index
     def unify_cols__sub(df1, df2, df1_name, df2_name):
         diff1=np.setdiff1d(df1.columns, df2.columns)
@@ -1635,6 +1920,25 @@ def unify_cols(df1, df2, df1_name, df2_name):
     return df1, df2
 
 def binarizer(tags):
+  """
+  Convert a list of tags into a binary matrix representation.
+
+  Parameters:
+  tags (list of list of str): A list where each element is a list of tags.
+
+  Returns:
+  pd.DataFrame: A DataFrame with binary values indicating the presence of tags.
+          Each column represents a unique tag, and each row corresponds
+          to the input list of tags.
+  
+  Example:
+  >>> tags = [['tag1', 'tag2'], ['tag2', 'tag3'], ['tag1']]
+  >>> binarizer(tags)
+     tag1  tag2  tag3
+  0     1     1     0
+  1     0     1     1
+  2     1     0     0
+  """
   import pandas as pd
   from sklearn.preprocessing import MultiLabelBinarizer
   tags_seri = pd.Series(tags)
@@ -1677,6 +1981,17 @@ def split_multiLabel_data__index(X, y, test_size, random_state=None):
     return train_indexes,test_indexes
 
 def split_multiLabel_data(df_samples2, binarized_tags, random_state=None):
+        """
+        Splits multi-label data into training, evaluation, and test sets.
+        Parameters:
+        df_samples2 (pd.DataFrame): DataFrame containing the samples to be split.
+        binarized_tags (pd.DataFrame): DataFrame containing the binarized tags corresponding to the samples.
+        random_state (int, optional): Random seed for reproducibility. Defaults to None.
+        Returns:
+        tuple: A tuple containing:
+          - pd.DataFrame: DataFrame with an additional 'Set' column indicating the split ('train', 'eval', 'test').
+          - pd.DataFrame: DataFrame of binarized tags with an additional 'Set' column indicating the split.
+        """
         binarized_tags_lst=binarized_tags.apply(lambda x: x.tolist(), axis=1)
         
         train_rows, evalNtest_rows= split_multiLabel_data__index(df_samples2.to_numpy(),
@@ -1700,6 +2015,29 @@ def split_multiLabel_data(df_samples2, binarized_tags, random_state=None):
         return df_samples2, binarized_tags
 
 def evaluate_multiLabel(y_pred, y_true):
+    """
+    Evaluate multi-label classification performance.
+    This function evaluates the performance of a multi-label classification model by calculating various metrics such as recall, precision, accuracy, AUC, F1 score, kappa, and MCC. It also computes macro, micro, and weighted averages of these metrics.
+    Parameters:
+    -----------
+    y_pred : pd.DataFrame
+      Predicted labels for the multi-label classification.
+    y_true : pd.DataFrame
+      True labels for the multi-label classification.
+    Returns:
+    --------
+    model_performance : dict
+      A dictionary containing:
+      - 'yScore': pd.DataFrame with calculated metrics for each label and overall averages.
+      - 'accuracy_overall': float, accuracy score of selecting entire sets of tags.
+    y_model : pd.DataFrame
+      DataFrame containing the true and predicted labels along with the cross-validation iteration information.
+    Notes:
+    ------
+    - The function uses micro, macro, and weighted averages for evaluation.
+    - The overall accuracy is calculated using the subset accuracy method.
+    - The function assumes that the input dataframes `y_pred` and `y_true` have the same structure and columns.
+    """
     y_pred, y_true=unify_cols(y_pred, y_true, 'y_pred', 'y_true')
     y_model=pd.concat([y_true.melt(value_name='y_true').set_index('variable'),
                     y_pred.melt(value_name='y_pred').set_index('variable')],
