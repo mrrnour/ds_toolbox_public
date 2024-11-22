@@ -2,18 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.10.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.0">
 <title>common_funcs API documentation</title>
-<meta name="description" content="" />
-<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
-<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
-<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
-<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
-<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
 <style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
-<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+})</script>
 </head>
 <body>
 <main>
@@ -22,1454 +25,6 @@
 <h1 class="title">Module <code>common_funcs</code></h1>
 </header>
 <section id="section-intro">
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">import numpy as np
-import pandas as pd
-
-import time
-import re
-
-import matplotlib.pyplot as plt
-# from matplotlib.ticker import MultipleLocator
-import plotly.express as px
-
-#import pydotplus
-import pylab as pl
-import seaborn as sns
-import os,sys
-import datetime as dt
-import math
-
-import dsToolbox.io_funcs as io_funcs
-import plotly.express as px
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# -------------------------Basic functions-------------------------------
-def inWithReg(regLst, LstAll):
-    &#34;&#34;&#34; search regualr expression list in a list
-
-    Parameters:
-    ----------
-    regLst (list of strings with regx)
-
-    LstAll (list of strings to be searched for regLst
-
-    returns:
-    -------
-    out: the subset of LstAll which met contains any subset of regLst
-    
-    ind: a list of True/False values of existence LstAll in any subset of regLst
-
-    Example:
-    ---------
-        regLst=[&#39;.vol_flag$&#39;,&#39;fefefre&#39;,&#39;_date&#39;]
-        LstAll=[&#39;bi_alt_account_id&#39;, &#39;snapshot_date&#39;, &#39;snapshot_year&#39;,&#39;tv_vol_flag&#39;, &#39;phone_vol_flag&#39;]
-        out,ind=inWithReg(regLst,LstAll)
-        out=[&#39;tv_vol_flag&#39;, &#39;phone_vol_flag&#39;, &#39;snapshot_date&#39;]
-        ind=[False,  True, False,  True,  True]
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    out = []
-    if type(regLst) != list:
-        regLst = [regLst]
-    for i in regLst:
-        tmp = list(filter(re.compile(i).search, LstAll))
-        out = out + tmp
-    ind = np.in1d(LstAll, out)
-    return out, ind
-
-def retrieve_name(var):
-    import inspect
-    &#34;&#34;&#34;Getting the name of a variable as a string
-    Ref: https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string 
-    &#34;&#34;&#34;
-    callers_local_vars = inspect.currentframe().f_back.f_locals.items()
-    return [var_name for var_name, var_val in callers_local_vars if var_val is var][0]
-
-def flattenList(ulist):
-    &#34;&#34;&#34; makes a flat list out of list of lists
-
-    Parameters:
-    ----------
-    ulist: a list of nested lists
-    
-    returns:
-    -------
-    results  ulist: a list of flatten ulist
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    results = []
-    for rec in ulist:
-        if isinstance(rec, list):
-            results.extend(rec)
-            results = flattenList(results)
-        else:
-            results.append(rec)
-    return results
-
-def unique_list(seq):
-    &#34;&#34;&#34; Get unique values from a list seq with saving the order of list elements
-    Parameters:
-    ----------
-    seq: a list with duplicates elements
-    -------
-    out  (list): 
-    a list with unqiue elements
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    seen = set()
-    seen_add = seen.add
-    out=[x for x in seq if not (x in seen or seen_add(x))]
-    return out
-  
-def check_timestamps(start, end, format_required=&#39;%Y-%m-%d&#39;):
-    &#39;&#39;&#39;validate the format required for the query&#39;&#39;&#39;
-    try:
-        check_start = type(time.strptime(start, format_required))
-        check_end = type(time.strptime(end, format_required))
-        if (check_start.__name__==&#39;struct_time&#39;) &amp; (check_end.__name__==&#39;struct_time&#39;):
-            return True
-    except ValueError as e:
-        print(e)
-
-def check_path(path):
-    &#34;&#34;&#34;Raise exception if the file path doesn&#39;t exist.&#34;&#34;&#34;
-    import argparse
-    if &#39;~&#39; in path:
-        path = os.path.expanduser(path)
-    if not os.path.exists(path):
-        msg = &#34;File (%s) not found!&#34; % path
-        raise argparse.ArgumentTypeError(msg)
-    return path
-
-def pass_days(start_date, end_date):
-    ##TODO: add comment
-    import pandas as pd
-
-    # if (start_date is None)|(end_date is None)| (pd.isnull(start_date))| (pd.isnull(end_date)):
-    #   return None
-    month_year_index = (
-        pd.date_range(start=start_date, end=end_date, freq=&#34;D&#34;).to_period(&#34;Q&#34;).unique()
-    )
-    # print(start_date, end_date, month_year_index)
-
-    pass_days_dict = {}
-    for month_year in month_year_index:
-        days_in_month = (
-            min(end_date, month_year.end_time)
-            - max(start_date, (month_year.start_time))
-        ).days + 1
-        pass_days_dict[month_year] = days_in_month
-
-    result_series = pd.Series(pass_days_dict)
-    qs = &#34;Q&#34; + result_series.index.quarter.astype(str)
-    result_series = result_series.groupby(qs).sum()
-    # print(result_series)
-    return result_series.fillna(0)
-
-def copy_ymls(dsToolbox, platform=&#39;databricks&#39;, destination=None):
-  ##TODO: add comments:  
-  import sys, os
-  from dsToolbox import io_funcs
-  upath=dsToolbox.__file__
-  if destination==None:
-    destination=os.getcwd()
-  for ufile in [&#39;config.yml&#39;, &#39;sql_template.yml&#39;]:
-    ufile_src=os.path.join(os.path.dirname(upath), ufile)
-    ufile_desc=os.path.join(destination, ufile)
-    ufile_desc_tmp=os.path.join(destination, f&#39;.{ufile}.crc&#39;)
-    print(f&#34;copying {ufile_src} ---&gt; {ufile_desc}&#34;)
-    if platform==&#39;databricks&#39;:
-      dbutils=io_funcs.get_dbutils()
-      dbutils.fs.cp(f&#39;file://{ufile_src}&#39;, f&#39;file://{ufile_desc}&#39;)
-      dbutils.fs.rm(f&#39;file://{ufile_desc_tmp}&#39;)
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# --------------------------------Date time -------------------------------
-def readableTime(time):
-    &#34;&#34;&#34; convert time to day, hour, minutes, seconds
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    day = time // (24 * 3600)
-    time = time % (24 * 3600)
-    hour = time // 3600
-    time %= 3600
-    minutes = time // 60
-    time %= 60
-    seconds = time
-    return (day, hour, minutes, seconds)
-
-def datesList(year_range=[2018,2099],
-              firstDate=None,
-              lastDate=dt.datetime.now().date()):
-  &#34;&#34;&#34;generates a list of first dates of months within a given range of years
-    Params:       
-      year_range(list):  list of first and the last year+1                               
-      firstDate (string or datetime): if it is not given, it will be the first day and month of year_range[0]
-      lastDate (string or datetime): if it is not given,  it will be the current date
-    Returns: python list 
-  &#34;&#34;&#34; 
-  import itertools  
-  import datetime as dt
-
-  # print(firstDate)
-  # print(lastDate)
-  yrs=[str(i) for i in range(year_range[0], year_range[1])]
-  months=[str(i).zfill(2) for i in range(1,13)]
-  udates=[&#39;-&#39;.join(udate) for udate in itertools.product(yrs,months,[&#39;01&#39;])]
-
-  if isinstance(firstDate, str):
-    print(firstDate)
-    firstDate   = dt.datetime.strptime(firstDate, &#34;%Y-%m-%d&#34;).date()
-  elif isinstance(firstDate,pd._libs.tslibs.timestamps.Timestamp):
-    firstDate   =firstDate.date()
-  if isinstance(lastDate, str):
-    lastDate     = dt.datetime.strptime(lastDate, &#34;%Y-%m-%d&#34;).date()  
-  elif isinstance(lastDate,pd._libs.tslibs.timestamps.Timestamp):
-    lastDate   =lastDate.date()
-
-  if firstDate is None:
-    firstDate=dt.datetime.strptime(udates[0], &#39;%Y-%m-%d&#39;).date() 
-  if lastDate is None:
-    lastDate=dt.datetime.strptime(udates[-1], &#39;%Y-%m-%d&#39;).date() 
-
-  if udates[-1]!=lastDate:
-    udates.append(lastDate.strftime(&#34;%Y-%m-%d&#34;))
-  if udates[0]!=firstDate:
-    udates[0]=firstDate.strftime(&#34;%Y-%m-%d&#34;)
-    # udates.insert(0,firstDate.strftime(&#34;%Y-%m-%d&#34;))
-  
-  udates=[ii for ii in udates if (dt.datetime.strptime(ii, &#39;%Y-%m-%d&#39;).date()&gt;=firstDate)&amp;\
-                                 (dt.datetime.strptime(ii, &#39;%Y-%m-%d&#39;).date()&lt;=lastDate)]
-  # print(udates)
-  return udates
-
-def extract_start_end(udates, ii):
-  import datetime as dt
-  start_date=udates[ii]
-  end_date=(dt.datetime.strptime(udates[ii+1], &#39;%Y-%m-%d&#39;).date()- dt.timedelta(days=1)).strftime(&#34;%Y-%m-%d&#34;)
-  print(start_date,&#39; to &#39;,end_date ,&#34;:&#34;)  
-  return start_date, end_date
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# -------------------------Panadas functions------------------------------- 
-def movecol(df, cols_to_move=[], ref_col=&#39;&#39;, place=&#39;After&#39;):
-    &#34;&#34;&#34; Reorders a panda dataframe columns
-    Parameters:
-    ----------
-    df (pandas dataframe) 
-    cols_to_move:                          list of columns to move
-    ref_col(string):                       name of a specific column to move  cols_to_move columns to after/before it
-    place(string) [options:&#34;After&#34;,&#34;Before&#34;]: cols_to_move columns will be move before/after it
-    
-    returns:
-    -------
-    df (pandas dataframe)  reordered dataframe
-
-    -------
-    Author:    https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5
-    &#34;&#34;&#34; 
-    cols = df.columns.tolist()
-    if place == &#39;After&#39;:
-        seg1 = cols[:list(cols).index(ref_col) + 1]
-        seg2 = cols_to_move
-    if place == &#39;Before&#39;:
-        seg1 = cols[:list(cols).index(ref_col)]
-        seg2 = cols_to_move + [ref_col]
-    
-    seg1 = [i for i in seg1 if i not in seg2]
-    seg3 = [i for i in cols if i not in seg1 + seg2]
-    
-    return(df[seg1 + seg2 + seg3]) 
-
-def merge_between(df1, df2, groupCol, closed=&#34;both&#34;):
-    #   df1=df_pi_dic_wide
-    #   df2=df_cases_edited
-    #   groupCol=&#39;Vessel&#39;
-
-  df_out=pd.DataFrame(columns=df1.columns.tolist()+[&#39;Index_no&#39;])
-  for name, group_df in df1.groupby([groupCol]):
-    print(name)
-    df2_sub=df2.loc[df2[groupCol]==name]
-
-    #     https://stackoverflow.com/questions/68792511/efficient-way-to-merge-large-pandas-dataframes-between-two-dates
-    #     https://stackoverflow.com/questions/31328014/merging-dataframes-based-on-date-range
-    #     https://stackoverflow.com/questions/69824730/check-if-value-in-pandas-dataframe-is-within-any-two-values-of-two-other-columns
-    #     https://stackoverflow.com/questions/43593554/merging-two-dataframes-based-on-a-date-between-two-other-dates-without-a-common
-    #     https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.from_arrays.html
-    i = pd.IntervalIndex.from_arrays(df2_sub[&#39;Start&#39;],
-                                     df2_sub[&#39;End&#39;], 
-                                     closed=closed
-                                               )
-    group_df[&#39;Index_no&#39;]=i.get_indexer(group_df[&#39;Date&#39;])
-
-    df_out=pd.concat([group_df, df_out],axis=0)
-  
-  return df_out
-
-def cellWeight(df, axis=0):
-  if axis==0:
-    out=df.div(df.sum(axis=0), axis=1)
-  else:
-    out=df.div(df.sum(axis=1), axis=0)
-  return out
-
-def compare_dfs(df1,
-                df2,
-                df_names=[&#39;df1&#39;,&#39;df2&#39;]):
-
-    uset=set(df1.columns).intersection(set(df2.columns))
-    different_dtypes=[i  for i in uset if df1[i].dtype!=df2[i].dtype]
-
-    if len(different_dtypes)!=0:
-      print(&#34;Same columns have different data types:\n\t df1:\n&#34;, str(df1[different_dtypes].dtypes),&#34;\n\t df2:\n&#34;,str(df2[different_dtypes].dtypes))
-      convert_dict = {i:df1[i].dtype for i in different_dtypes} 
-      df2 = df2.astype(convert_dict)
-      print(&#34;df2 dtypes match with df1 dtypes&#34;)
-      
-    ##TOdo: debug it when there are columnd with same names in a df
-    print(f&#34;shape {df_names[0]}:&#34;,str(df1.shape))
-    print(f&#34;shape {df_names[1]}:&#34;,str(df2.shape))
-    print(f&#34;-----------------------------------------&#34;)    
-
-    idx_only_df1=df1[~df1.index.isin(df2.index)]
-    idx_only_df2=df2[~df2.index.isin(df1.index)]
-
-    print(f&#34;only rows in {df_names[0]}...&#34;)
-    txt=idx_only_df1 if idx_only_df1.size!=0 else &#34;Empty&#34;
-    print(txt)
-
-    print(f&#34;only rows in {df_names[1]}...&#34;)
-    txt=idx_only_df2 if idx_only_df2.size!=0 else &#34;Empty&#34;
-    print(txt)
-    print(f&#34;-----------------------------------------&#34;)    
-
-    col_only_df1=df1.loc[:,~df1.columns.isin(df2.columns)]
-    col_only_df2=df2.loc[:,~df2.columns.isin(df1.columns)]
-
-    print(f&#34;only columns in {df_names[0]}...&#34;)
-    txt=col_only_df1 if col_only_df1.size!=0 else &#34;Empty&#34;
-    print(txt)
-
-    print(f&#34;only columns in {df_names[1]}...&#34;)
-    txt=col_only_df2 if col_only_df2.size!=0 else &#34;Empty&#34;
-    print(txt)
-    print(f&#34;-----------------------------------------&#34;)        
-
-    common_cols=df1.columns[df1.columns.isin(df2.columns)]
-    common_idx=df1.index[df1.index.isin(df2.index)]
-
-    df1_common=df1.loc[common_idx, common_cols]
-    df2_common=df2.loc[common_idx, common_cols]
-
-    df1_common_sub1=df1_common.select_dtypes(include=[&#39;number&#39;])
-    df2_common_sub1=df2_common.select_dtypes(include=[&#39;number&#39;])
-    common_bol_sub1=(abs(df1_common_sub1-df2_common_sub1).fillna(0))&lt;.001
-
-    df1_common_sub2=df1_common.select_dtypes(exclude=[&#39;number&#39;])
-    df2_common_sub2=df2_common.select_dtypes(exclude=[&#39;number&#39;])
-    common_bol_sub2=df1_common_sub2.fillna(&#39;&#39;)==df2_common_sub2.fillna(&#39;&#39;)
-
-    common_bol=pd.concat([common_bol_sub1,common_bol_sub2],axis=1)
-
-    #print(&#34;debug&#34;)
-    #print(all(common_bol_sub1[debugcol]))
-    #debugcol=&#39;co2_emission_t&#39;
-    #print(abs(df1_common_sub1[debugcol]-df2_common_sub1[debugcol]))    
-    #print(pd.concat([df1_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol,&#39;machine_energy_usage&#39;]],
-    #                 df2_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol]]
-     #              ],axis=1)
-    #     )
-    
-    ###TOOD: all(common_bol) leads to the wrong result why???
-    ##tmp=all((common_bol).all())
-    df1N2per=round(common_bol.sum()/common_bol.shape[0]*100,0).sort_values()  
-    if  (all(df1N2per==100))&amp;(df1_common.size!=0):
-        print(&#34;common rows and columns have same values, shape=&#34;,str(df1_common.shape))
-        df1N2per=100
-        df1N2diff=None
-    elif (all(df1N2per==100))&amp;(df1_common.size==0):
-        print(&#34;no Common values- Hint: unify indexes&#34;)
-        df1N2per=0
-        df1N2diff=df1_common.compare(df2_common)
-    else: 
-        print(&#34;Percentage of common values:\n&#34;,df1N2per)
-        idx=df1N2per!=100
-        df1_common_diff=df1_common[df1N2per[idx].index.tolist()]
-        df2_common_diff=df2_common[df1N2per[idx].index.tolist()]
-        df1N2diff=df1_common_diff.compare(df2_common_diff)
-        df1N2diff=df1N2diff.rename(columns={&#39;self&#39;:df_names[0],&#39;other&#39;:df_names[1]},level=1)
-        print(df1N2diff)
-      
-    df1_out={&#34;only rows in df1&#34;:idx_only_df1,
-             &#34;only columns in df1&#34;:col_only_df1,
-            }
-
-    df2_out={&#34;only rows in df2&#34;:idx_only_df2,
-         &#34;only columns in df2&#34;:col_only_df2,
-        }
-    
-    df1N2common={&#34;Percentage of common values&#34;:df1N2per,
-                 &#34;comparing common columns with diffrenet values&#34;:df1N2diff,
-                }
-    
-    return df1_out, df2_out, df1N2common
-
-def cat2no(df):
-    &#34;&#34;&#34; converts all categorical and object features of a dataframe (df) to cat.code
-
-    Parameters:
-    ----------
-    df(pandas dataframe) with [sample*features] format
-
-    thresh(number): thersold value for variance of features
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    cat_columns = df.select_dtypes(include=[&#39;object&#39;]).columns.tolist()+df.select_dtypes(include=[&#39;category&#39;]).columns.tolist()
-    if len(cat_columns) != 0:
-        print(&#39;Categorical columns...\n&#39;+cat_columns)
-        df[cat_columns] = df[cat_columns].apply(
-            lambda x: x.astype(&#39;category&#39;).cat.codes)
-    return df
-
-def reduce_mem_usage(df, obj2str_cols=&#39;all_columns&#39;, str2cat_cols=&#39;all_columns&#39;, verbose=False):
-  &#34;&#34;&#34; iterate through all the columns of a dataframe and modify the data type
-      to reduce memory usage.        
-  &#34;&#34;&#34;
-  ## https://www.kaggle.com/code/konradb/ts-4-sales-and-demand-forecasting
-  
-  start_mem = df.memory_usage().sum() / 1024**2
-  print(&#39;Memory usage of dataframe is {:.2f} MB&#39;.format(start_mem))
-  
-  from pandas.api.types import is_datetime64_any_dtype as is_datetime
-
-  for col in df.columns:
-    col_type = df[col].dtype
-
-    if ((str(col_type)[:3]==&#39;float&#39;) |(str(col_type)[:3]==&#39;int&#39;)): ##((col_type != object) &amp; ~(is_datetime(df[col])) &amp; (col_type!=&#39;str&#39;)):
-      if verbose: print(col, &#34;: compressing numeric column&#34;) 
-      c_min = df[col].min()
-      c_max = df[col].max()
-      if str(col_type)[:3] == &#39;int&#39;:
-        if c_min &gt; np.iinfo(np.int8).min and c_max &lt; np.iinfo(np.int8).max:
-            df[col] = df[col].astype(np.int8)
-        elif c_min &gt; np.iinfo(np.int16).min and c_max &lt; np.iinfo(np.int16).max:
-            df[col] = df[col].astype(np.int16)
-        elif c_min &gt; np.iinfo(np.int32).min and c_max &lt; np.iinfo(np.int32).max:
-            df[col] = df[col].astype(np.int32)
-        elif c_min &gt; np.iinfo(np.int64).min and c_max &lt; np.iinfo(np.int64).max:
-            df[col] = df[col].astype(np.int64)  
-      else:
-        if c_min &gt; np.finfo(np.float16).min and c_max &lt; np.finfo(np.float16).max:
-            df[col] = df[col].astype(np.float16)
-        elif c_min &gt; np.finfo(np.float32).min and c_max &lt; np.finfo(np.float32).max:
-            df[col] = df[col].astype(np.float32)
-        else:
-            df[col] = df[col].astype(np.float64)
-
-    if  (col_type==object) &amp; ((col in obj2str_cols)| (obj2str_cols==&#39;all_columns&#39;)) : 
-      df[col] = df[col].astype(&#39;str&#39;)
-      obj2str=True
-    else:
-      obj2str=False
-
-    if ((str(col_type)[:3]==&#39;str&#39;)| obj2str) &amp;  ((col in str2cat_cols)| (str2cat_cols==&#39;all_columns&#39;)) :     ##~(is_datetime(df[col])):
-      df[col] = df[col].astype(&#39;category&#39;)
-      if (verbose) &amp; (~obj2str):
-        print(col, f&#34;: string --&gt; category&#34;)
-      if (verbose) &amp; (obj2str):
-        print(col, f&#34;: object --&gt; string --&gt; category&#34;)
-
-  end_mem = df.memory_usage().sum() / 1024**2
-  print(&#39;Memory usage after optimization is: {:.2f} MB&#39;.format(end_mem))
-  print(&#39;Decreased by {:.1f}%&#39;.format(100 * (start_mem - end_mem) / start_mem))
-  
-  return df
-
-def null_per_column(df):
-    null_per = df.isnull().sum() / df.shape[0] * 100
-    null_per = pd.DataFrame(null_per, columns=[&#34;null_percent&#34;])
-    null_per = (
-        null_per.reset_index()
-        .sort_values(by=[&#34;null_percent&#34;, &#34;index&#34;], ascending=False)
-        .set_index(&#34;index&#34;)
-    )
-    return null_per
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# -------------------------EDA, Statisitcal analysis-----------------------     
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
-from sklearn.feature_selection import chi2
-from sklearn.feature_selection import SelectPercentile
-from sklearn.feature_selection import SelectFpr
-from sklearn.feature_selection import SelectFdr
-from sklearn.feature_selection import SelectFwe
-from sklearn.feature_selection import f_classif
-
-def compare_univar_fea(X, y, univar_fea_lst ):   
-    ##TODO: refactor it: 
-    arr = np.empty((0,X.shape[1]), float)
-    for univar in univar_fea_lst:
-        print(univar)
-        uFunc=eval(univar)
-        score = uFunc(X, y)
-        if univar in [&#39;mutual_info_classif&#39;,&#39;mutual_info_regression&#39;]:
-          score=score
-        elif univar in [&#39;chi2&#39;]:
-          score=score[1]
-        elif univar in [&#39;SelectFdr&#39;,&#39;SelectFdr&#39;,&#39;SelectFwe&#39;,&#39;f_classif&#39;]:
-          ###TODO: correct it:
-          selector = SelectKBest(uFunc,k=&#39;all&#39;)
-          selector.fit(X,y)
-          score = (selector.pvalues_)
-    #     cols = selector.get_support(indices=True)
-
-        if (score is  None):
-            score=np.empty(X.shape[1]) 
-            score[:]=np.nan
-        arr = np.append(arr,[score] , axis=0)
-    scores=pd.DataFrame(data=arr,index=univar_fea_lst,columns=X.columns)
-    scores_long = pd.melt(scores.T.dropna(how=&#39;all&#39;).reset_index().rename(columns={&#34;index&#34;: &#34;feature&#34;}),id_vars=[&#39;feature&#39;],value_name=&#39;P_value&#39;, var_name=&#39;Feature_selection_Method&#39;)
-
-    fig, ax = plt.subplots(figsize = (25,15))
-    uplot   = sns.scatterplot(y=&#34;feature&#34;,
-                          x=&#34;P_value&#34;,
-                          hue=&#34;Feature_selection_Method&#34;,
-                          style=&#39;Feature_selection_Method&#39;,
-                          size=&#39;Feature_selection_Method&#39;,
-                          data=scores_long,
-                          ax=ax
-                          ) 
-    cutter_values=[.05]
-    for con,xl in enumerate(cutter_values):
-      ax.axvline(x=xl, color=&#39;red&#39;, linestyle=&#39;--&#39;)
-      ax.text(xl, con+5, f&#39;P_value={xl}&#39;,rotation=90, size=10)
-
-    ## plt.xticks(rotation=90)
-    plt.show()
-    plt.close()
-
-    return scores.T
-
-def hypothesis_test(
-                    df,
-                    par,
-                    group,
-                    group_names,
-                   ):
-  import researchpy as rp
-  
-  df[group]=df[group].astype(&#39;bool&#39;)
-  X1=df[par][df[group]]
-  X2=df[par][~df[group]]
-  
-  group1_name, group2_name= group_names[0], group_names[1]
-  des, res =rp.ttest(X1, X2,
-                     group1_name= group1_name,
-                     group2_name= group2_name,
-                     equal_variances= False,
-                     paired= False,
-                     #correction= None
-                    )
-  res=res.set_index(res.columns[0])
-  res.columns=[par]
-
-  if res.loc[&#39;Two side test p value = &#39;][0]!=0:
-    txt=f&#34;{par}: There is no difference between {group1_name} and {group2_name}&#34;
-    txt2=&#39;no difference&#39;
-  elif (res.loc[&#39;Two side test p value = &#39;][0]==0) &amp; (res.loc[&#39;Difference &lt; 0 p value = &#39;][0]==0):
-    txt=f&#34;{par}: {group1_name} is lower &#34; #than {group2_name}&#34;
-    txt2=&#39;lower&#39;
-  elif  (res.loc[&#39;Two side test p value = &#39;][0]==0) &amp; (res.loc[&#39;Difference &gt; 0 p value = &#39;][0]==0):
-    txt=f&#34;{par}: {group1_name} is higher&#34; #than {group2_name}&#34;
-    txt2=&#39;higher&#39;
-  else:
-     txt2=txt=&#39;&#39;
-      
-  res.loc[&#39;summary&#39;]=txt
-  #   print(txt)
-
-  summary=pd.DataFrame(txt2,index=[par],columns=[group1_name])
-  #   print(summary)
-  return des, res, summary
-
-def hypothesis_test_batch_pars(df,
-                              pars ,
-                              group,
-                              group_names):
-  tsts=pd.DataFrame()
-  stats=pd.DataFrame()
-  summary=pd.DataFrame()
-  for par in pars:
-    par1_stats_tmp, par1_test_tmp, summary_tmp= hypothesis_test(df,
-                                                                par=par,
-                                                                group=group,
-                                                                group_names=group_names
-                                                               )
-    stats=pd.concat([stats,
-                    par1_stats_tmp],axis=0,
-                    # keys=[par]
-                    )
-    
-    tsts=pd.concat([tsts,
-                    par1_test_tmp],axis=1)
-
-    summary=pd.concat([summary,
-                    summary_tmp],axis=0,
-    #                     keys=[par]
-                    )
-  return stats, tsts, summary
-
-def percent_agg(df, grpby1, grpby2, sumCol):
-  agg1=df.groupby(grpby1)[sumCol].sum().reset_index()
-  agg2=df.groupby(grpby2)[sumCol].sum().reset_index()
-
-  agg1 = df.groupby(grpby1)[sumCol].sum()
-  agg1 = agg1.groupby(level=grpby2).apply(lambda x:100 * x / float(x.sum())).reset_index()
-  agg1.rename(columns={sumCol:f&#34;{sumCol}_percent&#34;}, inplace=True)
-  
-  agg1=agg1[agg1[f&#34;{sumCol}_percent&#34;]!=0]
-  #   agg1=agg1.merge(agg2,on=grpby2)
-  #   agg1[f&#39;{sumCol}_percent&#39;]=np.round(agg1[f&#39;{sumCol}_x&#39;]/agg1[f&#39;{sumCol}_y&#39;]*100,0)
-  #   agg1=agg1[agg1[outCol]!=0]
-
-    ##NOTE:
-  #   agg1.div(agg2, level=grpby2) * 100  doesnot work
-
-  ##print(agg1.groupby(grpby2)[f&#34;{sumCol}_percent&#34;].sum())
-  agg1[f&#34;{sumCol}&#34;]= pd.Series(df.groupby(grpby1)[sumCol].sum().values)
-  
-  return agg1
-
-def rle_encode(data):
-    #Ref:https://stackabuse.com/run-length-encoding/  
-    encoding = &#39;&#39;
-    prev_char = &#39;&#39;
-    count = 1
-
-    if not data: return &#39;&#39;
-
-    for char in data:
-        if char != prev_char:
-            if prev_char:
-                encoding += prev_char+&#34;(&#34;+str(count) +&#34;);&#34; 
-            count = 1
-            prev_char = char
-        else:
-            count += 1
-    else:
-        encoding += prev_char+&#34;(&#34;+str(count) +&#34;);&#34; 
-        return encoding
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# ---------------------------Graph and plot functions----------------------
-def corrmap(df0, method=&#39;kendall&#39;, diagonal_plot=True, **kwargs):
-    &#34;&#34;&#34; plot a correlation heatmap matrix
-
-    Parameters:
-    ----------
-    uData : (pandas dataframe) with [sample*features] format
-
-    method : {‘pearson’, ‘kendall’, ‘spearman’} or callable
-                pearson : standard correlation coefficient
-                kendall : Kendall Tau correlation coefficient
-                spearman : Spearman rank correlation
-                callable: callable with input two 1d ndarray and returning a float.
-
-    **kwargs: parameter of corr and seaborn heatmap: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com
-    &#34;&#34;&#34;
-    import inspect
-    
-    corr_args = list(inspect.signature(pd.DataFrame.corr).parameters)
-    kwargs_corr = {k: kwargs.pop(k) for k in dict(kwargs) if k in corr_args}
-    
-    heatmap_args = list(inspect.signature(sns.heatmap).parameters)
-    kwargs_heatmap = {k: kwargs.pop(k) for k in dict(kwargs) if k in heatmap_args}
-    
-    corr = df0.dropna(how=&#39;any&#39;,axis=0).drop_duplicates().corr(method=method,**kwargs_corr)
-    # Generate a mask for the upper triangle
-    
-    if diagonal_plot:
-      mask = np.zeros_like(corr)
-      mask[np.triu_indices_from(mask)] = True
-    else:
-      mask=None
-
-    plt.figure(figsize = (30,20))
-    # Generate a custom diverging colormap
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    snsPlot = sns.heatmap(                                    
-                            corr,
-                            mask=mask,
-                            cmap=cmap,
-                            center=0,
-                            square=True,
-                            linewidths=.5,
-                            cbar_kws={&#34;shrink&#34;: .5},
-                            fmt=&#34;.1f&#34;,
-                            annot=True,
-                            **kwargs_heatmap,
-                            )
-    figure = snsPlot.get_figure()
-    # figure.savefig(os.path.join(outputFolder,&#34;corr_map.png&#34;), bbox_inches=&#39;tight&#39;)
-    plt.show()
-    plt.close()
-    
-    return corr
-
-def sankey(left, right, value, thershold, utitle, filename):
-    &#34;&#34;&#34; create and plot a simplified sankey graph with only one source (left) and one target(right)
-
-    Parameters:
-    ----------
-    left (array, shape) [n_samples]
-    the label of left column
-
-    right (array, shape) [n_samples]
-    the label of right column
-
-    value (array, shape) [n_samples]
-    the value of transaction
-
-    thershold (float)
-    to filter those transactions which have less value than thershold
-
-    utitle (string):
-    the title of the plot
-
-    filename (string):
-    the location of the plot
-
-    returns:
-    -------
-    tranactions(array, shape) [filtered n_samples*3]
-    tranactions has three columns: left, right, value
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    tranactions0 = pd.concat(
-        [left.rename(&#39;left&#39;), right.rename(&#39;right&#39;), value.rename(&#39;value&#39;)], axis=1)
-    tranactions = tranactions0.groupby(
-        [&#39;left&#39;, &#39;right&#39;], as_index=False).agg(&#39;sum&#39;)
-    counts = tranactions0.groupby(
-        [&#39;left&#39;, &#39;right&#39;], as_index=False).agg(&#39;count&#39;)
-    tranactions = tranactions.loc[counts[&#39;value&#39;] &gt; thershold, :]
-    tranactions.sort_values([&#39;value&#39;], ascending=[False], inplace=True)
-    left = tranactions[&#39;left&#39;]
-    right = tranactions[&#39;right&#39;]
-    values = tranactions[&#39;value&#39;]
-
-    #import chart_studio.plotly as py
-    import plotly
-
-    lbLeft = list(pd.unique(left))
-    lbRight = list(pd.unique(right))
-
-    # label=lbLeft+lbRight
-    source = []
-    target = []
-    value = []
-    for i in list(range(left.shape[0])):
-        # if i==3:
-        #     pdb.set_trace()
-        tmpSource = np.where(
-            np.asarray(lbLeft) == np.asarray(
-                left.iloc[i]))[0].tolist()
-        source = source + tmpSource
-
-        tmpTarget = np.where(
-            np.asarray(lbRight) == np.asarray(
-                right.iloc[i]))[0].tolist()
-        target = target + tmpTarget
-
-        tmpValue = [values.iloc[i]]
-        value = value + tmpValue
-
-    target = [x + len(lbLeft) for x in target]
-
-    data = dict(
-        type=&#39;sankey&#39;,
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(
-                color=&#34;black&#34;,
-                width=0.5
-            ),
-            label=list(pd.unique(left)) + list(pd.unique(right))
-            # color = [&#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;]
-        ),
-        link=dict(
-            source=source,
-            target=target,
-            value=value
-        ))
-
-    layout = dict(
-        title=utitle,
-        font=dict(
-            size=10
-        )
-    )
-    fig = dict(data=[data], layout=layout)
-    plotly.offline.plot(fig, filename=filename)
-    return tranactions
-
-def explainedVar(pcaML, outputFile):
-    &#34;&#34;&#34; calcluate and plot Variance Explained VS number of features for PCA
-    ##TODO: add screeplot
-    Parameters:
-    ----------
-    pcaML (float): Percentage of variance explained by each of the selected components.
-
-    outputFile (string):
-    the location of the plot
-
-    returns:
-    -------
-    var  (float)
-    cumulative varaince explained
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    
-    eigen_values=pcaML.explained_variance_
-
-    np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3)
-
-
-    explained_var = np.cumsum(
-        np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3) * 100)
-
-    plt.ylabel(&#39;% explained_variance Explained&#39;)
-    plt.xlabel(&#39;# of Features&#39;)
-    plt.title(&#39;PCA Analysis&#39;)
-
-    plt.ylim(0, 100)
-    plt.style.context(&#39;seaborn-whitegrid&#39;)
-    plt.grid()
-    plt.plot(explained_var)
-    plt.savefig(outputFile, format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-
-    return explained_var,eigen_values
-
-def worldCloud_graph(txtSeries_df,outputFile):  
-    ##TODO: document it  
-    # txtSeries_df=tmp[&#39;prizm_68_2019&#39;]
-    # outputFile=os.path.join(outputFolder,&#39;enviroPostal_wordCloud2.png&#39;)
-
-    from wordcloud import WordCloud, STOPWORDS
-    import matplotlib.pyplot as plt
-    
-    if  type(txtSeries_df)==pd.core.series.Series:
-        txt=&#39; &#39;.join(txtSeries_df.astype(&#39;str&#39;))
-        worldCloud_instance = WordCloud(width=800, height=400).generate(txt)
-    else:
-        worldCloud_instance = WordCloud(width=800, height=400).generate_from_frequencies(dict(zip(txtSeries_df.iloc[:,0] ,txtSeries_df.iloc[:,1])))
-
-    ## Generate plot
-    plt.figure(figsize=(20,10), facecolor=&#39;k&#39;)
-    plt.imshow(worldCloud_instance)
-    plt.axis(&#34;off&#34;)
-    plt.savefig(outputFile, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-    # print(&#34;it was saved in &#34;+os.path.join(outputFile))
-
-def plot3D(udata, uY, xyzLabels, utitle, outPutFile):
-    &#34;&#34;&#34; plot3d of udata
-
-    parameters:
-    ----------
-    udata : (pandas dataframe) with [sample*3] format
-
-    uY (string):
-    the name of columns which is used to color dot plot
-
-    xyzLabels: the list of string
-    labels of Axis X,Y,Z
-
-    utitle (string):
-    the title of graph
-
-    outputFile (string):
-    the location of the plot
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    # %matplotlib notebook
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection=&#39;3d&#39;)
-    ax.set_xlabel(xyzLabels[0], fontsize=15)
-    ax.set_ylabel(xyzLabels[1], fontsize=15)
-    ax.set_zlabel(xyzLabels[2], fontsize=15)
-    ax.set_title(utitle, fontsize=20)
-    targets = pd.unique(uY)
-    colors = [&#39;r&#39;, &#39;g&#39;, &#39;b&#39;, &#39;y&#39;]
-    for target, color in list(zip(targets, colors)):
-        indicesToKeep = uY.squeeze() == target
-        ax.scatter(udata[indicesToKeep, 0], udata[indicesToKeep, 1],
-                   udata[indicesToKeep, 2], c=color, s=50, alpha=.5)
-    ax.legend(pd.unique(uY).astype(&#39;str&#39;))
-    ax.grid()
-
-    plt.tight_layout()
-    plt.savefig(outPutFile, format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-    print(&#39;Plot saved in &#39; + outPutFile)
-    # for angle in list(range(0, 360,60)):
-    #     ax.view_init(30, angle)
-    #     # plt.draw()
-    #     plt.tight_layout()
-    #     plt.savefig(os.path.join(outputFolder,fileName.split(&#39;.&#39;)[0]+str(angle)+&#39;.&#39;+fileName.split(&#39;.&#39;)[1]) , format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    #     plt.pause(.001)
-
-def lag_plot(x, y=None, nlags=24):
-  # x=x.dropna()
-  # print(f&#34;data size after removing nulls({plant}):&#34;, x.shape )
-  with sns.plotting_context(&#34;paper&#34;):
-    fig, ax = plt.subplots(nrows=math.ceil((nlags)/4), ncols=4, figsize=[15, 10])
-    
-    if y is None:
-      fig.suptitle(f&#39;Auto correlation plot {x.name}&#39;, fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          
-          pd.plotting.lag_plot(x, lag=i + 1, ax=ax_)
-          # ax_.set_title(f&#34;Lag {i+1}&#34;)
-          ax_.ticklabel_format(style=&#34;sci&#34;, scilimits=(0, 0))
-          ax_.set_ylabel(f&#34;{x.name}$_t$&#34;)
-          ax_.set_xlabel(f&#34;{x.name}$_{{t-{i}}}$&#34;)
-    else:
-      fig.suptitle(f&#39;Cross correlation plot {x.name} vs {y.name}&#39;, fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          ax_.scatter(y=y, x=x.shift(periods=i), s=10)
-          ax_.set_ylabel(f&#34;{y.name}$_{{t}}$&#34;)
-          ax_.set_xlabel(f&#34;{x.name}$_{{t-{i}}}$&#34;)
-
-    # plt.tight_layout()
-
-def plot_ccf(x, y, lags,  ax=None, title=&#34;Cross-correlation&#34;, **kwargs):
-  from statsmodels.tsa.stattools import ccf
-  from matplotlib.ticker import MaxNLocator
-  # Compute CCF and confidence interval
-  cross_corrs = ccf(x, y, **kwargs)
-  ci = 2 / np.sqrt(len(y))
-  # Create plot
-  if ax is None:
-    fig, ax = plt.subplots(figsize=[10, 5])
-  ax.stem(range(0, lags + 1), cross_corrs[: lags + 1])
-  ax.fill_between(range(0, lags + 1), ci, y2=-ci, alpha=0.2)
-  ax.set_title(title)
-  ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-  return ax, cross_corrs
-
-def figures_to_html(figs, filename=&#34;dashboard.html&#34;):
-    &#34;&#34;&#34;save a list of figures all to a single HTML file.
-    &#34;&#34;&#34;
-    ##from https://stackoverflow.com/questions/45577255/plot-multiple-figures-as-subplots
-    with open(filename, &#39;w&#39;) as dashboard:
-        dashboard.write(&#34;&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;&#34; + &#34;\n&#34;)
-        for fig in figs:
-            inner_html = fig.to_html().split(&#39;&lt;body&gt;&#39;)[1].split(&#39;&lt;/body&gt;&#39;)[0]
-            dashboard.write(inner_html)
-        dashboard.write(&#34;&lt;/body&gt;&lt;/html&gt;&#34; + &#34;\n&#34;)
-        
-def save_plotly_fig(fig, fname_prefix, image_format=&#34;jpg&#34;):
-    import plotly      
-    uFiles = [f&#34;{fname_prefix}.{ext}&#34; for ext in [&#34;html&#34;, &#34;json&#34;, image_format]]
-    for uFile in uFiles:
-        ext = uFile.split(&#34;.&#34;)[-1]
-        if ext == &#34;html&#34;:
-            plotly.offline.plot(fig, filename=uFile, auto_open=False)
-        elif ext == &#34;json&#34;:
-            plotly.io.write_json(fig, uFile)
-        else:
-            fig.write_image(uFile, width=2400, height=1400, scale=4)
-    return uFiles
-
-def cat2color_plotly(label_col, color_palette=None):
-  import plotly.express as px
-  # color_palette=px.colors.qualitative.Antique
-  if color_palette is None:
-    ## https://plotly.com/python/discrete-color/
-    color_palette=px.colors.qualitative.Alphabet  ##Light24  ##Plotly
-  domain=label_col.unique()
-  if len(domain)&gt;len(color_palette):
-    print(f&#34;number of available colors({len(color_palette)}) is more than categorizes({len(domain)}), change the palette&#34;)
-  color_map = dict(zip(domain, color_palette[:len(domain)+2])) 
-  c=label_col.map(color_map)
-  return c, color_map
-
-def plotly_group_stack(df_plot,
-                        col2grp,
-                        col2stack,
-                        col2c,
-                        date_col,
-                        title,
-                        color_palette=px.colors.qualitative.Light24,
-                        patterns=[&#39;&#39;,&#39;/&#39;]
-                                                                                        ):
-  import plotly.graph_objects as go
-  import plotly.express as px
-  import pandas as pd
-
-  x = [list(df_plot[date_col].dt.date.values),list(df_plot[col2grp].values)]
-
-  colors,color_map=cat2color_plotly(df_plot[col2grp], color_palette=color_palette)
-
-  fig = go.Figure()
-
-  for shift_name, upattern in zip(df_plot[col2stack].unique(), patterns):
-    df_tmp = df_plot.mask(df_plot[col2stack]!=shift_name, pd.NA)
-    for machine in df_plot[col2grp].unique():
-      y = df_tmp[col2c].mask(df_plot[col2grp]!=machine, pd.NA)
-      fig.add_bar(
-                  x=x,
-                  y=y,
-                  name=f&#34;{machine} - {shift_name}&#34;, 
-                  hovertext = df_plot[col2stack],
-                  marker_color=color_map[machine],
-                  marker_pattern_shape=upattern,
-                  legendgroup=shift_name,
-                  legendgrouptitle_text=shift_name,
-                  hovertemplate=&#34;Date: %{x[0]}&lt;br&gt;&#34;+
-                                &#34;Machine: %{x[1]}&lt;br&gt;&#34;+
-                                &#34;Efficiency: %{y}&lt;br&gt;&#34;+
-                                &#34;DayNight: %{hovertext}&lt;br&gt;&#34;,
-                )       
-
-  fig.update_layout(
-                    barmode=&#34;relative&#34;,
-                    xaxis_title=&#34;Date&#34;,
-                    yaxis_title=col2c,
-                    legend_title_text=&#39;&#39;,
-                    title=title
-                    )
-  return fig
-
-def subplot_plExpress(figs, sub_titles, main_title):
-  from plotly.subplots import make_subplots
-  figure_traces=[]
-  for con, fig_sub in enumerate(figs):
-    figure_traces_sub=[]
-    for trace in range(len(fig_sub[&#34;data&#34;])):
-        if con&gt;0: 
-          fig_sub[&#34;data&#34;][trace][&#39;showlegend&#39;] = False 
-        figure_traces_sub.append(fig_sub[&#34;data&#34;][trace])
-    figure_traces.append(figure_traces_sub)
-  figure = make_subplots(rows = 3, cols = 1, subplot_titles =sub_titles)
-  figure.update_layout(height = 500, width = 1200, title_text =main_title, title_font_size = 25)
-  for con, figure_traces_sub in enumerate(figure_traces):
-    for traces in figure_traces_sub:
-        figure.append_trace(traces, row = con+1, col = 1)
-  return figure
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# --------------------------Reading a SQL file/string----------------------
-def split_sql_expressions_sub(text):
-    &#34;&#34;&#34; split sql queries based on &#34;;&#34;
-
-    Parameters:
-    ----------
-    text (string): (sql queries)
-
-    returns:
-    a list of queries
-    --------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    # from riskmodelPipeline.py
-    results = []
-    current = &#39;&#39;
-    state = None
-    for c in text:
-        if state is None:  # default state, outside of special entity
-            current += c
-            if c in &#39;&#34;\&#39;&#39;:
-                # quoted string
-                state = c
-            elif c == &#39;-&#39;:
-                # probably &#34;--&#34; comment
-                state = &#39;-&#39;
-            elif c == &#39;/&#39;:
-                # probably &#39;/*&#39; comment
-                state = &#39;/&#39;
-            elif c == &#39;;&#39;:
-                # remove it from the statement
-                current = current[:-1].strip()
-                # and save current stmt unless empty
-                if current:
-                    results.append(current)
-                current = &#39;&#39;
-        elif state == &#39;-&#39;:
-            if c != &#39;-&#39;:
-                # not a comment
-                state = None
-                current += c
-                continue
-            # remove first minus
-            current = current[:-1]
-            # comment until end of line
-            state = &#39;--&#39;
-        elif state == &#39;--&#39;:
-            if c == &#39;\n&#39;:
-                # end of comment
-                # and we do include this newline
-                current += c
-                state = None
-            # else just ignore
-        elif state == &#39;/&#39;:
-            if c != &#39;*&#39;:
-                state = None
-                current += c
-                continue
-            # remove starting slash
-            current = current[:-1]
-            # multiline comment
-            state = &#39;/*&#39;
-        elif state == &#39;/*&#39;:
-            if c == &#39;*&#39;:
-                # probably end of comment
-                state = &#39;/**&#39;
-        elif state == &#39;/**&#39;:
-            if c == &#39;/&#39;:
-                state = None
-            else:
-                # not an end
-                state = &#39;/*&#39;
-        elif state[0] in &#39;&#34;\&#39;&#39;:
-            current += c
-            if state.endswith(&#39;\\&#39;):
-                # prev was backslash, don&#39;t check for ender
-                # just revert to regular state
-                state = state[0]
-                continue
-            elif c == &#39;\\&#39;:
-                # don&#39;t check next char
-                state += &#39;\\&#39;
-                continue
-            elif c == state[0]:
-                # end of quoted string
-                state = None
-        else:
-            raise Exception(&#39;Illegal state %s&#39; % state)
-
-    if current:
-        current = current.rstrip(&#39;;&#39;).strip()
-        if current:
-            results.append(current)
-    return results
-
-def parse_sql_file(file_name):
-    &#34;&#34;&#34; read sql queries in a file
-
-    Parameters:
-    ----------
-    file (string): the location of sql file
-
-    returns:
-    a list of queries
-    --------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    # from riskmodelPipeline.py
-    check_path(file_name)
-    sql_statements = []
-    with open(file_name, &#39;r&#39;) as f:
-        for sql_statement in split_sql_expressions_sub(f.read()):
-            sql_statements.append(sql_statement)
-    return(sql_statements)
-
-# -------------------------------------------------------------------------
-# -------------------------------------------------------------------------
-# -------------------------EDA, Statisitcal analysis-----------------------
-def date2Num(df, dateCols):
-    &#34;&#34;&#34; returns a new dataframe after deducing dates columns from the min dates of columns
-
-    Parameters:
-    ----------
-    df (pandas dataframe) with [sample*features] format
-
-    datecols  (a list of strings):: name of columns with date values
-
-    returns:
-    -------
-    df[dateCols]-eval(df[dateCols].min()[0])
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    tmploc, _ = inWithReg(dateCols, df.columns.values)
-        
-    if len(tmploc) != 0:
-        
-        df[tmploc] = df[tmploc].astype(&#39;datetime64[ns]&#39;)
-
-        print(&#34;conversion date features to number (month): date - &#34; + str(df[tmploc].min()[0]))
-        tmp3 = df[tmploc].apply(lambda x: x - df[tmploc].min()[0])
-        tmp3 = tmp3.apply(lambda x: x / np.timedelta64(1, &#39;M&#39;))
-        df[tmploc] = tmp3.fillna(-1).round(0).astype(&#39;int64&#39;)
-        df[tmploc]=df[tmploc].replace(-1,np.nan)
-
-    return(df)
-
-def find_low_variance(df, thresh=0.0):
-    &#34;&#34;&#34; returns name of features  with variance less than thersold
-
-    Parameters:
-    ----------
-    df(pandas dataframe) with [sample*features] format
-
-    thresh(number): thersold value for variance of features
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    variance = df.var(skipna=True)
-    low_variance = list(variance[variance &lt;= thresh].index)
-    return low_variance
-
-def kruskalwallis2(x, y):
-    &#34;&#34;&#34; calculate the Kruskal-Wallis H-test for independent samples
-
-    Parameters:
-    ----------
-    x  array of sample1
-    y  array of sample2
-
-    returns:
-    -------
-    H-statistic  (float)
-    The Kruskal-Wallis H statistic, corrected for ties
-    p-value  (float)
-    The p-value for the test using the assumption that H has a chi square distribution
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    groupednumbers = {}
-    from scipy import stats
-    for grp in y.unique():
-        groupednumbers[grp] = x.values[y == grp]
-    args = groupednumbers.values()
-    tmp = stats.mstats.kruskalwallis(*args)
-    # pdb.set_trace()
-    return (tmp)
-
-def chi2_contingency(x, y):
-    &#34;&#34;&#34; Chi-square test of independence of variables in a contingency table.
-    This function computes the chi-square statistic and p-value for the hypothesis test of independence of the observed frequencies in the contingency table.
-
-    Parameters:
-    ----------
-    x  array of sample1
-
-    y  array of sample2
-
-    returns:
-    -------
-    p (float) :The p-value of the test
-
-    Example:
-    ---------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    from scipy import stats
-    xtab = pd.crosstab(x, y)
-    pval = None
-    if xtab.size != 0:
-        try:
-            _, pval, _, _ = stats.chi2_contingency(xtab)
-        except Exception:
-            pval = 0
-    return pval
-
-def corr_pointbiserial(binary_data, continuous_data, data):
-    # TODO: correct it with nan
-    &#34;&#34;&#34; computes the point biserial correlation of two pandas data frame columns
-
-    Parameters:
-    ----------
-    binary_data :list : name of dichotomous data column
-
-    continuous_data: list : name of dichotomous data column
-
-    data (pandas dataframe) with [sample*feature] format: dataframe where above columns come from
-
-    returns:
-    -------
-    out :  Point Biserial Correlation
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    import math
-    bd_unique = data[binary_data].unique()
-    
-    g0 = data[data[binary_data] == bd_unique[0]][continuous_data]
-    g1 = data[data[binary_data] == bd_unique[1]][continuous_data]
-    
-    s_y = np.std(data[continuous_data])
-    n = len(data[binary_data])
-    n0 = len(g0)
-    n1 = len(g1)
-    m0 = g0.mean()
-    m1 = g1.mean()
-    out=(m0-m1)*math.sqrt((n0*n1)/n**2)/s_y
-    return out
-
-def highcorr_finder(corrMat,df_scores,thershold):
-    #TODO: add comment 
-    corr_matrix = corrMat.abs()
-    # Select upper triangle of correlation matrix
-    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
-
-    # Find features with correlation greater than x
-    drop_cols = [x for x in upper.columns if any(upper[x] &gt;thershold)]
-    drops_rows = [x for x in upper.index   if any(upper.loc[x] &gt;thershold)]
-
-    to_drop = list()
-    mat_ind=list()
-    for x,y in zip (drop_cols,drops_rows):
-        tmp= y if df_scores[x]&gt;df_scores[x] else x
-        to_drop.append(tmp)
-        mat_ind.append(x)
-        mat_ind.append(y)
-
-    high_corrs = dict(zip(drop_cols, drops_rows))
-
-    return to_drop,mat_ind,high_corrs
-
-def ortho_rotation(lam, method=&#39;varimax&#39;,gamma=None,
-                    eps=1e-6, itermax=100):
-    &#34;&#34;&#34;
-    ##TODO: document it 
-    ## A VARIMAX rotation is a change of coordinates used in principal component analysis1 (PCA) that maximizes the sum of the variances of the squared loadings
-    ## https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py
-    Return orthogal rotation matrix
-    TODO: - other types beyond 
-    &#34;&#34;&#34;
-    if gamma == None:
-        if (method == &#39;varimax&#39;):
-            gamma = 1.0
-        if (method == &#39;quartimax&#39;):
-            gamma = 0.0
-
-    nrow, ncol = lam.shape
-    R = np.eye(ncol)
-    var = 0
-
-    for i in range(itermax):
-        lam_rot = np.dot(lam, R)
-        tmp = np.diag(np.sum(lam_rot ** 2, axis=0)) / nrow * gamma
-        u, s, v = np.linalg.svd(np.dot(lam.T, lam_rot ** 3 - np.dot(lam_rot, tmp)))
-        R = np.dot(u, v)
-        var_new = np.sum(s)
-        if var_new &lt; var * (1 + eps):
-            break
-        var = var_new
-
-    return R
-
-def discretizer(x,y,labels=[&#34;Q1&#34;, &#34;Q2&#34;, &#34;Q3&#34;,&#34;Q4&#34;],method=&#39;cut&#39;): 
-    # print(&#39;discretizer:&#39;+method)
-
-    if method==&#39;cut&#39;:
-        from sklearn import preprocessing
-        min_max_scaler = preprocessing.MinMaxScaler()        
-        out,bins=pd.cut(min_max_scaler.fit_transform(x.values.reshape(-1,1)).reshape(-1),bins=[-.1,.33,.66,1.1],labels=labels,retbins=True)
-
-    elif method==&#39;tree1&#39;:
-        from sklearn.tree import DecisionTreeClassifier
-        clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 1)
-        clf.fit(x.to_frame(),y)
-
-        # if len(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]))==1:
-        #     # print (&#34;max_depth increased&#34;)
-        #     clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 2)
-        #     clf.fit(x.to_frame(),y)
-
-        bins =  np.sort(np.append(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]),[x.max()+1/1e6,x.min()-1/1e6])).tolist()
-        out=pd.cut(x,bins=bins,labels=labels[:(len(bins)-1)])
-
-    elif method==&#39;tree2&#39;:
-        from sklearn.tree import DecisionTreeClassifier
-        clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 2)
-        clf.fit(x.to_frame(),y)
-
-        bins =  np.sort(np.append(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]),[x.max()+1/1e6,x.min()-1/1e6])).tolist()
-        out=pd.cut(x,bins=bins,labels=labels[:(len(bins)-1)])
-    
-    else:
-        ##TODO: it needs to be corrected:
-        out,bins=pd.qcut(x.rank(method=&#39;first&#39;),q=3,labels=labels,retbins=True)
-        # out,bins=pd.qcut(x,q=3,labels=labels,retbins=True, duplicates=&#39;drop&#39;)
-        # out,bins=pd.qcut(x+ jitter(x),q=3,labels=labels,retbins=True)
-
-    bins=[np.float(x) for x in bins]
-    print(x.name+&#39;:\n&#39;+str(bins))
-    return (out ,bins)
-
-def jitter(a_series, noise_reduction=1000000):
-    # https://stackoverflow.com/questions/20158597/how-to-qcut-with-non-unique-bin-edges
-    #TODO: add docs
-    return (np.random.random(len(a_series))*a_series.std()/noise_reduction)-(a_series.std()/(2*noise_reduction))
-
-def extract_equation(results_pars):
-  vars=results_pars.reset_index()
-  vars[0]=np.round(vars[0],2).astype(str)
-  vars[&#39;ploys&#39;]=vars[&#39;index&#39;].str.extract(&#39;np.power\((.+?),&#39;)
-  vars[&#39;power&#39;]=np.where(vars[&#39;ploys&#39;].isnull(),np.nan, vars[&#39;index&#39;].str[-2:-1])
-  vars[&#39;index&#39;]=np.where(vars[&#39;ploys&#39;].isnull(),vars[&#39;index&#39;],vars[&#39;ploys&#39;]+&#39;**&#39;+vars[&#39;power&#39;])
-  equation=&#34;&#34;
-  for row in vars.iterrows():
-    sign=&#39;&#39; if (np.sign(float(row[1][0]))==-1) or (row[0]==0) else &#39;+&#39;
-    tmp=f&#34;{sign}{row[1][0]}&#34; if row[1][&#39;index&#39;]==&#39;Intercept&#39; else f&#34;{sign}{row[1][0]}*{row[1][&#39;index&#39;]}&#34;
-    equation+=tmp
-  return equation</code></pre>
-</details>
 </section>
 <section>
 </section>
@@ -1483,23 +38,6 @@ def extract_equation(results_pars):
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def cat2color_plotly(label_col, color_palette=None):
-  import plotly.express as px
-  # color_palette=px.colors.qualitative.Antique
-  if color_palette is None:
-    ## https://plotly.com/python/discrete-color/
-    color_palette=px.colors.qualitative.Alphabet  ##Light24  ##Plotly
-  domain=label_col.unique()
-  if len(domain)&gt;len(color_palette):
-    print(f&#34;number of available colors({len(color_palette)}) is more than categorizes({len(domain)}), change the palette&#34;)
-  color_map = dict(zip(domain, color_palette[:len(domain)+2])) 
-  c=label_col.map(color_map)
-  return c, color_map</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.cat2no"><code class="name flex">
 <span>def <span class="ident">cat2no</span></span>(<span>df)</span>
@@ -1511,87 +49,24 @@ def extract_equation(results_pars):
 <p>thresh(number): thersold value for variance of features</p>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def cat2no(df):
-    &#34;&#34;&#34; converts all categorical and object features of a dataframe (df) to cat.code
-
-    Parameters:
-    ----------
-    df(pandas dataframe) with [sample*features] format
-
-    thresh(number): thersold value for variance of features
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    cat_columns = df.select_dtypes(include=[&#39;object&#39;]).columns.tolist()+df.select_dtypes(include=[&#39;category&#39;]).columns.tolist()
-    if len(cat_columns) != 0:
-        print(&#39;Categorical columns...\n&#39;+cat_columns)
-        df[cat_columns] = df[cat_columns].apply(
-            lambda x: x.astype(&#39;category&#39;).cat.codes)
-    return df</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.cellWeight"><code class="name flex">
 <span>def <span class="ident">cellWeight</span></span>(<span>df, axis=0)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def cellWeight(df, axis=0):
-  if axis==0:
-    out=df.div(df.sum(axis=0), axis=1)
-  else:
-    out=df.div(df.sum(axis=1), axis=0)
-  return out</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.check_path"><code class="name flex">
 <span>def <span class="ident">check_path</span></span>(<span>path)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Raise exception if the file path doesn't exist.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def check_path(path):
-    &#34;&#34;&#34;Raise exception if the file path doesn&#39;t exist.&#34;&#34;&#34;
-    import argparse
-    if &#39;~&#39; in path:
-        path = os.path.expanduser(path)
-    if not os.path.exists(path):
-        msg = &#34;File (%s) not found!&#34; % path
-        raise argparse.ArgumentTypeError(msg)
-    return path</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.check_timestamps"><code class="name flex">
 <span>def <span class="ident">check_timestamps</span></span>(<span>start, end, format_required='%Y-%m-%d')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>validate the format required for the query</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def check_timestamps(start, end, format_required=&#39;%Y-%m-%d&#39;):
-    &#39;&#39;&#39;validate the format required for the query&#39;&#39;&#39;
-    try:
-        check_start = type(time.strptime(start, format_required))
-        check_end = type(time.strptime(end, format_required))
-        if (check_start.__name__==&#39;struct_time&#39;) &amp; (check_end.__name__==&#39;struct_time&#39;):
-            return True
-    except ValueError as e:
-        print(e)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.chi2_contingency"><code class="name flex">
 <span>def <span class="ident">chi2_contingency</span></span>(<span>x, y)</span>
@@ -1609,233 +84,24 @@ array of sample2</p>
 <h2 id="example">Example:</h2>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def chi2_contingency(x, y):
-    &#34;&#34;&#34; Chi-square test of independence of variables in a contingency table.
-    This function computes the chi-square statistic and p-value for the hypothesis test of independence of the observed frequencies in the contingency table.
-
-    Parameters:
-    ----------
-    x  array of sample1
-
-    y  array of sample2
-
-    returns:
-    -------
-    p (float) :The p-value of the test
-
-    Example:
-    ---------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    from scipy import stats
-    xtab = pd.crosstab(x, y)
-    pval = None
-    if xtab.size != 0:
-        try:
-            _, pval, _, _ = stats.chi2_contingency(xtab)
-        except Exception:
-            pval = 0
-    return pval</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.compare_dfs"><code class="name flex">
 <span>def <span class="ident">compare_dfs</span></span>(<span>df1, df2, df_names=['df1', 'df2'])</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def compare_dfs(df1,
-                df2,
-                df_names=[&#39;df1&#39;,&#39;df2&#39;]):
-
-    uset=set(df1.columns).intersection(set(df2.columns))
-    different_dtypes=[i  for i in uset if df1[i].dtype!=df2[i].dtype]
-
-    if len(different_dtypes)!=0:
-      print(&#34;Same columns have different data types:\n\t df1:\n&#34;, str(df1[different_dtypes].dtypes),&#34;\n\t df2:\n&#34;,str(df2[different_dtypes].dtypes))
-      convert_dict = {i:df1[i].dtype for i in different_dtypes} 
-      df2 = df2.astype(convert_dict)
-      print(&#34;df2 dtypes match with df1 dtypes&#34;)
-      
-    ##TOdo: debug it when there are columnd with same names in a df
-    print(f&#34;shape {df_names[0]}:&#34;,str(df1.shape))
-    print(f&#34;shape {df_names[1]}:&#34;,str(df2.shape))
-    print(f&#34;-----------------------------------------&#34;)    
-
-    idx_only_df1=df1[~df1.index.isin(df2.index)]
-    idx_only_df2=df2[~df2.index.isin(df1.index)]
-
-    print(f&#34;only rows in {df_names[0]}...&#34;)
-    txt=idx_only_df1 if idx_only_df1.size!=0 else &#34;Empty&#34;
-    print(txt)
-
-    print(f&#34;only rows in {df_names[1]}...&#34;)
-    txt=idx_only_df2 if idx_only_df2.size!=0 else &#34;Empty&#34;
-    print(txt)
-    print(f&#34;-----------------------------------------&#34;)    
-
-    col_only_df1=df1.loc[:,~df1.columns.isin(df2.columns)]
-    col_only_df2=df2.loc[:,~df2.columns.isin(df1.columns)]
-
-    print(f&#34;only columns in {df_names[0]}...&#34;)
-    txt=col_only_df1 if col_only_df1.size!=0 else &#34;Empty&#34;
-    print(txt)
-
-    print(f&#34;only columns in {df_names[1]}...&#34;)
-    txt=col_only_df2 if col_only_df2.size!=0 else &#34;Empty&#34;
-    print(txt)
-    print(f&#34;-----------------------------------------&#34;)        
-
-    common_cols=df1.columns[df1.columns.isin(df2.columns)]
-    common_idx=df1.index[df1.index.isin(df2.index)]
-
-    df1_common=df1.loc[common_idx, common_cols]
-    df2_common=df2.loc[common_idx, common_cols]
-
-    df1_common_sub1=df1_common.select_dtypes(include=[&#39;number&#39;])
-    df2_common_sub1=df2_common.select_dtypes(include=[&#39;number&#39;])
-    common_bol_sub1=(abs(df1_common_sub1-df2_common_sub1).fillna(0))&lt;.001
-
-    df1_common_sub2=df1_common.select_dtypes(exclude=[&#39;number&#39;])
-    df2_common_sub2=df2_common.select_dtypes(exclude=[&#39;number&#39;])
-    common_bol_sub2=df1_common_sub2.fillna(&#39;&#39;)==df2_common_sub2.fillna(&#39;&#39;)
-
-    common_bol=pd.concat([common_bol_sub1,common_bol_sub2],axis=1)
-
-    #print(&#34;debug&#34;)
-    #print(all(common_bol_sub1[debugcol]))
-    #debugcol=&#39;co2_emission_t&#39;
-    #print(abs(df1_common_sub1[debugcol]-df2_common_sub1[debugcol]))    
-    #print(pd.concat([df1_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol,&#39;machine_energy_usage&#39;]],
-    #                 df2_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol]]
-     #              ],axis=1)
-    #     )
-    
-    ###TOOD: all(common_bol) leads to the wrong result why???
-    ##tmp=all((common_bol).all())
-    df1N2per=round(common_bol.sum()/common_bol.shape[0]*100,0).sort_values()  
-    if  (all(df1N2per==100))&amp;(df1_common.size!=0):
-        print(&#34;common rows and columns have same values, shape=&#34;,str(df1_common.shape))
-        df1N2per=100
-        df1N2diff=None
-    elif (all(df1N2per==100))&amp;(df1_common.size==0):
-        print(&#34;no Common values- Hint: unify indexes&#34;)
-        df1N2per=0
-        df1N2diff=df1_common.compare(df2_common)
-    else: 
-        print(&#34;Percentage of common values:\n&#34;,df1N2per)
-        idx=df1N2per!=100
-        df1_common_diff=df1_common[df1N2per[idx].index.tolist()]
-        df2_common_diff=df2_common[df1N2per[idx].index.tolist()]
-        df1N2diff=df1_common_diff.compare(df2_common_diff)
-        df1N2diff=df1N2diff.rename(columns={&#39;self&#39;:df_names[0],&#39;other&#39;:df_names[1]},level=1)
-        print(df1N2diff)
-      
-    df1_out={&#34;only rows in df1&#34;:idx_only_df1,
-             &#34;only columns in df1&#34;:col_only_df1,
-            }
-
-    df2_out={&#34;only rows in df2&#34;:idx_only_df2,
-         &#34;only columns in df2&#34;:col_only_df2,
-        }
-    
-    df1N2common={&#34;Percentage of common values&#34;:df1N2per,
-                 &#34;comparing common columns with diffrenet values&#34;:df1N2diff,
-                }
-    
-    return df1_out, df2_out, df1N2common</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.compare_univar_fea"><code class="name flex">
 <span>def <span class="ident">compare_univar_fea</span></span>(<span>X, y, univar_fea_lst)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def compare_univar_fea(X, y, univar_fea_lst ):   
-    ##TODO: refactor it: 
-    arr = np.empty((0,X.shape[1]), float)
-    for univar in univar_fea_lst:
-        print(univar)
-        uFunc=eval(univar)
-        score = uFunc(X, y)
-        if univar in [&#39;mutual_info_classif&#39;,&#39;mutual_info_regression&#39;]:
-          score=score
-        elif univar in [&#39;chi2&#39;]:
-          score=score[1]
-        elif univar in [&#39;SelectFdr&#39;,&#39;SelectFdr&#39;,&#39;SelectFwe&#39;,&#39;f_classif&#39;]:
-          ###TODO: correct it:
-          selector = SelectKBest(uFunc,k=&#39;all&#39;)
-          selector.fit(X,y)
-          score = (selector.pvalues_)
-    #     cols = selector.get_support(indices=True)
-
-        if (score is  None):
-            score=np.empty(X.shape[1]) 
-            score[:]=np.nan
-        arr = np.append(arr,[score] , axis=0)
-    scores=pd.DataFrame(data=arr,index=univar_fea_lst,columns=X.columns)
-    scores_long = pd.melt(scores.T.dropna(how=&#39;all&#39;).reset_index().rename(columns={&#34;index&#34;: &#34;feature&#34;}),id_vars=[&#39;feature&#39;],value_name=&#39;P_value&#39;, var_name=&#39;Feature_selection_Method&#39;)
-
-    fig, ax = plt.subplots(figsize = (25,15))
-    uplot   = sns.scatterplot(y=&#34;feature&#34;,
-                          x=&#34;P_value&#34;,
-                          hue=&#34;Feature_selection_Method&#34;,
-                          style=&#39;Feature_selection_Method&#39;,
-                          size=&#39;Feature_selection_Method&#39;,
-                          data=scores_long,
-                          ax=ax
-                          ) 
-    cutter_values=[.05]
-    for con,xl in enumerate(cutter_values):
-      ax.axvline(x=xl, color=&#39;red&#39;, linestyle=&#39;--&#39;)
-      ax.text(xl, con+5, f&#39;P_value={xl}&#39;,rotation=90, size=10)
-
-    ## plt.xticks(rotation=90)
-    plt.show()
-    plt.close()
-
-    return scores.T</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.copy_ymls"><code class="name flex">
 <span>def <span class="ident">copy_ymls</span></span>(<span>dsToolbox, platform='databricks', destination=None)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def copy_ymls(dsToolbox, platform=&#39;databricks&#39;, destination=None):
-  ##TODO: add comments:  
-  import sys, os
-  from dsToolbox import io_funcs
-  upath=dsToolbox.__file__
-  if destination==None:
-    destination=os.getcwd()
-  for ufile in [&#39;config.yml&#39;, &#39;sql_template.yml&#39;]:
-    ufile_src=os.path.join(os.path.dirname(upath), ufile)
-    ufile_desc=os.path.join(destination, ufile)
-    ufile_desc_tmp=os.path.join(destination, f&#39;.{ufile}.crc&#39;)
-    print(f&#34;copying {ufile_src} ---&gt; {ufile_desc}&#34;)
-    if platform==&#39;databricks&#39;:
-      dbutils=io_funcs.get_dbutils()
-      dbutils.fs.cp(f&#39;file://{ufile_src}&#39;, f&#39;file://{ufile_desc}&#39;)
-      dbutils.fs.rm(f&#39;file://{ufile_desc_tmp}&#39;)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.corr_pointbiserial"><code class="name flex">
 <span>def <span class="ident">corr_pointbiserial</span></span>(<span>binary_data, continuous_data, data)</span>
@@ -1850,44 +116,6 @@ array of sample2</p>
 <h2 id="out-point-biserial-correlation">out :
 Point Biserial Correlation</h2>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def corr_pointbiserial(binary_data, continuous_data, data):
-    # TODO: correct it with nan
-    &#34;&#34;&#34; computes the point biserial correlation of two pandas data frame columns
-
-    Parameters:
-    ----------
-    binary_data :list : name of dichotomous data column
-
-    continuous_data: list : name of dichotomous data column
-
-    data (pandas dataframe) with [sample*feature] format: dataframe where above columns come from
-
-    returns:
-    -------
-    out :  Point Biserial Correlation
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    import math
-    bd_unique = data[binary_data].unique()
-    
-    g0 = data[data[binary_data] == bd_unique[0]][continuous_data]
-    g1 = data[data[binary_data] == bd_unique[1]][continuous_data]
-    
-    s_y = np.std(data[continuous_data])
-    n = len(data[binary_data])
-    n0 = len(g0)
-    n1 = len(g1)
-    m0 = g0.mean()
-    m1 = g1.mean()
-    out=(m0-m1)*math.sqrt((n0*n1)/n**2)/s_y
-    return out</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.corrmap"><code class="name flex">
 <span>def <span class="ident">corrmap</span></span>(<span>df0, method='kendall', diagonal_plot=True, **kwargs)</span>
@@ -1904,67 +132,6 @@ callable: callable with input two 1d ndarray and returning a float.</p>
 <p>**kwargs: parameter of corr and seaborn heatmap: <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html">https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html</a></p>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def corrmap(df0, method=&#39;kendall&#39;, diagonal_plot=True, **kwargs):
-    &#34;&#34;&#34; plot a correlation heatmap matrix
-
-    Parameters:
-    ----------
-    uData : (pandas dataframe) with [sample*features] format
-
-    method : {‘pearson’, ‘kendall’, ‘spearman’} or callable
-                pearson : standard correlation coefficient
-                kendall : Kendall Tau correlation coefficient
-                spearman : Spearman rank correlation
-                callable: callable with input two 1d ndarray and returning a float.
-
-    **kwargs: parameter of corr and seaborn heatmap: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com
-    &#34;&#34;&#34;
-    import inspect
-    
-    corr_args = list(inspect.signature(pd.DataFrame.corr).parameters)
-    kwargs_corr = {k: kwargs.pop(k) for k in dict(kwargs) if k in corr_args}
-    
-    heatmap_args = list(inspect.signature(sns.heatmap).parameters)
-    kwargs_heatmap = {k: kwargs.pop(k) for k in dict(kwargs) if k in heatmap_args}
-    
-    corr = df0.dropna(how=&#39;any&#39;,axis=0).drop_duplicates().corr(method=method,**kwargs_corr)
-    # Generate a mask for the upper triangle
-    
-    if diagonal_plot:
-      mask = np.zeros_like(corr)
-      mask[np.triu_indices_from(mask)] = True
-    else:
-      mask=None
-
-    plt.figure(figsize = (30,20))
-    # Generate a custom diverging colormap
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    snsPlot = sns.heatmap(                                    
-                            corr,
-                            mask=mask,
-                            cmap=cmap,
-                            center=0,
-                            square=True,
-                            linewidths=.5,
-                            cbar_kws={&#34;shrink&#34;: .5},
-                            fmt=&#34;.1f&#34;,
-                            annot=True,
-                            **kwargs_heatmap,
-                            )
-    figure = snsPlot.get_figure()
-    # figure.savefig(os.path.join(outputFolder,&#34;corr_map.png&#34;), bbox_inches=&#39;tight&#39;)
-    plt.show()
-    plt.close()
-    
-    return corr</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.date2Num"><code class="name flex">
 <span>def <span class="ident">date2Num</span></span>(<span>df, dateCols)</span>
@@ -1979,44 +146,9 @@ callable: callable with input two 1d ndarray and returning a float.</p>
 <p>df[dateCols]-eval(df[dateCols].min()[0])</p>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def date2Num(df, dateCols):
-    &#34;&#34;&#34; returns a new dataframe after deducing dates columns from the min dates of columns
-
-    Parameters:
-    ----------
-    df (pandas dataframe) with [sample*features] format
-
-    datecols  (a list of strings):: name of columns with date values
-
-    returns:
-    -------
-    df[dateCols]-eval(df[dateCols].min()[0])
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    tmploc, _ = inWithReg(dateCols, df.columns.values)
-        
-    if len(tmploc) != 0:
-        
-        df[tmploc] = df[tmploc].astype(&#39;datetime64[ns]&#39;)
-
-        print(&#34;conversion date features to number (month): date - &#34; + str(df[tmploc].min()[0]))
-        tmp3 = df[tmploc].apply(lambda x: x - df[tmploc].min()[0])
-        tmp3 = tmp3.apply(lambda x: x / np.timedelta64(1, &#39;M&#39;))
-        df[tmploc] = tmp3.fillna(-1).round(0).astype(&#39;int64&#39;)
-        df[tmploc]=df[tmploc].replace(-1,np.nan)
-
-    return(df)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.datesList"><code class="name flex">
-<span>def <span class="ident">datesList</span></span>(<span>year_range=[2018, 2099], firstDate=None, lastDate=datetime.date(2024, 2, 28))</span>
+<span>def <span class="ident">datesList</span></span>(<span>year_range=[2018, 2099], firstDate=None, lastDate=datetime.date(2024, 11, 21))</span>
 </code></dt>
 <dd>
 <div class="desc"><p>generates a list of first dates of months within a given range of years
@@ -2029,104 +161,12 @@ firstDate (string or datetime): if it is not given, it will be the first day and
 lastDate (string or datetime): if it is not given,
 it will be the current date
 Returns: python list</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def datesList(year_range=[2018,2099],
-              firstDate=None,
-              lastDate=dt.datetime.now().date()):
-  &#34;&#34;&#34;generates a list of first dates of months within a given range of years
-    Params:       
-      year_range(list):  list of first and the last year+1                               
-      firstDate (string or datetime): if it is not given, it will be the first day and month of year_range[0]
-      lastDate (string or datetime): if it is not given,  it will be the current date
-    Returns: python list 
-  &#34;&#34;&#34; 
-  import itertools  
-  import datetime as dt
-
-  # print(firstDate)
-  # print(lastDate)
-  yrs=[str(i) for i in range(year_range[0], year_range[1])]
-  months=[str(i).zfill(2) for i in range(1,13)]
-  udates=[&#39;-&#39;.join(udate) for udate in itertools.product(yrs,months,[&#39;01&#39;])]
-
-  if isinstance(firstDate, str):
-    print(firstDate)
-    firstDate   = dt.datetime.strptime(firstDate, &#34;%Y-%m-%d&#34;).date()
-  elif isinstance(firstDate,pd._libs.tslibs.timestamps.Timestamp):
-    firstDate   =firstDate.date()
-  if isinstance(lastDate, str):
-    lastDate     = dt.datetime.strptime(lastDate, &#34;%Y-%m-%d&#34;).date()  
-  elif isinstance(lastDate,pd._libs.tslibs.timestamps.Timestamp):
-    lastDate   =lastDate.date()
-
-  if firstDate is None:
-    firstDate=dt.datetime.strptime(udates[0], &#39;%Y-%m-%d&#39;).date() 
-  if lastDate is None:
-    lastDate=dt.datetime.strptime(udates[-1], &#39;%Y-%m-%d&#39;).date() 
-
-  if udates[-1]!=lastDate:
-    udates.append(lastDate.strftime(&#34;%Y-%m-%d&#34;))
-  if udates[0]!=firstDate:
-    udates[0]=firstDate.strftime(&#34;%Y-%m-%d&#34;)
-    # udates.insert(0,firstDate.strftime(&#34;%Y-%m-%d&#34;))
-  
-  udates=[ii for ii in udates if (dt.datetime.strptime(ii, &#39;%Y-%m-%d&#39;).date()&gt;=firstDate)&amp;\
-                                 (dt.datetime.strptime(ii, &#39;%Y-%m-%d&#39;).date()&lt;=lastDate)]
-  # print(udates)
-  return udates</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.discretizer"><code class="name flex">
 <span>def <span class="ident">discretizer</span></span>(<span>x, y, labels=['Q1', 'Q2', 'Q3', 'Q4'], method='cut')</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def discretizer(x,y,labels=[&#34;Q1&#34;, &#34;Q2&#34;, &#34;Q3&#34;,&#34;Q4&#34;],method=&#39;cut&#39;): 
-    # print(&#39;discretizer:&#39;+method)
-
-    if method==&#39;cut&#39;:
-        from sklearn import preprocessing
-        min_max_scaler = preprocessing.MinMaxScaler()        
-        out,bins=pd.cut(min_max_scaler.fit_transform(x.values.reshape(-1,1)).reshape(-1),bins=[-.1,.33,.66,1.1],labels=labels,retbins=True)
-
-    elif method==&#39;tree1&#39;:
-        from sklearn.tree import DecisionTreeClassifier
-        clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 1)
-        clf.fit(x.to_frame(),y)
-
-        # if len(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]))==1:
-        #     # print (&#34;max_depth increased&#34;)
-        #     clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 2)
-        #     clf.fit(x.to_frame(),y)
-
-        bins =  np.sort(np.append(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]),[x.max()+1/1e6,x.min()-1/1e6])).tolist()
-        out=pd.cut(x,bins=bins,labels=labels[:(len(bins)-1)])
-
-    elif method==&#39;tree2&#39;:
-        from sklearn.tree import DecisionTreeClassifier
-        clf = DecisionTreeClassifier(criterion = &#39;entropy&#39;,max_depth = 2)
-        clf.fit(x.to_frame(),y)
-
-        bins =  np.sort(np.append(np.unique(clf.tree_.threshold[clf.tree_.threshold!=-2]),[x.max()+1/1e6,x.min()-1/1e6])).tolist()
-        out=pd.cut(x,bins=bins,labels=labels[:(len(bins)-1)])
-    
-    else:
-        ##TODO: it needs to be corrected:
-        out,bins=pd.qcut(x.rank(method=&#39;first&#39;),q=3,labels=labels,retbins=True)
-        # out,bins=pd.qcut(x,q=3,labels=labels,retbins=True, duplicates=&#39;drop&#39;)
-        # out,bins=pd.qcut(x+ jitter(x),q=3,labels=labels,retbins=True)
-
-    bins=[np.float(x) for x in bins]
-    print(x.name+&#39;:\n&#39;+str(bins))
-    return (out ,bins)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.explainedVar"><code class="name flex">
 <span>def <span class="ident">explainedVar</span></span>(<span>pcaML, outputFile)</span>
@@ -2144,115 +184,24 @@ the location of the plot</p>
 cumulative varaince explained</p>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def explainedVar(pcaML, outputFile):
-    &#34;&#34;&#34; calcluate and plot Variance Explained VS number of features for PCA
-    ##TODO: add screeplot
-    Parameters:
-    ----------
-    pcaML (float): Percentage of variance explained by each of the selected components.
-
-    outputFile (string):
-    the location of the plot
-
-    returns:
-    -------
-    var  (float)
-    cumulative varaince explained
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    
-    eigen_values=pcaML.explained_variance_
-
-    np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3)
-
-
-    explained_var = np.cumsum(
-        np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3) * 100)
-
-    plt.ylabel(&#39;% explained_variance Explained&#39;)
-    plt.xlabel(&#39;# of Features&#39;)
-    plt.title(&#39;PCA Analysis&#39;)
-
-    plt.ylim(0, 100)
-    plt.style.context(&#39;seaborn-whitegrid&#39;)
-    plt.grid()
-    plt.plot(explained_var)
-    plt.savefig(outputFile, format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-
-    return explained_var,eigen_values</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.extract_equation"><code class="name flex">
 <span>def <span class="ident">extract_equation</span></span>(<span>results_pars)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def extract_equation(results_pars):
-  vars=results_pars.reset_index()
-  vars[0]=np.round(vars[0],2).astype(str)
-  vars[&#39;ploys&#39;]=vars[&#39;index&#39;].str.extract(&#39;np.power\((.+?),&#39;)
-  vars[&#39;power&#39;]=np.where(vars[&#39;ploys&#39;].isnull(),np.nan, vars[&#39;index&#39;].str[-2:-1])
-  vars[&#39;index&#39;]=np.where(vars[&#39;ploys&#39;].isnull(),vars[&#39;index&#39;],vars[&#39;ploys&#39;]+&#39;**&#39;+vars[&#39;power&#39;])
-  equation=&#34;&#34;
-  for row in vars.iterrows():
-    sign=&#39;&#39; if (np.sign(float(row[1][0]))==-1) or (row[0]==0) else &#39;+&#39;
-    tmp=f&#34;{sign}{row[1][0]}&#34; if row[1][&#39;index&#39;]==&#39;Intercept&#39; else f&#34;{sign}{row[1][0]}*{row[1][&#39;index&#39;]}&#34;
-    equation+=tmp
-  return equation</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.extract_start_end"><code class="name flex">
 <span>def <span class="ident">extract_start_end</span></span>(<span>udates, ii)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def extract_start_end(udates, ii):
-  import datetime as dt
-  start_date=udates[ii]
-  end_date=(dt.datetime.strptime(udates[ii+1], &#39;%Y-%m-%d&#39;).date()- dt.timedelta(days=1)).strftime(&#34;%Y-%m-%d&#34;)
-  print(start_date,&#39; to &#39;,end_date ,&#34;:&#34;)  
-  return start_date, end_date</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.figures_to_html"><code class="name flex">
 <span>def <span class="ident">figures_to_html</span></span>(<span>figs, filename='dashboard.html')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>save a list of figures all to a single HTML file.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def figures_to_html(figs, filename=&#34;dashboard.html&#34;):
-    &#34;&#34;&#34;save a list of figures all to a single HTML file.
-    &#34;&#34;&#34;
-    ##from https://stackoverflow.com/questions/45577255/plot-multiple-figures-as-subplots
-    with open(filename, &#39;w&#39;) as dashboard:
-        dashboard.write(&#34;&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;&#34; + &#34;\n&#34;)
-        for fig in figs:
-            inner_html = fig.to_html().split(&#39;&lt;body&gt;&#39;)[1].split(&#39;&lt;/body&gt;&#39;)[0]
-            dashboard.write(inner_html)
-        dashboard.write(&#34;&lt;/body&gt;&lt;/html&gt;&#34; + &#34;\n&#34;)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.find_low_variance"><code class="name flex">
 <span>def <span class="ident">find_low_variance</span></span>(<span>df, thresh=0.0)</span>
@@ -2265,27 +214,6 @@ with variance less than thersold</p>
 <p>thresh(number): thersold value for variance of features</p>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def find_low_variance(df, thresh=0.0):
-    &#34;&#34;&#34; returns name of features  with variance less than thersold
-
-    Parameters:
-    ----------
-    df(pandas dataframe) with [sample*features] format
-
-    thresh(number): thersold value for variance of features
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    variance = df.var(skipna=True)
-    low_variance = list(variance[variance &lt;= thresh].index)
-    return low_variance</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.flattenList"><code class="name flex">
 <span>def <span class="ident">flattenList</span></span>(<span>ulist)</span>
@@ -2299,154 +227,24 @@ with variance less than thersold</p>
 ulist: a list of flatten ulist</p>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def flattenList(ulist):
-    &#34;&#34;&#34; makes a flat list out of list of lists
-
-    Parameters:
-    ----------
-    ulist: a list of nested lists
-    
-    returns:
-    -------
-    results  ulist: a list of flatten ulist
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    results = []
-    for rec in ulist:
-        if isinstance(rec, list):
-            results.extend(rec)
-            results = flattenList(results)
-        else:
-            results.append(rec)
-    return results</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.highcorr_finder"><code class="name flex">
 <span>def <span class="ident">highcorr_finder</span></span>(<span>corrMat, df_scores, thershold)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def highcorr_finder(corrMat,df_scores,thershold):
-    #TODO: add comment 
-    corr_matrix = corrMat.abs()
-    # Select upper triangle of correlation matrix
-    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
-
-    # Find features with correlation greater than x
-    drop_cols = [x for x in upper.columns if any(upper[x] &gt;thershold)]
-    drops_rows = [x for x in upper.index   if any(upper.loc[x] &gt;thershold)]
-
-    to_drop = list()
-    mat_ind=list()
-    for x,y in zip (drop_cols,drops_rows):
-        tmp= y if df_scores[x]&gt;df_scores[x] else x
-        to_drop.append(tmp)
-        mat_ind.append(x)
-        mat_ind.append(y)
-
-    high_corrs = dict(zip(drop_cols, drops_rows))
-
-    return to_drop,mat_ind,high_corrs</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.hypothesis_test"><code class="name flex">
 <span>def <span class="ident">hypothesis_test</span></span>(<span>df, par, group, group_names)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def hypothesis_test(
-                    df,
-                    par,
-                    group,
-                    group_names,
-                   ):
-  import researchpy as rp
-  
-  df[group]=df[group].astype(&#39;bool&#39;)
-  X1=df[par][df[group]]
-  X2=df[par][~df[group]]
-  
-  group1_name, group2_name= group_names[0], group_names[1]
-  des, res =rp.ttest(X1, X2,
-                     group1_name= group1_name,
-                     group2_name= group2_name,
-                     equal_variances= False,
-                     paired= False,
-                     #correction= None
-                    )
-  res=res.set_index(res.columns[0])
-  res.columns=[par]
-
-  if res.loc[&#39;Two side test p value = &#39;][0]!=0:
-    txt=f&#34;{par}: There is no difference between {group1_name} and {group2_name}&#34;
-    txt2=&#39;no difference&#39;
-  elif (res.loc[&#39;Two side test p value = &#39;][0]==0) &amp; (res.loc[&#39;Difference &lt; 0 p value = &#39;][0]==0):
-    txt=f&#34;{par}: {group1_name} is lower &#34; #than {group2_name}&#34;
-    txt2=&#39;lower&#39;
-  elif  (res.loc[&#39;Two side test p value = &#39;][0]==0) &amp; (res.loc[&#39;Difference &gt; 0 p value = &#39;][0]==0):
-    txt=f&#34;{par}: {group1_name} is higher&#34; #than {group2_name}&#34;
-    txt2=&#39;higher&#39;
-  else:
-     txt2=txt=&#39;&#39;
-      
-  res.loc[&#39;summary&#39;]=txt
-  #   print(txt)
-
-  summary=pd.DataFrame(txt2,index=[par],columns=[group1_name])
-  #   print(summary)
-  return des, res, summary</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.hypothesis_test_batch_pars"><code class="name flex">
 <span>def <span class="ident">hypothesis_test_batch_pars</span></span>(<span>df, pars, group, group_names)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def hypothesis_test_batch_pars(df,
-                              pars ,
-                              group,
-                              group_names):
-  tsts=pd.DataFrame()
-  stats=pd.DataFrame()
-  summary=pd.DataFrame()
-  for par in pars:
-    par1_stats_tmp, par1_test_tmp, summary_tmp= hypothesis_test(df,
-                                                                par=par,
-                                                                group=group,
-                                                                group_names=group_names
-                                                               )
-    stats=pd.concat([stats,
-                    par1_stats_tmp],axis=0,
-                    # keys=[par]
-                    )
-    
-    tsts=pd.concat([tsts,
-                    par1_test_tmp],axis=1)
-
-    summary=pd.concat([summary,
-                    summary_tmp],axis=0,
-    #                     keys=[par]
-                    )
-  return stats, tsts, summary</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.inWithReg"><code class="name flex">
 <span>def <span class="ident">inWithReg</span></span>(<span>regLst, LstAll)</span>
@@ -2468,60 +266,12 @@ ind=[False,  True, False,  True,  True]
 </code></pre>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def inWithReg(regLst, LstAll):
-    &#34;&#34;&#34; search regualr expression list in a list
-
-    Parameters:
-    ----------
-    regLst (list of strings with regx)
-
-    LstAll (list of strings to be searched for regLst
-
-    returns:
-    -------
-    out: the subset of LstAll which met contains any subset of regLst
-    
-    ind: a list of True/False values of existence LstAll in any subset of regLst
-
-    Example:
-    ---------
-        regLst=[&#39;.vol_flag$&#39;,&#39;fefefre&#39;,&#39;_date&#39;]
-        LstAll=[&#39;bi_alt_account_id&#39;, &#39;snapshot_date&#39;, &#39;snapshot_year&#39;,&#39;tv_vol_flag&#39;, &#39;phone_vol_flag&#39;]
-        out,ind=inWithReg(regLst,LstAll)
-        out=[&#39;tv_vol_flag&#39;, &#39;phone_vol_flag&#39;, &#39;snapshot_date&#39;]
-        ind=[False,  True, False,  True,  True]
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    out = []
-    if type(regLst) != list:
-        regLst = [regLst]
-    for i in regLst:
-        tmp = list(filter(re.compile(i).search, LstAll))
-        out = out + tmp
-    ind = np.in1d(LstAll, out)
-    return out, ind</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.jitter"><code class="name flex">
 <span>def <span class="ident">jitter</span></span>(<span>a_series, noise_reduction=1000000)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def jitter(a_series, noise_reduction=1000000):
-    # https://stackoverflow.com/questions/20158597/how-to-qcut-with-non-unique-bin-edges
-    #TODO: add docs
-    return (np.random.random(len(a_series))*a_series.std()/noise_reduction)-(a_series.std()/(2*noise_reduction))</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.kruskalwallis2"><code class="name flex">
 <span>def <span class="ident">kruskalwallis2</span></span>(<span>x, y)</span>
@@ -2530,118 +280,28 @@ ind=[False,  True, False,  True,  True]
 <div class="desc"><p>calculate the Kruskal-Wallis H-test for independent samples</p>
 <h2 id="parameters">Parameters:</h2>
 <p>x
-array of sample1
+array of observations
 y
-array of sample2</p>
+array of groups</p>
 <h2 id="returns">returns:</h2>
 <p>H-statistic
 (float)
 The Kruskal-Wallis H statistic, corrected for ties
 p-value
 (float)
-The p-value for the test using the assumption that H has a chi square distribution</p>
-<hr>
-<p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def kruskalwallis2(x, y):
-    &#34;&#34;&#34; calculate the Kruskal-Wallis H-test for independent samples
-
-    Parameters:
-    ----------
-    x  array of sample1
-    y  array of sample2
-
-    returns:
-    -------
-    H-statistic  (float)
-    The Kruskal-Wallis H statistic, corrected for ties
-    p-value  (float)
-    The p-value for the test using the assumption that H has a chi square distribution
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    groupednumbers = {}
-    from scipy import stats
-    for grp in y.unique():
-        groupednumbers[grp] = x.values[y == grp]
-    args = groupednumbers.values()
-    tmp = stats.mstats.kruskalwallis(*args)
-    # pdb.set_trace()
-    return (tmp)</code></pre>
-</details>
+The p-value for the test using the assumption that H has a chi square distribution</p></div>
 </dd>
 <dt id="common_funcs.lag_plot"><code class="name flex">
 <span>def <span class="ident">lag_plot</span></span>(<span>x, y=None, nlags=24)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def lag_plot(x, y=None, nlags=24):
-  # x=x.dropna()
-  # print(f&#34;data size after removing nulls({plant}):&#34;, x.shape )
-  with sns.plotting_context(&#34;paper&#34;):
-    fig, ax = plt.subplots(nrows=math.ceil((nlags)/4), ncols=4, figsize=[15, 10])
-    
-    if y is None:
-      fig.suptitle(f&#39;Auto correlation plot {x.name}&#39;, fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          
-          pd.plotting.lag_plot(x, lag=i + 1, ax=ax_)
-          # ax_.set_title(f&#34;Lag {i+1}&#34;)
-          ax_.ticklabel_format(style=&#34;sci&#34;, scilimits=(0, 0))
-          ax_.set_ylabel(f&#34;{x.name}$_t$&#34;)
-          ax_.set_xlabel(f&#34;{x.name}$_{{t-{i}}}$&#34;)
-    else:
-      fig.suptitle(f&#39;Cross correlation plot {x.name} vs {y.name}&#39;, fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          ax_.scatter(y=y, x=x.shift(periods=i), s=10)
-          ax_.set_ylabel(f&#34;{y.name}$_{{t}}$&#34;)
-          ax_.set_xlabel(f&#34;{x.name}$_{{t-{i}}}$&#34;)
-
-    # plt.tight_layout()</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.merge_between"><code class="name flex">
 <span>def <span class="ident">merge_between</span></span>(<span>df1, df2, groupCol, closed='both')</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def merge_between(df1, df2, groupCol, closed=&#34;both&#34;):
-    #   df1=df_pi_dic_wide
-    #   df2=df_cases_edited
-    #   groupCol=&#39;Vessel&#39;
-
-  df_out=pd.DataFrame(columns=df1.columns.tolist()+[&#39;Index_no&#39;])
-  for name, group_df in df1.groupby([groupCol]):
-    print(name)
-    df2_sub=df2.loc[df2[groupCol]==name]
-
-    #     https://stackoverflow.com/questions/68792511/efficient-way-to-merge-large-pandas-dataframes-between-two-dates
-    #     https://stackoverflow.com/questions/31328014/merging-dataframes-based-on-date-range
-    #     https://stackoverflow.com/questions/69824730/check-if-value-in-pandas-dataframe-is-within-any-two-values-of-two-other-columns
-    #     https://stackoverflow.com/questions/43593554/merging-two-dataframes-based-on-a-date-between-two-other-dates-without-a-common
-    #     https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.from_arrays.html
-    i = pd.IntervalIndex.from_arrays(df2_sub[&#39;Start&#39;],
-                                     df2_sub[&#39;End&#39;], 
-                                     closed=closed
-                                               )
-    group_df[&#39;Index_no&#39;]=i.get_indexer(group_df[&#39;Date&#39;])
-
-    df_out=pd.concat([group_df, df_out],axis=0)
-  
-  return df_out</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.movecol"><code class="name flex">
 <span>def <span class="ident">movecol</span></span>(<span>df, cols_to_move=[], ref_col='', place='After')</span>
@@ -2663,59 +323,12 @@ reordered dataframe</p>
 <hr>
 <p>Author:
 <a href="https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5">https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5</a></p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def movecol(df, cols_to_move=[], ref_col=&#39;&#39;, place=&#39;After&#39;):
-    &#34;&#34;&#34; Reorders a panda dataframe columns
-    Parameters:
-    ----------
-    df (pandas dataframe) 
-    cols_to_move:                          list of columns to move
-    ref_col(string):                       name of a specific column to move  cols_to_move columns to after/before it
-    place(string) [options:&#34;After&#34;,&#34;Before&#34;]: cols_to_move columns will be move before/after it
-    
-    returns:
-    -------
-    df (pandas dataframe)  reordered dataframe
-
-    -------
-    Author:    https://towardsdatascience.com/reordering-pandas-dataframe-columns-thumbs-down-on-standard-solutions-1ff0bc2941d5
-    &#34;&#34;&#34; 
-    cols = df.columns.tolist()
-    if place == &#39;After&#39;:
-        seg1 = cols[:list(cols).index(ref_col) + 1]
-        seg2 = cols_to_move
-    if place == &#39;Before&#39;:
-        seg1 = cols[:list(cols).index(ref_col)]
-        seg2 = cols_to_move + [ref_col]
-    
-    seg1 = [i for i in seg1 if i not in seg2]
-    seg3 = [i for i in cols if i not in seg1 + seg2]
-    
-    return(df[seg1 + seg2 + seg3]) </code></pre>
-</details>
 </dd>
 <dt id="common_funcs.null_per_column"><code class="name flex">
 <span>def <span class="ident">null_per_column</span></span>(<span>df)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def null_per_column(df):
-    null_per = df.isnull().sum() / df.shape[0] * 100
-    null_per = pd.DataFrame(null_per, columns=[&#34;null_percent&#34;])
-    null_per = (
-        null_per.reset_index()
-        .sort_values(by=[&#34;null_percent&#34;, &#34;index&#34;], ascending=False)
-        .set_index(&#34;index&#34;)
-    )
-    return null_per</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.ortho_rotation"><code class="name flex">
 <span>def <span class="ident">ortho_rotation</span></span>(<span>lam, method='varimax', gamma=None, eps=1e-06, itermax=100)</span>
@@ -2726,41 +339,6 @@ reordered dataframe</p>
 <h2 id="httpsgithubcomrossfadelyconsommeblobmasterconsommerotate_factorpy"><a href="https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py">https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py</a></h2>
 <p>Return orthogal rotation matrix
 TODO: - other types beyond</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def ortho_rotation(lam, method=&#39;varimax&#39;,gamma=None,
-                    eps=1e-6, itermax=100):
-    &#34;&#34;&#34;
-    ##TODO: document it 
-    ## A VARIMAX rotation is a change of coordinates used in principal component analysis1 (PCA) that maximizes the sum of the variances of the squared loadings
-    ## https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py
-    Return orthogal rotation matrix
-    TODO: - other types beyond 
-    &#34;&#34;&#34;
-    if gamma == None:
-        if (method == &#39;varimax&#39;):
-            gamma = 1.0
-        if (method == &#39;quartimax&#39;):
-            gamma = 0.0
-
-    nrow, ncol = lam.shape
-    R = np.eye(ncol)
-    var = 0
-
-    for i in range(itermax):
-        lam_rot = np.dot(lam, R)
-        tmp = np.diag(np.sum(lam_rot ** 2, axis=0)) / nrow * gamma
-        u, s, v = np.linalg.svd(np.dot(lam.T, lam_rot ** 3 - np.dot(lam_rot, tmp)))
-        R = np.dot(u, v)
-        var_new = np.sum(s)
-        if var_new &lt; var * (1 + eps):
-            break
-        var = var_new
-
-    return R</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.parse_sql_file"><code class="name flex">
 <span>def <span class="ident">parse_sql_file</span></span>(<span>file_name)</span>
@@ -2774,98 +352,18 @@ A List Of Queries</p>
 <hr>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def parse_sql_file(file_name):
-    &#34;&#34;&#34; read sql queries in a file
-
-    Parameters:
-    ----------
-    file (string): the location of sql file
-
-    returns:
-    a list of queries
-    --------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    # from riskmodelPipeline.py
-    check_path(file_name)
-    sql_statements = []
-    with open(file_name, &#39;r&#39;) as f:
-        for sql_statement in split_sql_expressions_sub(f.read()):
-            sql_statements.append(sql_statement)
-    return(sql_statements)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.pass_days"><code class="name flex">
 <span>def <span class="ident">pass_days</span></span>(<span>start_date, end_date)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def pass_days(start_date, end_date):
-    ##TODO: add comment
-    import pandas as pd
-
-    # if (start_date is None)|(end_date is None)| (pd.isnull(start_date))| (pd.isnull(end_date)):
-    #   return None
-    month_year_index = (
-        pd.date_range(start=start_date, end=end_date, freq=&#34;D&#34;).to_period(&#34;Q&#34;).unique()
-    )
-    # print(start_date, end_date, month_year_index)
-
-    pass_days_dict = {}
-    for month_year in month_year_index:
-        days_in_month = (
-            min(end_date, month_year.end_time)
-            - max(start_date, (month_year.start_time))
-        ).days + 1
-        pass_days_dict[month_year] = days_in_month
-
-    result_series = pd.Series(pass_days_dict)
-    qs = &#34;Q&#34; + result_series.index.quarter.astype(str)
-    result_series = result_series.groupby(qs).sum()
-    # print(result_series)
-    return result_series.fillna(0)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.percent_agg"><code class="name flex">
 <span>def <span class="ident">percent_agg</span></span>(<span>df, grpby1, grpby2, sumCol)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def percent_agg(df, grpby1, grpby2, sumCol):
-  agg1=df.groupby(grpby1)[sumCol].sum().reset_index()
-  agg2=df.groupby(grpby2)[sumCol].sum().reset_index()
-
-  agg1 = df.groupby(grpby1)[sumCol].sum()
-  agg1 = agg1.groupby(level=grpby2).apply(lambda x:100 * x / float(x.sum())).reset_index()
-  agg1.rename(columns={sumCol:f&#34;{sumCol}_percent&#34;}, inplace=True)
-  
-  agg1=agg1[agg1[f&#34;{sumCol}_percent&#34;]!=0]
-  #   agg1=agg1.merge(agg2,on=grpby2)
-  #   agg1[f&#39;{sumCol}_percent&#39;]=np.round(agg1[f&#39;{sumCol}_x&#39;]/agg1[f&#39;{sumCol}_y&#39;]*100,0)
-  #   agg1=agg1[agg1[outCol]!=0]
-
-    ##NOTE:
-  #   agg1.div(agg2, level=grpby2) * 100  doesnot work
-
-  ##print(agg1.groupby(grpby2)[f&#34;{sumCol}_percent&#34;].sum())
-  agg1[f&#34;{sumCol}&#34;]= pd.Series(df.groupby(grpby1)[sumCol].sum().values)
-  
-  return agg1</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.plot3D"><code class="name flex">
 <span>def <span class="ident">plot3D</span></span>(<span>udata, uY, xyzLabels, utitle, outPutFile)</span>
@@ -2884,144 +382,18 @@ the title of graph</p>
 the location of the plot</p>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot3D(udata, uY, xyzLabels, utitle, outPutFile):
-    &#34;&#34;&#34; plot3d of udata
-
-    parameters:
-    ----------
-    udata : (pandas dataframe) with [sample*3] format
-
-    uY (string):
-    the name of columns which is used to color dot plot
-
-    xyzLabels: the list of string
-    labels of Axis X,Y,Z
-
-    utitle (string):
-    the title of graph
-
-    outputFile (string):
-    the location of the plot
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    # %matplotlib notebook
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection=&#39;3d&#39;)
-    ax.set_xlabel(xyzLabels[0], fontsize=15)
-    ax.set_ylabel(xyzLabels[1], fontsize=15)
-    ax.set_zlabel(xyzLabels[2], fontsize=15)
-    ax.set_title(utitle, fontsize=20)
-    targets = pd.unique(uY)
-    colors = [&#39;r&#39;, &#39;g&#39;, &#39;b&#39;, &#39;y&#39;]
-    for target, color in list(zip(targets, colors)):
-        indicesToKeep = uY.squeeze() == target
-        ax.scatter(udata[indicesToKeep, 0], udata[indicesToKeep, 1],
-                   udata[indicesToKeep, 2], c=color, s=50, alpha=.5)
-    ax.legend(pd.unique(uY).astype(&#39;str&#39;))
-    ax.grid()
-
-    plt.tight_layout()
-    plt.savefig(outPutFile, format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-    print(&#39;Plot saved in &#39; + outPutFile)
-    # for angle in list(range(0, 360,60)):
-    #     ax.view_init(30, angle)
-    #     # plt.draw()
-    #     plt.tight_layout()
-    #     plt.savefig(os.path.join(outputFolder,fileName.split(&#39;.&#39;)[0]+str(angle)+&#39;.&#39;+fileName.split(&#39;.&#39;)[1]) , format=&#39;png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
-    #     plt.pause(.001)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.plot_ccf"><code class="name flex">
 <span>def <span class="ident">plot_ccf</span></span>(<span>x, y, lags, ax=None, title='Cross-correlation', **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot_ccf(x, y, lags,  ax=None, title=&#34;Cross-correlation&#34;, **kwargs):
-  from statsmodels.tsa.stattools import ccf
-  from matplotlib.ticker import MaxNLocator
-  # Compute CCF and confidence interval
-  cross_corrs = ccf(x, y, **kwargs)
-  ci = 2 / np.sqrt(len(y))
-  # Create plot
-  if ax is None:
-    fig, ax = plt.subplots(figsize=[10, 5])
-  ax.stem(range(0, lags + 1), cross_corrs[: lags + 1])
-  ax.fill_between(range(0, lags + 1), ci, y2=-ci, alpha=0.2)
-  ax.set_title(title)
-  ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-  return ax, cross_corrs</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.plotly_group_stack"><code class="name flex">
 <span>def <span class="ident">plotly_group_stack</span></span>(<span>df_plot, col2grp, col2stack, col2c, date_col, title, color_palette=['#FD3216', '#00FE35', '#6A76FC', '#FED4C4', '#FE00CE', '#0DF9FF', '#F6F926', '#FF9616', '#479B55', '#EEA6FB', '#DC587D', '#D626FF', '#6E899C', '#00B5F7', '#B68E00', '#C9FBE5', '#FF0092', '#22FFA7', '#E3EE9E', '#86CE00', '#BC7196', '#7E7DCD', '#FC6955', '#E48F72'], patterns=['', '/'])</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plotly_group_stack(df_plot,
-                        col2grp,
-                        col2stack,
-                        col2c,
-                        date_col,
-                        title,
-                        color_palette=px.colors.qualitative.Light24,
-                        patterns=[&#39;&#39;,&#39;/&#39;]
-                                                                                        ):
-  import plotly.graph_objects as go
-  import plotly.express as px
-  import pandas as pd
-
-  x = [list(df_plot[date_col].dt.date.values),list(df_plot[col2grp].values)]
-
-  colors,color_map=cat2color_plotly(df_plot[col2grp], color_palette=color_palette)
-
-  fig = go.Figure()
-
-  for shift_name, upattern in zip(df_plot[col2stack].unique(), patterns):
-    df_tmp = df_plot.mask(df_plot[col2stack]!=shift_name, pd.NA)
-    for machine in df_plot[col2grp].unique():
-      y = df_tmp[col2c].mask(df_plot[col2grp]!=machine, pd.NA)
-      fig.add_bar(
-                  x=x,
-                  y=y,
-                  name=f&#34;{machine} - {shift_name}&#34;, 
-                  hovertext = df_plot[col2stack],
-                  marker_color=color_map[machine],
-                  marker_pattern_shape=upattern,
-                  legendgroup=shift_name,
-                  legendgrouptitle_text=shift_name,
-                  hovertemplate=&#34;Date: %{x[0]}&lt;br&gt;&#34;+
-                                &#34;Machine: %{x[1]}&lt;br&gt;&#34;+
-                                &#34;Efficiency: %{y}&lt;br&gt;&#34;+
-                                &#34;DayNight: %{hovertext}&lt;br&gt;&#34;,
-                )       
-
-  fig.update_layout(
-                    barmode=&#34;relative&#34;,
-                    xaxis_title=&#34;Date&#34;,
-                    yaxis_title=col2c,
-                    legend_title_text=&#39;&#39;,
-                    title=title
-                    )
-  return fig</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.readableTime"><code class="name flex">
 <span>def <span class="ident">readableTime</span></span>(<span>time)</span>
@@ -3030,25 +402,6 @@ the location of the plot</p>
 <div class="desc"><p>convert time to day, hour, minutes, seconds</p>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def readableTime(time):
-    &#34;&#34;&#34; convert time to day, hour, minutes, seconds
-
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    day = time // (24 * 3600)
-    time = time % (24 * 3600)
-    hour = time // 3600
-    time %= 3600
-    minutes = time // 60
-    time %= 60
-    seconds = time
-    return (day, hour, minutes, seconds)</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.reduce_mem_usage"><code class="name flex">
 <span>def <span class="ident">reduce_mem_usage</span></span>(<span>df, obj2str_cols='all_columns', str2cat_cols='all_columns', verbose=False)</span>
@@ -3056,112 +409,24 @@ the location of the plot</p>
 <dd>
 <div class="desc"><p>iterate through all the columns of a dataframe and modify the data type
 to reduce memory usage.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def reduce_mem_usage(df, obj2str_cols=&#39;all_columns&#39;, str2cat_cols=&#39;all_columns&#39;, verbose=False):
-  &#34;&#34;&#34; iterate through all the columns of a dataframe and modify the data type
-      to reduce memory usage.        
-  &#34;&#34;&#34;
-  ## https://www.kaggle.com/code/konradb/ts-4-sales-and-demand-forecasting
-  
-  start_mem = df.memory_usage().sum() / 1024**2
-  print(&#39;Memory usage of dataframe is {:.2f} MB&#39;.format(start_mem))
-  
-  from pandas.api.types import is_datetime64_any_dtype as is_datetime
-
-  for col in df.columns:
-    col_type = df[col].dtype
-
-    if ((str(col_type)[:3]==&#39;float&#39;) |(str(col_type)[:3]==&#39;int&#39;)): ##((col_type != object) &amp; ~(is_datetime(df[col])) &amp; (col_type!=&#39;str&#39;)):
-      if verbose: print(col, &#34;: compressing numeric column&#34;) 
-      c_min = df[col].min()
-      c_max = df[col].max()
-      if str(col_type)[:3] == &#39;int&#39;:
-        if c_min &gt; np.iinfo(np.int8).min and c_max &lt; np.iinfo(np.int8).max:
-            df[col] = df[col].astype(np.int8)
-        elif c_min &gt; np.iinfo(np.int16).min and c_max &lt; np.iinfo(np.int16).max:
-            df[col] = df[col].astype(np.int16)
-        elif c_min &gt; np.iinfo(np.int32).min and c_max &lt; np.iinfo(np.int32).max:
-            df[col] = df[col].astype(np.int32)
-        elif c_min &gt; np.iinfo(np.int64).min and c_max &lt; np.iinfo(np.int64).max:
-            df[col] = df[col].astype(np.int64)  
-      else:
-        if c_min &gt; np.finfo(np.float16).min and c_max &lt; np.finfo(np.float16).max:
-            df[col] = df[col].astype(np.float16)
-        elif c_min &gt; np.finfo(np.float32).min and c_max &lt; np.finfo(np.float32).max:
-            df[col] = df[col].astype(np.float32)
-        else:
-            df[col] = df[col].astype(np.float64)
-
-    if  (col_type==object) &amp; ((col in obj2str_cols)| (obj2str_cols==&#39;all_columns&#39;)) : 
-      df[col] = df[col].astype(&#39;str&#39;)
-      obj2str=True
-    else:
-      obj2str=False
-
-    if ((str(col_type)[:3]==&#39;str&#39;)| obj2str) &amp;  ((col in str2cat_cols)| (str2cat_cols==&#39;all_columns&#39;)) :     ##~(is_datetime(df[col])):
-      df[col] = df[col].astype(&#39;category&#39;)
-      if (verbose) &amp; (~obj2str):
-        print(col, f&#34;: string --&gt; category&#34;)
-      if (verbose) &amp; (obj2str):
-        print(col, f&#34;: object --&gt; string --&gt; category&#34;)
-
-  end_mem = df.memory_usage().sum() / 1024**2
-  print(&#39;Memory usage after optimization is: {:.2f} MB&#39;.format(end_mem))
-  print(&#39;Decreased by {:.1f}%&#39;.format(100 * (start_mem - end_mem) / start_mem))
-  
-  return df</code></pre>
-</details>
+</dd>
+<dt id="common_funcs.remove_extra_none"><code class="name flex">
+<span>def <span class="ident">remove_extra_none</span></span>(<span>nested_lst)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
 </dd>
 <dt id="common_funcs.retrieve_name"><code class="name flex">
 <span>def <span class="ident">retrieve_name</span></span>(<span>var)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def retrieve_name(var):
-    import inspect
-    &#34;&#34;&#34;Getting the name of a variable as a string
-    Ref: https://stackoverflow.com/questions/18425225/getting-the-name-of-a-variable-as-a-string 
-    &#34;&#34;&#34;
-    callers_local_vars = inspect.currentframe().f_back.f_locals.items()
-    return [var_name for var_name, var_val in callers_local_vars if var_val is var][0]</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.rle_encode"><code class="name flex">
 <span>def <span class="ident">rle_encode</span></span>(<span>data)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def rle_encode(data):
-    #Ref:https://stackabuse.com/run-length-encoding/  
-    encoding = &#39;&#39;
-    prev_char = &#39;&#39;
-    count = 1
-
-    if not data: return &#39;&#39;
-
-    for char in data:
-        if char != prev_char:
-            if prev_char:
-                encoding += prev_char+&#34;(&#34;+str(count) +&#34;);&#34; 
-            count = 1
-            prev_char = char
-        else:
-            count += 1
-    else:
-        encoding += prev_char+&#34;(&#34;+str(count) +&#34;);&#34; 
-        return encoding</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.sankey"><code class="name flex">
 <span>def <span class="ident">sankey</span></span>(<span>left, right, value, thershold, utitle, filename)</span>
@@ -3186,133 +451,12 @@ the location of the plot</p>
 tranactions has three columns: left, right, value</p>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def sankey(left, right, value, thershold, utitle, filename):
-    &#34;&#34;&#34; create and plot a simplified sankey graph with only one source (left) and one target(right)
-
-    Parameters:
-    ----------
-    left (array, shape) [n_samples]
-    the label of left column
-
-    right (array, shape) [n_samples]
-    the label of right column
-
-    value (array, shape) [n_samples]
-    the value of transaction
-
-    thershold (float)
-    to filter those transactions which have less value than thershold
-
-    utitle (string):
-    the title of the plot
-
-    filename (string):
-    the location of the plot
-
-    returns:
-    -------
-    tranactions(array, shape) [filtered n_samples*3]
-    tranactions has three columns: left, right, value
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-
-    tranactions0 = pd.concat(
-        [left.rename(&#39;left&#39;), right.rename(&#39;right&#39;), value.rename(&#39;value&#39;)], axis=1)
-    tranactions = tranactions0.groupby(
-        [&#39;left&#39;, &#39;right&#39;], as_index=False).agg(&#39;sum&#39;)
-    counts = tranactions0.groupby(
-        [&#39;left&#39;, &#39;right&#39;], as_index=False).agg(&#39;count&#39;)
-    tranactions = tranactions.loc[counts[&#39;value&#39;] &gt; thershold, :]
-    tranactions.sort_values([&#39;value&#39;], ascending=[False], inplace=True)
-    left = tranactions[&#39;left&#39;]
-    right = tranactions[&#39;right&#39;]
-    values = tranactions[&#39;value&#39;]
-
-    #import chart_studio.plotly as py
-    import plotly
-
-    lbLeft = list(pd.unique(left))
-    lbRight = list(pd.unique(right))
-
-    # label=lbLeft+lbRight
-    source = []
-    target = []
-    value = []
-    for i in list(range(left.shape[0])):
-        # if i==3:
-        #     pdb.set_trace()
-        tmpSource = np.where(
-            np.asarray(lbLeft) == np.asarray(
-                left.iloc[i]))[0].tolist()
-        source = source + tmpSource
-
-        tmpTarget = np.where(
-            np.asarray(lbRight) == np.asarray(
-                right.iloc[i]))[0].tolist()
-        target = target + tmpTarget
-
-        tmpValue = [values.iloc[i]]
-        value = value + tmpValue
-
-    target = [x + len(lbLeft) for x in target]
-
-    data = dict(
-        type=&#39;sankey&#39;,
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(
-                color=&#34;black&#34;,
-                width=0.5
-            ),
-            label=list(pd.unique(left)) + list(pd.unique(right))
-            # color = [&#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;, &#34;blue&#34;]
-        ),
-        link=dict(
-            source=source,
-            target=target,
-            value=value
-        ))
-
-    layout = dict(
-        title=utitle,
-        font=dict(
-            size=10
-        )
-    )
-    fig = dict(data=[data], layout=layout)
-    plotly.offline.plot(fig, filename=filename)
-    return tranactions</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.save_plotly_fig"><code class="name flex">
 <span>def <span class="ident">save_plotly_fig</span></span>(<span>fig, fname_prefix, image_format='jpg')</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def save_plotly_fig(fig, fname_prefix, image_format=&#34;jpg&#34;):
-    import plotly      
-    uFiles = [f&#34;{fname_prefix}.{ext}&#34; for ext in [&#34;html&#34;, &#34;json&#34;, image_format]]
-    for uFile in uFiles:
-        ext = uFile.split(&#34;.&#34;)[-1]
-        if ext == &#34;html&#34;:
-            plotly.offline.plot(fig, filename=uFile, auto_open=False)
-        elif ext == &#34;json&#34;:
-            plotly.io.write_json(fig, uFile)
-        else:
-            fig.write_image(uFile, width=2400, height=1400, scale=4)
-    return uFiles</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.split_sql_expressions_sub"><code class="name flex">
 <span>def <span class="ident">split_sql_expressions_sub</span></span>(<span>text)</span>
@@ -3326,133 +470,18 @@ A List Of Queries</p>
 <hr>
 <hr>
 <p>Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def split_sql_expressions_sub(text):
-    &#34;&#34;&#34; split sql queries based on &#34;;&#34;
-
-    Parameters:
-    ----------
-    text (string): (sql queries)
-
-    returns:
-    a list of queries
-    --------
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    # from riskmodelPipeline.py
-    results = []
-    current = &#39;&#39;
-    state = None
-    for c in text:
-        if state is None:  # default state, outside of special entity
-            current += c
-            if c in &#39;&#34;\&#39;&#39;:
-                # quoted string
-                state = c
-            elif c == &#39;-&#39;:
-                # probably &#34;--&#34; comment
-                state = &#39;-&#39;
-            elif c == &#39;/&#39;:
-                # probably &#39;/*&#39; comment
-                state = &#39;/&#39;
-            elif c == &#39;;&#39;:
-                # remove it from the statement
-                current = current[:-1].strip()
-                # and save current stmt unless empty
-                if current:
-                    results.append(current)
-                current = &#39;&#39;
-        elif state == &#39;-&#39;:
-            if c != &#39;-&#39;:
-                # not a comment
-                state = None
-                current += c
-                continue
-            # remove first minus
-            current = current[:-1]
-            # comment until end of line
-            state = &#39;--&#39;
-        elif state == &#39;--&#39;:
-            if c == &#39;\n&#39;:
-                # end of comment
-                # and we do include this newline
-                current += c
-                state = None
-            # else just ignore
-        elif state == &#39;/&#39;:
-            if c != &#39;*&#39;:
-                state = None
-                current += c
-                continue
-            # remove starting slash
-            current = current[:-1]
-            # multiline comment
-            state = &#39;/*&#39;
-        elif state == &#39;/*&#39;:
-            if c == &#39;*&#39;:
-                # probably end of comment
-                state = &#39;/**&#39;
-        elif state == &#39;/**&#39;:
-            if c == &#39;/&#39;:
-                state = None
-            else:
-                # not an end
-                state = &#39;/*&#39;
-        elif state[0] in &#39;&#34;\&#39;&#39;:
-            current += c
-            if state.endswith(&#39;\\&#39;):
-                # prev was backslash, don&#39;t check for ender
-                # just revert to regular state
-                state = state[0]
-                continue
-            elif c == &#39;\\&#39;:
-                # don&#39;t check next char
-                state += &#39;\\&#39;
-                continue
-            elif c == state[0]:
-                # end of quoted string
-                state = None
-        else:
-            raise Exception(&#39;Illegal state %s&#39; % state)
-
-    if current:
-        current = current.rstrip(&#39;;&#39;).strip()
-        if current:
-            results.append(current)
-    return results</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.subplot_plExpress"><code class="name flex">
 <span>def <span class="ident">subplot_plExpress</span></span>(<span>figs, sub_titles, main_title)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def subplot_plExpress(figs, sub_titles, main_title):
-  from plotly.subplots import make_subplots
-  figure_traces=[]
-  for con, fig_sub in enumerate(figs):
-    figure_traces_sub=[]
-    for trace in range(len(fig_sub[&#34;data&#34;])):
-        if con&gt;0: 
-          fig_sub[&#34;data&#34;][trace][&#39;showlegend&#39;] = False 
-        figure_traces_sub.append(fig_sub[&#34;data&#34;][trace])
-    figure_traces.append(figure_traces_sub)
-  figure = make_subplots(rows = 3, cols = 1, subplot_titles =sub_titles)
-  figure.update_layout(height = 500, width = 1200, title_text =main_title, title_font_size = 25)
-  for con, figure_traces_sub in enumerate(figure_traces):
-    for traces in figure_traces_sub:
-        figure.append_trace(traces, row = con+1, col = 1)
-  return figure</code></pre>
-</details>
+</dd>
+<dt id="common_funcs.unify_cols"><code class="name flex">
+<span>def <span class="ident">unify_cols</span></span>(<span>df1, df2, df1_name, df2_name)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
 </dd>
 <dt id="common_funcs.unique_list"><code class="name flex">
 <span>def <span class="ident">unique_list</span></span>(<span>seq)</span>
@@ -3467,58 +496,12 @@ Parameters:</p>
 A List With Unqiue Elements</p>
 <hr>
 <p>Author: Reza Nourzadeh- reza.nourzadeh@gmail.com</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def unique_list(seq):
-    &#34;&#34;&#34; Get unique values from a list seq with saving the order of list elements
-    Parameters:
-    ----------
-    seq: a list with duplicates elements
-    -------
-    out  (list): 
-    a list with unqiue elements
-    -------
-    Author: Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    &#34;&#34;&#34;
-    seen = set()
-    seen_add = seen.add
-    out=[x for x in seq if not (x in seen or seen_add(x))]
-    return out</code></pre>
-</details>
 </dd>
 <dt id="common_funcs.worldCloud_graph"><code class="name flex">
 <span>def <span class="ident">worldCloud_graph</span></span>(<span>txtSeries_df, outputFile)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def worldCloud_graph(txtSeries_df,outputFile):  
-    ##TODO: document it  
-    # txtSeries_df=tmp[&#39;prizm_68_2019&#39;]
-    # outputFile=os.path.join(outputFolder,&#39;enviroPostal_wordCloud2.png&#39;)
-
-    from wordcloud import WordCloud, STOPWORDS
-    import matplotlib.pyplot as plt
-    
-    if  type(txtSeries_df)==pd.core.series.Series:
-        txt=&#39; &#39;.join(txtSeries_df.astype(&#39;str&#39;))
-        worldCloud_instance = WordCloud(width=800, height=400).generate(txt)
-    else:
-        worldCloud_instance = WordCloud(width=800, height=400).generate_from_frequencies(dict(zip(txtSeries_df.iloc[:,0] ,txtSeries_df.iloc[:,1])))
-
-    ## Generate plot
-    plt.figure(figsize=(20,10), facecolor=&#39;k&#39;)
-    plt.imshow(worldCloud_instance)
-    plt.axis(&#34;off&#34;)
-    plt.savefig(outputFile, bbox_inches=&#39;tight&#39;)
-    plt.close(&#39;all&#39;)
-    # print(&#34;it was saved in &#34;+os.path.join(outputFile))</code></pre>
-</details>
 </dd>
 </dl>
 </section>
@@ -3526,7 +509,6 @@ A List With Unqiue Elements</p>
 </section>
 </article>
 <nav id="sidebar">
-<h1>Index</h1>
 <div class="toc">
 <ul></ul>
 </div>
@@ -3572,12 +554,14 @@ A List With Unqiue Elements</p>
 <li><code><a title="common_funcs.plotly_group_stack" href="#common_funcs.plotly_group_stack">plotly_group_stack</a></code></li>
 <li><code><a title="common_funcs.readableTime" href="#common_funcs.readableTime">readableTime</a></code></li>
 <li><code><a title="common_funcs.reduce_mem_usage" href="#common_funcs.reduce_mem_usage">reduce_mem_usage</a></code></li>
+<li><code><a title="common_funcs.remove_extra_none" href="#common_funcs.remove_extra_none">remove_extra_none</a></code></li>
 <li><code><a title="common_funcs.retrieve_name" href="#common_funcs.retrieve_name">retrieve_name</a></code></li>
 <li><code><a title="common_funcs.rle_encode" href="#common_funcs.rle_encode">rle_encode</a></code></li>
 <li><code><a title="common_funcs.sankey" href="#common_funcs.sankey">sankey</a></code></li>
 <li><code><a title="common_funcs.save_plotly_fig" href="#common_funcs.save_plotly_fig">save_plotly_fig</a></code></li>
 <li><code><a title="common_funcs.split_sql_expressions_sub" href="#common_funcs.split_sql_expressions_sub">split_sql_expressions_sub</a></code></li>
 <li><code><a title="common_funcs.subplot_plExpress" href="#common_funcs.subplot_plExpress">subplot_plExpress</a></code></li>
+<li><code><a title="common_funcs.unify_cols" href="#common_funcs.unify_cols">unify_cols</a></code></li>
 <li><code><a title="common_funcs.unique_list" href="#common_funcs.unique_list">unique_list</a></code></li>
 <li><code><a title="common_funcs.worldCloud_graph" href="#common_funcs.worldCloud_graph">worldCloud_graph</a></code></li>
 </ul>
@@ -3586,7 +570,7 @@ A List With Unqiue Elements</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.0</a>.</p>
 </footer>
 </body>
 </html>
