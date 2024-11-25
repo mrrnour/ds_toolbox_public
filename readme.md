@@ -5,7 +5,7 @@
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![Contributions](https://img.shields.io/badge/contributions-welcome-orange.svg)
 
-`dstoolbox` is a comprehensive data science toolbox built on top of popular open-source frameworks such as Pandas, Spark, Scikit-learn, and the Azure Storage Blob package. It offers abstracted functions for  machine learning (ML)  and ETL processes.
+dstoolbox is a comprehensive Python package designed to streamline data science workflows, offering modules for machine learning, data processing, and natural language processing (NLP). It includes functions for model training and evaluation, common data manipulation and visualization utilities, seamless input/output operations with Azure Blob Storage, Databricks, and Azure Synapse, and specialized tools for NLP and large language models (LLMs). With its integration of cloud-based functionality, Spark support, and user-friendly design, ds_toolBox simplifies complex tasks, making it an essential toolkit for efficient and scalable data science projects.
 
 See doc folder for more information, example: [ml_funcs.html](./dsToolbox/doc/ml_funcs.html)
 
