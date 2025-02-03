@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+import logging
 import time
 import re
 
@@ -171,6 +171,48 @@ def remove_extra_none(nested_lst):
     # print(items)
     return items
 
+def setOutputFolder(outputFolder, uFiles, overWrite):
+    """ creates output directory and copies template file(s)
+
+    Parameters:
+    ----------
+    outputFolder (string): path of the outputFolder
+
+    uFiles (a list of strings): of files that shoud be copied in outputFolder
+
+    overWrite (True/False): if it True , it copies uFiles to outputFolder,even they exist;
+
+    returns:
+    -------
+    outputFolder string
+    """
+    import os, shutil, sys
+    
+    # Setting output directory and copying template file(s)
+    if len(outputFolder.split('/')) == 1:
+        outputFolder = os.path.abspath(os.path.join(os.getcwd(), outputFolder))
+    else:
+        outputFolder = os.path.abspath(outputFolder)
+
+    if os.path.exists(outputFolder) & (not overWrite):
+        sys.exit(
+            "Program terminated: overwrite is not allowed and the output directory exists")
+    # elif os.path.exists(outputFolder):
+    #     shutil.rmtree(outputFolder)
+    #     os.makedirs(outputFolder)
+    # else:
+    #     os.makedirs(outputFolder)
+    elif not os.path.exists(outputFolder):
+        os.makedirs(outputFolder)
+    # pdb.set_trace()
+    if (overWrite):
+        for uFile in uFiles:
+            shutil.copyfile(
+                uFile,
+                os.path.join(
+                    outputFolder,
+                    os.path.basename(uFile)))
+    return (outputFolder)
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # --------------------------------Date time -------------------------------
@@ -189,13 +231,14 @@ def readableTime(time):
     seconds = time
     return (day, hour, minutes, seconds)
 
-def datesList(year_range=[2018,2099],
+def datesList(range_date__year=[2018,2099],
               firstDate=None,
-              lastDate=dt.datetime.now().date()):
+              lastDate=dt.datetime.now().date(),
+              month_step=1):
   """generates a list of first dates of months within a given range of years
     Params:       
-      year_range(list):  list of first and the last year+1                               
-      firstDate (string or datetime): if it is not given, it will be the first day and month of year_range[0]
+      range_date__year(list):  list of first and the last year+1                               
+      firstDate (string or datetime): if it is not given, it will be the first day and month of range_date__year[0]
       lastDate (string or datetime): if it is not given,  it will be the current date
     Returns: python list 
   """ 
@@ -204,8 +247,8 @@ def datesList(year_range=[2018,2099],
 
   # print(firstDate)
   # print(lastDate)
-  yrs=[str(i) for i in range(year_range[0], year_range[1])]
-  months=[str(i).zfill(2) for i in range(1,13)]
+  yrs=[str(i) for i in range(range_date__year[0], range_date__year[1])]
+  months=[str(i).zfill(2) for i in range(1,13, month_step)]
   udates=['-'.join(udate) for udate in itertools.product(yrs,months,['01'])]
 
   if isinstance(firstDate, str):
@@ -238,7 +281,7 @@ def extract_start_end(udates, ii):
   import datetime as dt
   start_date=udates[ii]
   end_date=(dt.datetime.strptime(udates[ii+1], '%Y-%m-%d').date()- dt.timedelta(days=1)).strftime("%Y-%m-%d")
-  print(start_date,' to ',end_date ,":")  
+#   print(start_date,' to ',end_date ,":")  
   return start_date, end_date
 
 # -------------------------------------------------------------------------
@@ -1088,6 +1131,360 @@ def subplot_plExpress(figs, sub_titles, main_title):
         figure.append_trace(traces, row = con+1, col = 1)
   return figure
 
+from typing import Optional, Dict, Any, Tuple, Literal
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import scipy.stats as stats
+import scipy
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class PlotConfig:
+    """Configuration class for plot customization"""
+    height: int = 800
+    width: int = 1200
+    colors: List[str] = None
+    theme: str = 'white'  # or 'dark'
+    title_font_size: int = 24
+    axis_font_size: int = 14
+    bins: int = 20
+    boxpoints: Literal['all', 'outliers', False] = 'outliers'
+    kde_points: int = 100
+    jitter: float = 0.3
+    violin_points: bool = True
+    first_plot: Literal['box', 'violin'] = 'box'
+    
+    def __post_init__(self):
+        if self.colors is None:
+            self.colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+        if self.first_plot not in ['box', 'violin']:
+            raise ValueError("first_plot must be either 'box' or 'violin'")
+
+def validate_input(data: pd.DataFrame, dependent_var: str, group_var: str) -> None:
+    """Validate input data and variables"""
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("Input 'data' must be a pandas DataFrame")
+        
+    if dependent_var not in data.columns:
+        raise ValueError(f"Column '{dependent_var}' not found in DataFrame")
+        
+    if group_var not in data.columns:
+        raise ValueError(f"Column '{group_var}' not found in DataFrame")
+        
+    if not pd.api.types.is_numeric_dtype(data[dependent_var]):
+        raise ValueError(f"Column '{dependent_var}' must be numeric")
+        
+    if len(data[group_var].unique()) > 10:
+        raise ValueError("Too many groups (>10) for meaningful visualization")
+
+def plot_distributions(
+    data: pd.DataFrame,
+    dependent_var: str,
+    group_var: str,
+    config: Optional[PlotConfig] = None
+) -> go.Figure:
+    """
+    Create interactive distribution plots for each group using plotly
+    
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        Input DataFrame containing the data
+    dependent_var : str
+        Name of the column containing the dependent variable
+    group_var : str
+        Name of the column containing the grouping variable
+    config : PlotConfig, optional
+        Configuration object for customizing the plots
+        
+    Returns:
+    --------
+    plotly figure object
+    """
+    # Input validation
+    validate_input(data, dependent_var, group_var)
+    
+    # Use default config if none provided
+    if config is None:
+        config = PlotConfig()
+
+    # Create subplot figure with 4 subplots
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=(
+            f'{config.first_plot.capitalize()} Plot', 
+            'Histogram with KDE',
+            'Empirical CDF',
+            'Q-Q Plot'
+        )
+    )
+    
+    groups = sorted(data[group_var].unique())
+    
+    # 1. Box or Violin plot (top-left)
+    for i, group in enumerate(groups):
+        group_data = data[data[group_var] == group][dependent_var]
+        if config.first_plot == 'box':
+            fig.add_trace(
+                go.Box(
+                    y=group_data,
+                    name=group,
+                    boxpoints=config.boxpoints,
+                    jitter=config.jitter,
+                    pointpos=-1.8,
+                    marker_color=config.colors[i % len(config.colors)],
+                    marker=dict(size=6),
+                    legendgroup=group,
+                    showlegend=True
+                ),
+                row=1, col=1
+            )
+        else:  # violin plot
+            fig.add_trace(
+                go.Violin(
+                    y=group_data,
+                    name=group,
+                    box_visible=True,
+                    meanline_visible=True,
+                    points="all" if config.violin_points else None,
+                    marker_color=config.colors[i % len(config.colors)],
+                    legendgroup=group,
+                    showlegend=True
+                ),
+                row=1, col=1
+            )
+
+    # 2. Histogram with KDE (top-right)
+    for i, group in enumerate(groups):
+        group_data = data[data[group_var] == group][dependent_var]
+        
+        # Calculate KDE with proper scaling
+        kde_x = np.linspace(group_data.min(), group_data.max(), config.kde_points)
+        kde = scipy.stats.gaussian_kde(group_data)
+        kde_y = kde(kde_x)
+        
+        # Scale KDE to match histogram height
+        hist, bin_edges = np.histogram(group_data, bins=config.bins)
+        scaling_factor = max(hist) / max(kde_y)
+        kde_y = kde_y * scaling_factor
+        
+        # Add histogram
+        fig.add_trace(
+            go.Histogram(
+                x=group_data,
+                name=group,
+                opacity=0.7,
+                nbinsx=config.bins,
+                marker_color=config.colors[i % len(config.colors)],
+                legendgroup=group,
+                showlegend=False
+            ),
+            row=1, col=2
+        )
+        
+        # Add KDE line
+        fig.add_trace(
+            go.Scatter(
+                x=kde_x,
+                y=kde_y,
+                name=group,
+                line=dict(color=config.colors[i % len(config.colors)]),
+                legendgroup=group,
+                showlegend=False
+            ),
+            row=1, col=2
+        )
+
+    # 3. ECDF (bottom-left)
+    for i, group in enumerate(groups):
+        group_data = data[data[group_var] == group][dependent_var]
+        
+        # Calculate ECDF
+        sorted_data = np.sort(group_data)
+        n = len(sorted_data)
+        ecdf = np.arange(1, n + 1) / n
+        
+        fig.add_trace(
+            go.Scatter(
+                x=sorted_data,
+                y=ecdf,
+                name=group,
+                mode='lines',
+                line=dict(color=config.colors[i % len(config.colors)]),
+                legendgroup=group,
+                showlegend=False
+            ),
+            row=2, col=1
+        )
+
+    # 4. Q-Q Plot (bottom-right)
+    for i, group in enumerate(groups):
+        group_data = data[data[group_var] == group][dependent_var]
+        qq = scipy.stats.probplot(group_data, dist="norm")
+        
+        # Add Q-Q points
+        fig.add_trace(
+            go.Scatter(
+                x=qq[0][0],
+                y=qq[0][1],
+                mode='markers',
+                name=group,
+                marker=dict(color=config.colors[i % len(config.colors)]),
+                legendgroup=group,
+                showlegend=False
+            ),
+            row=2, col=2
+        )
+        
+        # Add Q-Q line
+        z = np.polyfit(qq[0][0], qq[0][1], 1)
+        p = np.poly1d(z)
+        fig.add_trace(
+            go.Scatter(
+                x=qq[0][0],
+                y=p(qq[0][0]),
+                mode='lines',
+                name=group,
+                line=dict(color=config.colors[i % len(config.colors)], dash='dash'),
+                legendgroup=group,
+                showlegend=False
+            ),
+            row=2, col=2
+        )
+    
+    # Update layout
+    fig.update_layout(
+        height=config.height,
+        width=config.width,
+        title=dict(
+            text="Distribution Analysis",
+            x=0.5,
+            font=dict(size=config.title_font_size)
+        ),
+        template=f"plotly_{config.theme}",
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="right",
+            x=0.99
+        ),
+        boxmode='group',
+        violinmode='group'
+    )
+    
+    # Update axes labels
+    fig.update_xaxes(title_text=group_var, row=1, col=1, title_font=dict(size=config.axis_font_size))
+    fig.update_xaxes(title_text=dependent_var, row=1, col=2, title_font=dict(size=config.axis_font_size))
+    fig.update_xaxes(title_text=dependent_var, row=2, col=1, title_font=dict(size=config.axis_font_size))
+    fig.update_xaxes(title_text="Theoretical Quantiles", row=2, col=2, title_font=dict(size=config.axis_font_size))
+    
+    fig.update_yaxes(title_text=dependent_var, row=1, col=1, title_font=dict(size=config.axis_font_size))
+    fig.update_yaxes(title_text="Count", row=1, col=2, title_font=dict(size=config.axis_font_size))
+    fig.update_yaxes(title_text="Cumulative Probability", row=2, col=1, title_font=dict(size=config.axis_font_size))
+    fig.update_yaxes(title_text="Sample Quantiles", row=2, col=2, title_font=dict(size=config.axis_font_size))
+    
+    return fig
+
+def analyze_categorical_data(data, independent_var, dependent_var, alpha=0.05):
+    import numpy as np
+    import pandas as pd
+    from scipy.stats import chi2_contingency
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    """
+    Perform statistical analysis on categorical variables.
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The dataset containing the variables
+    independent_var : str
+        Name of the independent variable column
+    dependent_var : str
+        Name of the dependent variable column
+    alpha : float, optional
+        Significance level for hypothesis testing (default is 0.05)
+    
+    Returns:
+    --------
+    dict
+        Dictionary containing test results, contingency table, and visualization
+    """
+    # Create contingency table
+    contingency_table = pd.crosstab(data[independent_var], data[dependent_var])
+    
+    # Perform Chi-square test
+    chi2, p_value, dof, expected = chi2_contingency(contingency_table)
+    
+    # Calculate Cramer's V
+    n = contingency_table.sum().sum()
+    min_dim = min(contingency_table.shape) - 1
+    cramer_v = np.sqrt(chi2 / (n * min_dim))
+    
+    # Create result dictionary
+    results = {
+        'contingency_table': contingency_table,
+        'chi_square_statistic': chi2,
+        'p_value': p_value,
+        'degrees_of_freedom': dof,
+        'cramers_v': cramer_v,
+        'significant': p_value < alpha
+    }
+    
+    # Add interpretation
+    results['interpretation'] = interpret_results_analyze_categorical(results, alpha)
+    
+    # Create visualization
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(contingency_table, annot=True, cmap='YlOrRd', fmt='d')
+    plt.title(f'Contingency Table: {independent_var} vs {dependent_var}')
+    plt.tight_layout()
+    
+    return results
+
+def interpret_results_analyze_categorical(results, alpha):
+    """
+    Interpret the statistical test results.
+    
+    Parameters:
+    -----------
+    results : dict
+        Dictionary containing test results
+    alpha : float
+        Significance level
+    
+    Returns:
+    --------
+    str
+        Interpretation of results
+    """
+    interpretation = []
+    
+    # Chi-square test interpretation
+    if results['p_value'] < alpha:
+        interpretation.append(f"There is a statistically significant relationship between the variables (p-value = {results['p_value']:.4f} < {alpha}).")
+    else:
+        interpretation.append(f"There is no statistically significant relationship between the variables (p-value = {results['p_value']:.4f} > {alpha}).")
+    
+    # Cramer's V interpretation
+    cramers_v = results['cramers_v']
+    if cramers_v < 0.1:
+        strength = "negligible"
+    elif cramers_v < 0.3:
+        strength = "weak"
+    elif cramers_v < 0.5:
+        strength = "moderate"
+    else:
+        strength = "strong"
+    
+    interpretation.append(f"The strength of the association is {strength} (Cramer's V = {cramers_v:.3f}).")
+    
+    return " ".join(interpretation)
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # --------------------------Reading a SQL file/string----------------------
@@ -1460,184 +1857,115 @@ def extract_equation(results_pars):
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
-# -----------------------Update a db table recursively---------------------
-# def last_date(output_name,
-#               date_col='date',
-#               custom_config=None,
-#               key_vault_dict='deltaTable',   ###for only delta_table
-#               platform='databricks',         ### for only blob
-#               ):
-  
-#   if (isinstance(output_name,str)) and (io_funcs.deltaTable_check(output_name)): 
-#     saved_dates = io_funcs.query_deltaTable_db(
-#                                               f"""select min({date_col}) as min_time ,
-#                                                           max({date_col}) as max_time
-#                                                   from   {output_name}""",
-#                                               key_vault_dict=key_vault_dict,
-#                                               custom_config=custom_config,
-#                                               verbose=False 
-#                                               ).toPandas()  
-#     last_save_date=saved_dates['max_time'].iloc[0]
-#     print(f"The last date found in delta_table:{last_save_date}")
+# --------------------------------loggers----------------------------------
+def logmaker(uFile, name, logLevel=logging.INFO):
+    """ create a logger
 
-#   elif (isinstance(output_name, dict)) and (io_funcs.blob_check(blob_dict=output_name,
-#                                                                 custom_config=custom_config,
-#                                                                 platform=platform,)):
-#     udata = io_funcs.blob2pd(blob_dict=output_name,
-#                             custom_config=custom_config,
-#                             platform=platform,
-#                             #  **kwargs_csv,
-#                             )
-#     udata[date_col] = pd.to_datetime(udata[date_col], format="%Y-%m-%d")
-#     last_save_date= udata[date_col].max()  
+    Parameters:
+    ----------
+    uFile (string): path of logger file
+
+    name (string): name of logger
+
+    loggingLevel integer:
+    The numeric values of logging levels are given in the following table. These are primarily of interest if you want to define your own levels, and need them to have specific values relative to the predefined levels. If you define a level with the same numeric value, it overwrites the predefined value; the predefined name is lost.
     
-#     print(f"The last date found in blob:{last_save_date}")
+    -------
+    #numerical logging level:
+                # CRITICAL	50
+                # ERROR	    40
+                # WARNING	30
+                # INFO	    20
+                # DEBUG	    10
+                # NOTSET	0
 
-#   else:
-#     last_save_date=None
+    returns:
+    -------
+    logger (logger type):  created logger
 
-#   return last_save_date
+    -------
+    Author: Reza Nourzadeh 
+    """
 
-# def save_outputs(ouputs_dict_list,
-#                 **kwargs,
-#               ):
-#   import inspect
-#   import dsToolbox.io_funcs as io_funcs
-  
-#   spark2del_args = list(inspect.signature(io_funcs.spark2deltaTable).parameters)
-#   spark2del_args = {k: kwargs.pop(k) for k in dict(kwargs) if k in spark2del_args}
-#   pd2blob_args = list(inspect.signature(io_funcs.pd2blob).parameters)
-#   pd2blob_args = {k: kwargs.pop(k) for k in dict(kwargs) if k in pd2blob_args}
+    #   logging.basicConfig(filemode='w')
 
-#   outputs=ouputs_dict_list.items() if isinstance(ouputs_dict_list, dict) else ouputs_dict_list
+    # configure log formatter
+    logFormatter1 = logging.Formatter(
+        '%(asctime)s | %(levelname)-3s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
+    logFormatter2 = logging.Formatter("%(message)s")
+    #   logFormatter2 = logFormatter1
 
-#   for (tableName_blobDict , sp) in outputs:
-#     print(tableName_blobDict)
-#     if isinstance(tableName_blobDict, str): 
-#       io_funcs.spark2deltaTable(
-#                                 sp,
-#                                 table_name    = tableName_blobDict.split('.')[1],
-#                                 schema        = tableName_blobDict.split('.')[0],
-#                                 write_mode = 'append',
-#                                 mergeSchema=True,
-#                                 **spark2del_args
-#                               )
-#     elif isinstance(tableName_blobDict, dict): 
-#       io_funcs.pd2blob(sp,
-#                       blob_dict=tableName_blobDict,
-#                       overwrite=False,
-#                       append=True,
-#                       **pd2blob_args
-#                       )
+    # configure file handler
+    fileHandler = logging.FileHandler(uFile, 'w')
+    fileHandler.setFormatter(logFormatter1)
 
-# def update_db_recursively(dfGenerator_func,
-#                           output_name,
-#                           year_range=[2021,2099],
-#                           firstDate=None,
-#                           lastDate=dt.datetime.now().date(),
-#                           date_col='date',
-#                           custom_config=None,
-#                           key_vault_dict='deltaTable',   ###for  delta_table only
-#                           platform='databricks',         ### for blob only
-#                           **kwargs
-#                           ):
-#   """
-#   Run a function recursively to create each month's results and append them to a delta table/blob storage
-  
-#   The first step creates a list of months (LOM) which must be run recursively. 
-#   The last LOM date will be set to running code date. 
-#   If there is already an output, it will use the last day of the output to modify the first date of LOM. 
-#   After generating a list of dates, the function runs and appends the results to output
-#   For example with the following inputs:
-#     year_range=[2021,2099]
-#     the last date of record in output deltatable: '2023-15-07'  
-#     run_date: '2023-22-12'
+    # configure stream handler
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter2)
 
-#   The list of months will be:
-#   ['2023-16-07', '2021-01-03', '2021-01-04',...,'2023-22-11']  
-#   and function will be run recursively:
+    # get the logger instance
+    logger = logging.getLogger(name)
 
-#   from '2021-16-07'  to '2021-31-07' and append the result to output
-#   from '2021-01-08'  to '2021-31-08' and append the result to output
-#   ...
-#   from '2023-01-12'  to '2021-22-11' and append the result to output
+    # set the logging level
+    logger.setLevel(logLevel)
 
-  
-#     Params:
-#       dfGenerator_func:(function)  Define a function that generates spark|panadas dataframe based on three main arguments: start_date, end_date, output_name
-                                                          
-#       output_name:(string or dictionary) : the name of output, if it is a string , it is a delta table and if it is a dinctonary it is a blob file
-        
-#       year_range(list): A list in [first_year, last_year] format. The first and last years are used to create a list of dates from the first day of the first month of the first year. For example for [2021, 2099] , it creates the following list ['2021-01-01', '2021-01-02, ....,'2099-31-12'] . 
-      
-#       firstDate: the first date of range , regardless of the last date in output
-#       lastDate (dt.datetime.now().date()):  the last date of range
-                          
-#       custom_config(dict/filePath): a dictionary of configuration credentials or path of a yaml file, if it is not provided, dsToolbox.config_dict will be used instead
-      
-#       key_vault_dict='deltaTable': option only for delta table output see spark2deltaTable function for more information
+    if not len(logger.handlers):
+        logger.addHandler(fileHandler)
+        logger.addHandler(consoleHandler)
+    return logger
 
-#       platform='databricks'  :  option only for blob storage output  see pd2blob function for more information
-      
+def custom_print(message, logger=None):
+    print(message)
+    if logger:
+        logger.info(message)
 
-#     Returns:
-#             df - Dataframe with rolling features        
-#   """  
-#   import inspect
-#   import dsToolbox.io_funcs as io_funcs
-  
-#   spark2del_args = list(inspect.signature(io_funcs.spark2deltaTable).parameters)
-#   pd2blob_args = list(inspect.signature(io_funcs.pd2blob).parameters)
-#   dfGenerator_func_args = {k: kwargs.pop(k) for k in dict(kwargs) if k not in (spark2del_args+pd2blob_args)}
-  
-#   import datetime as dt  
+class loggerWriter_sub:
+    """ sub class used for loggerWriter2
+    ###---------- Redirect stderr and stdout to log --------------
+    ### https://stackoverflow.com/questions/19425736/how-to-redirect-stdout-and-stderr-to-logger-in-python
 
-#   last_save_date=last_date(                     ###for  delta_table only
-#                           output_name,
-#                           date_col=date_col,
-#                           custom_config=custom_config,
-#                           key_vault_dict=key_vault_dict,   ###for  delta_table only
-#                           platform=platform,         ### for blob only
-#                           )
-#   warn_txt=False
-#   if (firstDate is not None):
-#     if isinstance(firstDate, str):
-#       print(firstDate)
-#       firstDate   = dt.datetime.strptime(firstDate, "%Y-%m-%d").date()
-#     elif isinstance(firstDate,pd._libs.tslibs.timestamps.Timestamp):
-#       firstDate   =firstDate.date()
-#     warn_txt=True  
-#   else:
-#     firstDate= None if last_save_date is None else last_save_date+dt.timedelta(days=1)
-  
-#   ###polish the warning, it is meaningless when last_save_date exists
-#   if (warn_txt)& (last_save_date is not None):
-#     print(f"last date is {last_save_date}; however, the function starts from given first date: {firstDate}")
+    -------
+    Author: Reza Nourzadeh 
+    """
 
-#   udates=cfuncs.datesList(year_range=year_range, 
-#                           firstDate=firstDate,
-#                           lastDate=lastDate
-#                           ###'2020-01-01'
-#                           )
-  
-#   if len(udates)==0:
-#     print("Database|file is updated")
-#   else:
-#     print("date list updated to :\n", udates)
+    def __init__(self, level):
+        # self.level is really like using log.debug(message)
+        # at least in my case
+        self.level = level
 
-#   for ii in range(len(udates)-1):     
-#     try: 
-#       ##TODO: what if, there are more than on output, in that case output_name is only for the first output, 
-#       start_date, end_date= cfuncs.extract_start_end(udates, ii)
-#       ouputs_list=dfGenerator_func(start_date, end_date,
-#                                   output_name,
-#                                   **dfGenerator_func_args
-#                                   )
-      
-#       save_outputs(###for  delta_table only
-#                    ouputs_list)
-      
-#     except Exception as e:
-#       print(f'***Creating Database(s) for {start_date} failed: \n\t\t {str(e)}')
-#       print('**********************************************************************************************')
-#       ##sys.exit()
+    def write(self, message):
+        # if statement reduces the amount of newlines that are
+        # printed to the logger
+        if message != '\n':
+            self.level(message)
+
+    def flush(self):
+        # create a flush method so things can be flushed when
+        # the system wants to. Not sure if simply 'printing'
+        # sys.stderr is the correct way to do it, but it seemed
+        # to work properly for me.
+        self.level(sys.stderr)
+
+def loggerWriter2(stdoutLvl, stderrLvl):
+    """ Redirect stderr and stdout to log
+
+    Parameters:
+    ----------
+    stdoutLvl (string): the level of stdout
+
+    stderrLvl (string): the level of stderrLvl
+
+    returns:
+    -------
+    old_stdout,old_stderr: stdout and stderr before Redirecting to log
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    sys.stdout = loggerWriter_sub(stdoutLvl)
+    sys.stderr = loggerWriter_sub(stderrLvl)
+    return(old_stdout, old_stderr)

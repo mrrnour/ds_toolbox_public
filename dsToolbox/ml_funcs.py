@@ -18,23 +18,13 @@ metric_dict={
             'aucpr'                             : metrics.average_precision_score,
             'brier_score'                       : metrics.brier_score_loss,
             'f1'                                : metrics.f1_score,
-            'f1_micro'                          : metrics.f1_score,
-            'f1_macro'                          : metrics.f1_score,
-            'f1_weighted'                       : metrics.f1_score,
             'f1_samples'                        : metrics.f1_score,
             'log_loss'                          : metrics.log_loss,
             'precision'                         : metrics.precision_score,
             'recall'                            : metrics.recall_score,
             'jaccard'                           : metrics.jaccard_score,
             'auc'                               : metrics.roc_auc_score,
-            'auc_macro'                         : metrics.roc_auc_score,
-            'auc_weighted'                      : metrics.roc_auc_score,
-            'auc_micro'                         : metrics.roc_auc_score,
             'roc_auc'                           : metrics.roc_auc_score,
-            'roc_auc_ovr'                       : metrics.roc_auc_score,
-            'roc_auc_ovo'                       : metrics.roc_auc_score,
-            'roc_auc_ovr_weighted'              : metrics.roc_auc_score,
-            'roc_auc_ovo_weighted'              : metrics.roc_auc_score,
             'adjusted_mutual_info_score'        : metrics.adjusted_mutual_info_score,
             'adjusted_rand_score'               : metrics.adjusted_rand_score,
             'completeness_score'                : metrics.completeness_score,
@@ -51,12 +41,12 @@ metric_dict={
             'mean_squared_error'                : metrics.mean_squared_error,
             'mean_squared_log_error'            : metrics.mean_squared_log_error,
             'median_absolute_error'             : metrics.median_absolute_error,
-            'R2'                                    : metrics.r2_score,
+            'R2'                                : metrics.r2_score,
             'mean_poisson_deviance'             : metrics.mean_poisson_deviance,
             'mean_gamma_deviance'               : metrics.mean_gamma_deviance,
             'mean_absolute_percentage_error'    : metrics.mean_absolute_percentage_error,
 
-            'mcc'                                   : metrics.matthews_corrcoef,
+            'mcc'                               : metrics.matthews_corrcoef,
             'kappa'                             : metrics.cohen_kappa_score,
 
             }
@@ -72,7 +62,7 @@ metric_dict={
 # scoring_dict['kappa']=make_scorer(cohen_kappa_score)
 
 ##TODO: change y to y_ratio
-def classifiers_template(y, random_state=10):
+def classifiers_template(y, random_state=10, imputer_strategy='mean' ,pc_n_components=5):
   
   import numpy as np
 
@@ -159,9 +149,9 @@ def classifiers_template(y, random_state=10):
     # params={**basic_params,**classifier.get_params()}
     # print(params)
     if any([x in name for x in ['pca','DiscriminantAnalysis']]):  
-        classifiers2[name]= Pipeline(steps=[("imputer", SimpleImputer(strategy="median")),
+        classifiers2[name]= Pipeline(steps=[("imputer", SimpleImputer(strategy=imputer_strategy)),
                                             ("scaler", StandardScaler()),
-                                            ("reduce_dims", PCA(n_components=20)),
+                                            ("reduce_dims", PCA(n_components=pc_n_components)),
                                             (name, classifier)])
         
     elif ('xgb' not in name.lower()) & ('gbm' not in name.lower()) :
@@ -266,7 +256,10 @@ def regressors_template(random_state=10):
         regressors2[name]=Regressor
   return regressors2
 
-def ml_scores(y_model, scores_names):
+def ml_scores(y_model, scores_names ,
+               multi_class='ovo',
+               average ='macro' ##{‘micro’, ‘macro’, ‘samples’, ‘weighted’}
+               ):
   """
   Calculate various machine learning evaluation scores for a given model.
   Parameters:
@@ -280,38 +273,35 @@ def ml_scores(y_model, scores_names):
           along with the mean and standard deviation of the scores across iterations, 
           and the overall scores for the entire dataset.
   """
-  ##TODO: add micro, macro, weighted  to the scores see   classification_report 
+  import inspect
+
   if 'CV_Iteration' not in y_model.columns:
     y_model['CV_Iteration']='All_data'
      
   scores_all=pd.Series(index=scores_names, dtype='float64',name='scores_all')
   scores=pd.DataFrame(index=y_model['CV_Iteration'].unique(), columns=scores_names)
   
+  if (y_model.shape[1]>5) &(average =='binary'):
+    print("It is a multiclass problem: average argument changed to 'macro'")
+    average='macro'
+
+  kwargs_dict={'average':average, 
+              'multi_class':multi_class}
+    
   for con, score_name in enumerate(scores_names):
-    ##TODO: it is not good practice to catch known error with try:
     try:
       umetric=metric_dict.get(score_name)
 
-      if umetric in ['auc_weighted', 'auc_micro', 'auc_macro']:
-        scores_all.iloc[con]=umetric(y_model['y_true'], y_model['y_pred'], average=umetric.split("_")[1])
-        scores.loc[:,score_name]=y_model.groupby('CV_Iteration').apply(lambda x:\
-                                                                        pd.Series({score_name: umetric(x['y_true'], x['y_pred'], 
-                                                                                                      average=umetric.split("_")[1])
-                                                                                  })
-                                                                      )
-      else:
-        scores_all.iloc[con]=umetric(y_model['y_true'], y_model['y_pred'])
-        scores.loc[:,score_name]=y_model.groupby('CV_Iteration').apply(lambda x:\
-                                                                        pd.Series({score_name: umetric(x['y_true'], x['y_pred'])})
-                                                                      )
-        
-      # if umetric in ['auc_weighted', 'auc_micro', 'auc_macro']:
-      #   ufun=lambda x:umetric(x['y_true'] , x['y_pred'], umetric.split(")"))
-      # else:
-      #   ufun=lambda x:umetric(x['y_true'] , x['y_pred'])
+      umetric_args = list(inspect.signature(umetric).parameters)
 
-      # scores_all.iloc[con]=umetric(y_model['y_true'],y_model['y_pred'])
-      # scores.loc[:,score_name]=y_model.groupby('CV_Iteration').apply(ufun)
+      kwargs_dict2 = {k: kwargs_dict[k] for k in kwargs_dict if k in umetric_args}
+
+      scores_all.iloc[con] = umetric(y_model['y_true'], y_model['y_pred'], **kwargs_dict2)
+      scores.loc[:,score_name] = y_model.groupby('CV_Iteration').apply(
+          lambda x: pd.Series({
+              score_name: umetric(x['y_true'], x['y_pred'], **kwargs_dict2)
+          })
+      )
     except Exception as e:
       print (f"{score_name} wasn't added to scores data frame:\n " , str(e))
       
@@ -323,6 +313,7 @@ def ml_scores(y_model, scores_names):
                    axis=0,
                   )
   scores=scores.reset_index().rename({'index':'CV'}, axis=1)
+
   return scores
 
 def ml_scores_crossvalidate(**kwargs):
@@ -516,6 +507,8 @@ def ml_comparison(ml_models,
                   scores_names,
                   sk_fold,
                   mapNames={},
+                  multi_class='ovo',
+                  average ='macro', 
                   plot=True,
                   verbose=True
                   ):
@@ -570,7 +563,10 @@ def ml_comparison(ml_models,
                                         sk_fold,
                                         )
 
-      cv_results= ml_scores(y_model, scores_names)
+      cv_results= ml_scores(y_model, scores_names,
+                            multi_class=multi_class,
+                            average=average
+                            )
 
       tmp=cv_results
       tmp.insert(0, "model", model_name)
@@ -610,7 +606,9 @@ def classifer_performance_batch(y_model,
                                       'precision',
                                       # 'roc_auc',  
                                       # 'aucpr',
-                                      ]
+                                      ],
+                      multi_class='raise',
+                      average ='balanced',                       
                         ):
   """
   Evaluate the performance of a classifier model using various metrics.
@@ -647,7 +645,9 @@ def classifer_performance_batch(y_model,
   #                                               groupNo = 25
   #                                               )
   
-  scores= ml_scores(y_model, scores_names)
+  scores= ml_scores(y_model, scores_names,
+                    multi_class=multi_class,
+                    average=average)
   return scores, confMats
 
 def ml_prediction_xValNest(ml_model, X, y, outter_fold, inner_fold):
@@ -1167,7 +1167,7 @@ def reliability_diagram(y, model_prob, pos_label, outputFile, **kwargs):
       
     return prob_true, prob_pred, prob_true_norm, prob_pred_norm
 
-def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
+def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3, all_data_flag=True):
   """
   Plots confusion matrices for model predictions, optionally saving the plot to a file.
   Parameters:
@@ -1184,13 +1184,13 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
   from sklearn.metrics import confusion_matrix
   y_model1=y_model.copy()
   
-  if ('CV_Iteration' in y_model1.columns)&(y_model1['CV_Iteration'].nunique()!=1) :
+  if all_data_flag :
     ###TODO: use it for x-validation and not for multilabel
-    #if (y_model1['CV_Iteration'].nunique()!=1):
-    # y_model1['CV_Iteration']='cv_'+y_model1['CV_Iteration'].astype(str)
-    # y_model_all=y_model.copy()
-    # y_model_all['CV_Iteration']='All_data'
-    # y_model1=pd.concat([y_model1,y_model_all],axis=0)
+    if (y_model1['CV_Iteration'].nunique()!=1):
+      y_model1['CV_Iteration']='cv_'+y_model1['CV_Iteration'].astype(str)
+      y_model_all=y_model.copy()
+      y_model_all['CV_Iteration']='All_data'
+      y_model1=pd.concat([y_model1,y_model_all],axis=0)
     ncol=ncol
     fig_size=(25,17)
   else:
@@ -1198,7 +1198,7 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
     ncol=1
     fig_size=(10,5)
 
-  print(y_model1)
+  # print(y_model1)
   confMats=pd.Series([])
   #confMats=pd.Series([],index=y_model['CV_Iteration'].unique())    
   
@@ -1207,8 +1207,8 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3):
   axs=np.array([axs]) if ncol==1 else axs
 
   for cont, (cv, y_model_sub) in  enumerate(y_model1.groupby(['CV_Iteration'])):  
-    cv=cv[0]
-    print(cont,cv)
+    # cv=cv[0]
+    # print(cont,cv)
 
     y_true=y_model_sub[['y_true']]
     y_pred=y_model_sub[['y_pred']]
@@ -1533,7 +1533,9 @@ def ml_tuner(trial,
                               pruning_callback=pruning_callback,
                               )
 
-  scores=ml_scores(y_model, [Umetric])
+  scores=ml_scores(y_model, [Umetric], 
+                  multi_class='ovo',
+                  average ='macro' )
   print(scores)
   scores=scores.loc[scores['CV']=='CV_scores_Mean',Umetric]
   
@@ -1690,7 +1692,9 @@ def hyperparameter_tuning(
   #for instance use recall metric doesnot exists in eval_metric. Moreover same metric have difference name:  aucpr in eval_metric is same as average_precision_score in metrics
   ##so there is need to used dictionary to convert  eval_metric to metric  or add more items in metric_dict       
                                       
-  scores=ml_scores(y_model, [Umetric])
+  scores=ml_scores(y_model, [Umetric],
+                   multi_class='ovo',
+                  average ='macro')
   scores_sub=scores.loc[scores['CV']=='CV_scores_Mean',Umetric]
 
   return {'loss':-scores_sub, 'status':STATUS_OK, 'model':model}
@@ -1753,43 +1757,52 @@ def xgb_tuner(X_train, y_train,
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 from sklearn.decomposition import PCA
 
-def pca_explainedVar(pcaML):
-    """ calcluate and plot Variance Explained VS number of features for PCA
-    ##TODO: add screeplot
-    Parameters:
-    ----------
-    pcaML (float): Percentage of variance explained by each of the selected components.
+def pca_explainedVar(pcaML, output_Folder=None, plot_type='cumulative'):
+  """
+  Calculate and plot the variance explained by each principal component and the cumulative variance explained.
+  
+  Parameters:
+  ----------
+  pcaML : PCA object
+    Fitted PCA object from sklearn.
+  outputFile : str, optional
+    Path to save the output plots. If None, the plots are not saved. Default is None.
+  plot_type : str, optional
+    Type of plot to generate. Options are 'scree', 'cumulative', or 'both'. Default is 'both'.
+  
+  Returns:
+  -------
+  explained_var : np.ndarray
+    Array of explained variance ratios for each principal component.
+  eigen_values : np.ndarray
+    Array of eigenvalues for each principal component.
+  """
+  import plotly.graph_objects as go
+  import plotly.io as pio
 
-    outputFile (string):
-    the location of the plot
+  eigen_values = pcaML.explained_variance_
+  explained_var = np.round(pcaML.explained_variance_ratio_, decimals=3) * 100
+  explained_var_cumsum = np.cumsum(explained_var)
 
-    returns:
-    -------
-    var  (float)
-    cumulative varaince explained
+  if plot_type in ['scree', 'both']:
+    # Scree plot
+    scree_fig = go.Figure()
+    scree_fig.add_trace(go.Scatter(x=np.arange(1, pcaML.n_components_ + 1), y=explained_var, mode='lines+markers', name='Explained Variance'))
+    scree_fig.update_layout(title='Scree Plot', xaxis_title='Principal Component', yaxis_title='Variance Explained (%)')
+    if output_Folder:
+      pio.write_image(scree_fig, os.path.join(output_Folder, 'scree_plot.png')) 
+    scree_fig.show()
 
-    -------
-    Author: Reza Nourzadeh 
-    """
-    
-    eigen_values=pcaML.explained_variance_
+  if plot_type in ['cumulative', 'both']:
+    # Cumulative explained variance plot
+    cumulative_fig = go.Figure()
+    cumulative_fig.add_trace(go.Scatter(x=np.arange(1, pcaML.n_components_ + 1), y=explained_var_cumsum, mode='lines+markers', name='Cumulative Explained Variance'))
+    cumulative_fig.update_layout(title='Cumulative Explained Variance Ratio by Principal Components', xaxis_title='Number of Principal Components', yaxis_title='Cumulative Explained Variance (%)', yaxis=dict(range=[0, 100]))
+    if output_Folder:
+      pio.write_image(cumulative_fig,os.path.join(output_Folder, '_cumulative_variance.png'))
+    cumulative_fig.show()
 
-    np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3)
-
-    explained_var = np.cumsum(np.round(pcaML.explained_variance_ratio_,decimals=3) * 100)
-
-    plt.ylabel('% explained_variance Explained')
-    plt.xlabel('# of Features')
-    plt.title('PCA Analysis')
-
-    plt.ylim(0, 100)
-    plt.style.context('seaborn-whitegrid')
-    plt.grid()
-    plt.plot(explained_var)
-
-    return explained_var,eigen_values
+  return explained_var, eigen_values
 
 def pca_ortho_rotation(lam,
                    method  = 'varimax',
@@ -1850,6 +1863,34 @@ def pca_important_features(transformed_features, components_, columns):
     important_features = important_features.sort_values(ascending=[False])
     return important_features
 
+def pc_draw_vectors(transformed_features, components_, columns):
+    """
+    This funtion will project your *original* features
+    onto your principal component feature-space, so that you can
+    visualize how "important" each one was in the
+    multi-dimensional scaling
+
+    https://benalexkeen.com/principle-component-analysis-in-python/
+    """
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+
+    num_columns = len(columns)
+
+    # Scale the principal components by the max value in
+    # the transformed set belonging to that component
+    xvector = components_[0] * max(transformed_features[:,0])
+    yvector = components_[1] * max(transformed_features[:,1])
+
+    ax = plt.axes()
+
+    for i in range(num_columns):
+    # Use an arrow to project each original feature as a
+    # labeled vector on your principal component axes
+        plt.arrow(0, 0, xvector[i], yvector[i], color='b', width=0.0005, head_width=0.02, alpha=0.75)
+        plt.text(xvector[i]*1.2, yvector[i]*1.2, list(columns)[i], color='b', alpha=0.75)
+
+    return ax
 ####------------------------------other Functions--------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
@@ -1868,9 +1909,6 @@ def class_weight2(uclass_weight,y):
     -------
     df_class_weight  (pandas series) with [sample*1] format:
     weight of samples
-
-    -------
-    Author: Reza Nourzadeh 
 
     """ 
     ##y=y_train.cat.codes
@@ -2014,7 +2052,20 @@ def split_multiLabel_data(df_samples2, binarized_tags, random_state=None):
 
         return df_samples2, binarized_tags
 
-def evaluate_multiLabel(y_pred, y_true):
+def evaluate_multiLabel(y_pred, y_true,
+                        average_op='binary',
+                        scores_names=['recall' ,
+                                    'precision',
+                                    'accuracy',
+                                    'auc_weighted',
+                                    # 'balanced_accuracy',
+                                    # 'roc_auc',  
+                                    # 'aucpr',
+                                    'f1',
+                                    'kappa',
+                                    'mcc',
+                                    ]
+                ):
     """
     Evaluate multi-label classification performance.
     This function evaluates the performance of a multi-label classification model by calculating various metrics such as recall, precision, accuracy, AUC, F1 score, kappa, and MCC. It also computes macro, micro, and weighted averages of these metrics.
@@ -2039,28 +2090,24 @@ def evaluate_multiLabel(y_pred, y_true):
     - The function assumes that the input dataframes `y_pred` and `y_true` have the same structure and columns.
     """
     y_pred, y_true=unify_cols(y_pred, y_true, 'y_pred', 'y_true')
+
+
     y_model=pd.concat([y_true.melt(value_name='y_true').set_index('variable'),
                     y_pred.melt(value_name='y_pred').set_index('variable')],
                     axis=1).reset_index().rename(columns={'variable':'CV_Iteration'})
 
+    
     tmp=y_model.groupby('CV_Iteration')[['y_pred', 'y_true']].sum().sum(axis=1)
     # print('Number of tags in each CV_Iteration:', tmp)
     y_model=y_model[y_model['CV_Iteration'].isin(tmp[tmp>0].index)]
     #plot_confusion_matrix2(y_model, map_lbls={0:'N',1:'Y'}, ncol=5)
 
-    scores_names=['recall' ,
-                'precision',
-                'accuracy',
-                'auc_weighted',
-                # 'balanced_accuracy',
-                # 'roc_auc',  
-                # 'aucpr',
-                'f1',
-                'kappa',
-                'mcc',
-                ]
-    yScore=ml_scores(y_model, scores_names).set_index("CV")
+    yScore=ml_scores(y_model, scores_names,
+                  multi_class='ovo',
+                  average =average_op
+                  ).set_index("CV")
     yScore.index.name='Tag'
+
     map_dict={'CV_scores_Mean':'macro_avg',
             'CV_scores_STD':'macro_avg_STD',
             'scores_all':'micro_avg'
@@ -2085,7 +2132,6 @@ def evaluate_multiLabel(y_pred, y_true):
     yScore_overall=yScore[idx]
     yScore=pd.concat([yScore_labels, yScore_overall],axis=0)
 
-
     # """In multilabel classification, the function returns the subset accuracy. If the entire set of predicted labels for a sample strictly match with the true set of labels, then the subset accuracy is 1.0; otherwise it is 0.0."""
     # https://www.kaggle.com/code/kmkarakaya/multi-label-model-evaluation
     from sklearn.metrics import accuracy_score
@@ -2095,4 +2141,4 @@ def evaluate_multiLabel(y_pred, y_true):
                     'accuracy_overall':accuracy_overall,
                     }
 
-    return model_performance, y_model 
+    return model_performance, y_model.rename({'CV_Iteration':'Class'},axis=1) 
