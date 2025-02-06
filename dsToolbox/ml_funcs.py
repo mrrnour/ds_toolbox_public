@@ -940,108 +940,129 @@ def gainNlift(y, model_prob, pos_label, outputFile, groupNo=25):
 
     return out, df_gain_chart, df_lift_chart
   
-def precision_recall_curve2(y, model_prob, pos_label, outputFile=None, **kwargs):   
+def precision_recall_curve2(y, model_prob, pos_label, outputFile=None, **kwargs):
     """
     Plots the precision-recall curve and calculates the area under the curve (AUC).
-    Parameters:
-    -----------
+    
+    Parameters
+    ----------
     y : array-like of shape (n_samples,)
-      True binary labels.
+        True binary labels.
     model_prob : array-like of shape (n_samples,)
-      Estimated probabilities or decision function.
+        Estimated probabilities or decision function.
     pos_label : int or str
-      The label of the positive class.
+        The label of the positive class.
     outputFile : str, optional
-      If provided, the plot will be saved to this file.
-    **kwargs : additional keyword arguments
-      Additional arguments passed to `precision_recall_curve`.
-    Returns:
-    --------
-    df_rp : pandas.DataFrame
-      DataFrame containing precision, recall, and thresholds.
-    idx : list
-      List of indices used for setting x-ticks on the plot.
+        If provided, the plot will be saved to this file.
+    **kwargs : dict
+        Additional arguments passed to sklearn's precision_recall_curve.
+        
+    Returns
+    -------
+    tuple
+        - pandas.DataFrame: Contains precision, recall, and thresholds
+        - list: Indices used for setting x-ticks on the plot
     """
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     from sklearn.metrics import precision_recall_curve, auc
     
-    model_precision, model_recall, thresholds = precision_recall_curve(y_true=y, probas_pred=model_prob, pos_label=pos_label, **kwargs)
+    # Reset any existing plots
+    plt.clf()
+    
+    # Calculate precision-recall curve
+    model_precision, model_recall, thresholds = precision_recall_curve(
+        y_true=y,
+        probas_pred=model_prob,
+        pos_label=pos_label,
+        **kwargs
+    )
+    
+    # Calculate AUC
     model_auc_rp = auc(model_recall, model_precision)
-
-    tmpTxt='ROC of precision recall curve=%.3f' % (model_auc_rp)
-    ### plot the precision-recall curves
+    
+    # Create figure with white background
     fig, ax = plt.subplots(figsize=(20, 10))
-
-    df_rp=pd.DataFrame([model_precision[:-1],
-                      model_recall[:-1],
-                      thresholds], index=['Precision', 'Recall', 'thresholds']).T
-    df_rp['style']=1
-    # df_rp2=pd.melt(df_rp, id_vars='recall', value_vars=['Precision', 'thresholds'],  var_name='precision_thresholds')
-    # print(df_rp2)
-
-    uPlot2=sns.lineplot(data=df_rp,
-                        ax=ax,
-                        y='Precision',
-                        x='Recall',
-                        # hue='precision_thresholds',
-                        markers=True,
-                        style="style",
-                        # palette=["red"],
-                        alpha=0.1,
-                        )
-    plt.legend([],[], frameon=False)
-    ax.set_title('Precision Recall Curve')
+    # Set background colors
+    ax.set_facecolor('white')
+    fig.patch.set_facecolor('white')
+    
+    # Add horizontal and vertical grid lines
+    ax.grid(True, which='major', linestyle='--', alpha=0.7, color='gray')
+    ax.grid(True, which='minor', linestyle=':', alpha=0.4, color='gray')
+    ax.minorticks_on()  # Enable minor ticks
+    
+    # Set specific grid for both axes
+    ax.xaxis.grid(True, linestyle='--', alpha=0.7, color='gray')
+    ax.yaxis.grid(True, linestyle='--', alpha=0.7, color='gray')
+    
+    # Create DataFrame for plotting
+    df_rp = pd.DataFrame({
+        'Precision': model_precision[:-1],
+        'Recall': model_recall[:-1],
+        'thresholds': thresholds
+    })
+    
+    # Create the precision-recall curve plot
+    ax.plot(df_rp['Recall'], df_rp['Precision'], 
+            marker='o', markersize=4, alpha=0.1, 
+            linestyle='-', linewidth=1)
+    
+    # Configure plot aesthetics
+    ax.set_title('Precision Recall Curve', pad=20, fontsize=12)
+    ax.set_xlabel('Recall/(threshold)', fontsize=10)
+    ax.set_ylabel('Precision', fontsize=10)
+    
+    # Calculate and plot no-skill line
     no_skill = len(y[y==1]) / len(y)
-    # ax.set_ylim(0, 1.1)
-
-    df_rp_tmp=df_rp.drop_duplicates(subset=['Recall']).reset_index()
-    interval_no=min(15,df_rp_tmp.shape[0])
-    idx=list(np.linspace(df_rp_tmp.index.min(),df_rp_tmp.index.max(),interval_no,endpoint=True,dtype='int'))
-    plt.xticks(df_rp_tmp.iloc[idx]['Recall'])
-    ticks_loc = ax.get_xticks().tolist()
-    threshs=(df_rp_tmp.iloc[idx]['thresholds'].round(3).astype(str))  ### or:df_rp.loc[df_rp['Recall'].isin(ticks_loc),'thresholds']
-
-    ax.set_xticks(ax.get_xticks().tolist())
-    ax.set_xticklabels([str(round(x,2))+"(t="+y+")" for x,y in zip(ticks_loc,threshs)])
-    ax.set(xlabel='Recall/(threshold)')
-    plt.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill', color='black')
-    # plt.plot([0, 0], [no_skill, no_skill], linestyle='--', label='No Skill', color='red',alpha=1)
-    ax.text(.9, no_skill, f'No skill line', color='black', fontsize=10)
-
-    plt.xticks(rotation=90)
-    ax.annotate('ROC of Precision Recall curve=%.3f' % (model_auc_rp),
-                xy=(.4, 0), xycoords='axes fraction',
-                xytext=(-20, 25),
-                textcoords='offset pixels',
-                horizontalalignment='right',
-                verticalalignment='bottom',
-                fontsize=10)
-
-    # labels = ax.get_xticklabels()
-    # print(labels)
-    # labels=[x.get_text()+"("+y+")" for x,y in zip(labels,list(df_rp['x_label']))]
-    # ax.set_xticklabels(labels)
-
-    # ax2 = ax.twinx()
-    # ax2.set(ylim=(df_rp['thresholds'].min(),
-    #               df_rp['thresholds'].max()))
-
-    # ax3 = ax.twiny()
-    # ax3.set(ylim=(df_rp['thresholds'].min(),
-    #               df_rp['thresholds'].max()))
-
-    # uPlot2=sns.lineplot(data=df_rp,
-    #                     ax=ax2,
-    #                     y='thresholds',
-    #                     x='precision',
-    #                     markers=True
-    #                    )
-
+    ax.plot([0, 1], [no_skill, no_skill], 
+            linestyle='--', color='black', label='No Skill')
+    ax.text(0.9, no_skill, 'No skill line', 
+            color='black', fontsize=10)
+    
+    # Configure x-axis ticks with thresholds
+    df_rp_unique = df_rp.drop_duplicates(subset=['Recall']).reset_index()
+    interval_no = min(15, df_rp_unique.shape[0])
+    idx = list(np.linspace(
+        df_rp_unique.index.min(),
+        df_rp_unique.index.max(),
+        interval_no,
+        endpoint=True,
+        dtype='int'
+    ))
+    
+    # Set tick labels
+    recall_values = df_rp_unique.iloc[idx]['Recall']
+    threshold_values = df_rp_unique.iloc[idx]['thresholds'].round(3).astype(str)
+    ax.set_xticks(recall_values)
+    ax.set_xticklabels(
+        [f"{round(x,2)}(t={y})" for x, y in zip(recall_values, threshold_values)],
+        rotation=90
+    )
+    
+    # Add AUC annotation
+    ax.annotate(
+        f'ROC of Precision Recall curve={model_auc_rp:.3f}',
+        xy=(0.4, 0),
+        xycoords='axes fraction',
+        xytext=(-20, 25),
+        textcoords='offset pixels',
+        horizontalalignment='right',
+        verticalalignment='bottom',
+        fontsize=10
+    )
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+    
+    # Save plot if outputFile is provided
     if outputFile is not None:
-      plt.savefig(outputFile, bbox_inches='tight' ,dpi=300)
-      plt.show()
-      # plt.close('all')
-
-    return df_rp.drop(['style'],axis=1), idx 
+        plt.savefig(outputFile, bbox_inches='tight', dpi=300)
+        plt.show()
+    
+    return df_rp, idx
 
 def roc_curve2(y, model_prob, pos_label, outputFile=None, **kwargs):
     """
@@ -1189,8 +1210,10 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3, all_data_
     if (y_model1['CV_Iteration'].nunique()!=1):
       y_model1['CV_Iteration']='cv_'+y_model1['CV_Iteration'].astype(str)
       y_model_all=y_model.copy()
+      
       y_model_all['CV_Iteration']='All_data'
       y_model1=pd.concat([y_model1,y_model_all],axis=0)
+      
     ncol=ncol
     fig_size=(25,17)
   else:
@@ -1207,8 +1230,8 @@ def plot_confusion_matrix2(y_model, map_lbls, outputFile=None, ncol=3, all_data_
   axs=np.array([axs]) if ncol==1 else axs
 
   for cont, (cv, y_model_sub) in  enumerate(y_model1.groupby(['CV_Iteration'])):  
-    # cv=cv[0]
-    # print(cont,cv)
+
+    cv=cv[0] if isinstance(cv, tuple) else cv
 
     y_true=y_model_sub[['y_true']]
     y_pred=y_model_sub[['y_pred']]

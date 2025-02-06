@@ -213,6 +213,24 @@ def setOutputFolder(outputFolder, uFiles, overWrite):
                     outputFolder,
                     os.path.basename(uFile)))
     return (outputFolder)
+
+def sanitize_folder_name(text):
+    # List of characters not allowed in Windows folder names
+    invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*','-']
+    
+    # Replace invalid characters with underscores
+    sanitized = text
+    for char in invalid_chars:
+        sanitized = sanitized.replace(char, '_')
+    
+    # Remove trailing spaces and periods as Windows doesn't allow them at the end
+    sanitized = sanitized.strip('. ')
+    
+    # Limit length to 255 characters (Windows max path length limitation)
+    sanitized = sanitized[:255]
+    
+    return sanitized
+
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # --------------------------------Date time -------------------------------
@@ -546,6 +564,7 @@ def unify_cols(df1, df2, df1_name, df2_name):
     df2=unify_cols__sub(df1, df2, df1_name, df2_name)
     df1=unify_cols__sub(df2, df1, df2_name, df1_name)
     return df1, df2
+
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # -------------------------EDA, Statisitcal analysis-----------------------     
@@ -872,50 +891,6 @@ def sankey(left, right, value, thershold, utitle, filename):
     fig = dict(data=[data], layout=layout)
     plotly.offline.plot(fig, filename=filename)
     return tranactions
-
-def explainedVar(pcaML, outputFile):
-    """ calcluate and plot Variance Explained VS number of features for PCA
-    ##TODO: add screeplot
-    Parameters:
-    ----------
-    pcaML (float): Percentage of variance explained by each of the selected components.
-
-    outputFile (string):
-    the location of the plot
-
-    returns:
-    -------
-    var  (float)
-    cumulative varaince explained
-
-    -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
-    """
-    
-    eigen_values=pcaML.explained_variance_
-
-    np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3)
-
-
-    explained_var = np.cumsum(
-        np.round(
-            pcaML.explained_variance_ratio_,
-            decimals=3) * 100)
-
-    plt.ylabel('% explained_variance Explained')
-    plt.xlabel('# of Features')
-    plt.title('PCA Analysis')
-
-    plt.ylim(0, 100)
-    plt.style.context('seaborn-whitegrid')
-    plt.grid()
-    plt.plot(explained_var)
-    plt.savefig(outputFile, format='png', dpi=300, bbox_inches='tight')
-    plt.close('all')
-
-    return explained_var,eigen_values
 
 def worldCloud_graph(txtSeries_df,outputFile):  
     ##TODO: document it  
@@ -1389,102 +1364,6 @@ def plot_distributions(
     
     return fig
 
-def analyze_categorical_data(data, independent_var, dependent_var, alpha=0.05):
-    import numpy as np
-    import pandas as pd
-    from scipy.stats import chi2_contingency
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    """
-    Perform statistical analysis on categorical variables.
-    
-    Parameters:
-    -----------
-    data : pandas.DataFrame
-        The dataset containing the variables
-    independent_var : str
-        Name of the independent variable column
-    dependent_var : str
-        Name of the dependent variable column
-    alpha : float, optional
-        Significance level for hypothesis testing (default is 0.05)
-    
-    Returns:
-    --------
-    dict
-        Dictionary containing test results, contingency table, and visualization
-    """
-    # Create contingency table
-    contingency_table = pd.crosstab(data[independent_var], data[dependent_var])
-    
-    # Perform Chi-square test
-    chi2, p_value, dof, expected = chi2_contingency(contingency_table)
-    
-    # Calculate Cramer's V
-    n = contingency_table.sum().sum()
-    min_dim = min(contingency_table.shape) - 1
-    cramer_v = np.sqrt(chi2 / (n * min_dim))
-    
-    # Create result dictionary
-    results = {
-        'contingency_table': contingency_table,
-        'chi_square_statistic': chi2,
-        'p_value': p_value,
-        'degrees_of_freedom': dof,
-        'cramers_v': cramer_v,
-        'significant': p_value < alpha
-    }
-    
-    # Add interpretation
-    results['interpretation'] = interpret_results_analyze_categorical(results, alpha)
-    
-    # Create visualization
-    plt.figure(figsize=(10, 6))
-    sns.heatmap(contingency_table, annot=True, cmap='YlOrRd', fmt='d')
-    plt.title(f'Contingency Table: {independent_var} vs {dependent_var}')
-    plt.tight_layout()
-    
-    return results
-
-def interpret_results_analyze_categorical(results, alpha):
-    """
-    Interpret the statistical test results.
-    
-    Parameters:
-    -----------
-    results : dict
-        Dictionary containing test results
-    alpha : float
-        Significance level
-    
-    Returns:
-    --------
-    str
-        Interpretation of results
-    """
-    interpretation = []
-    
-    # Chi-square test interpretation
-    if results['p_value'] < alpha:
-        interpretation.append(f"There is a statistically significant relationship between the variables (p-value = {results['p_value']:.4f} < {alpha}).")
-    else:
-        interpretation.append(f"There is no statistically significant relationship between the variables (p-value = {results['p_value']:.4f} > {alpha}).")
-    
-    # Cramer's V interpretation
-    cramers_v = results['cramers_v']
-    if cramers_v < 0.1:
-        strength = "negligible"
-    elif cramers_v < 0.3:
-        strength = "weak"
-    elif cramers_v < 0.5:
-        strength = "moderate"
-    else:
-        strength = "strong"
-    
-    interpretation.append(f"The strength of the association is {strength} (Cramer's V = {cramers_v:.3f}).")
-    
-    return " ".join(interpretation)
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # --------------------------Reading a SQL file/string----------------------
@@ -1767,37 +1646,6 @@ def highcorr_finder(corrMat,df_scores,thershold):
 
     return to_drop,mat_ind,high_corrs
 
-def ortho_rotation(lam, method='varimax',gamma=None,
-                    eps=1e-6, itermax=100):
-    """
-    ##TODO: document it 
-    ## A VARIMAX rotation is a change of coordinates used in principal component analysis1 (PCA) that maximizes the sum of the variances of the squared loadings
-    ## https://github.com/rossfadely/consomme/blob/master/consomme/rotate_factor.py
-    Return orthogal rotation matrix
-    TODO: - other types beyond 
-    """
-    if gamma == None:
-        if (method == 'varimax'):
-            gamma = 1.0
-        if (method == 'quartimax'):
-            gamma = 0.0
-
-    nrow, ncol = lam.shape
-    R = np.eye(ncol)
-    var = 0
-
-    for i in range(itermax):
-        lam_rot = np.dot(lam, R)
-        tmp = np.diag(np.sum(lam_rot ** 2, axis=0)) / nrow * gamma
-        u, s, v = np.linalg.svd(np.dot(lam.T, lam_rot ** 3 - np.dot(lam_rot, tmp)))
-        R = np.dot(u, v)
-        var_new = np.sum(s)
-        if var_new < var * (1 + eps):
-            break
-        var = var_new
-
-    return R
-
 def discretizer(x,y,labels=["Q1", "Q2", "Q3","Q4"],method='cut'): 
     # print('discretizer:'+method)
 
@@ -1854,6 +1702,222 @@ def extract_equation(results_pars):
     tmp=f"{sign}{row[1][0]}" if row[1]['index']=='Intercept' else f"{sign}{row[1][0]}*{row[1]['index']}"
     equation+=tmp
   return equation
+
+
+def analyze_categorical_data(data, independent_var, dependent_var, alpha=0.05):
+    import numpy as np
+    import pandas as pd
+    from scipy.stats import chi2_contingency
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    """
+    Perform statistical analysis on categorical variables.
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The dataset containing the variables
+    independent_var : str
+        Name of the independent variable column
+    dependent_var : str
+        Name of the dependent variable column
+    alpha : float, optional
+        Significance level for hypothesis testing (default is 0.05)
+    
+    Returns:
+    --------
+    dict
+        Dictionary containing test results, contingency table, and visualization
+    """
+    # Create contingency table
+    contingency_table = pd.crosstab(data[independent_var], data[dependent_var])
+    
+    # Perform Chi-square test
+    chi2, p_value, dof, expected = chi2_contingency(contingency_table)
+    
+    # Calculate Cramer's V
+    n = contingency_table.sum().sum()
+    min_dim = min(contingency_table.shape) - 1
+    cramer_v = np.sqrt(chi2 / (n * min_dim))
+    
+    # Create result dictionary
+    results = {
+        'contingency_table': contingency_table,
+        'chi_square_statistic': chi2,
+        'p_value': p_value,
+        'degrees_of_freedom': dof,
+        'cramers_v': cramer_v,
+        'significant': p_value < alpha
+    }
+    
+    # Add interpretation
+    results['interpretation'] = interpret_results_analyze_categorical(results, alpha)
+    
+    # Create visualization
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(contingency_table, annot=True, cmap='YlOrRd', fmt='d')
+    plt.title(f'Contingency Table: {independent_var} vs {dependent_var}')
+    plt.tight_layout()
+    
+    return results
+
+def interpret_results_analyze_categorical(results, alpha):
+    """
+    Interpret the statistical test results.
+    
+    Parameters:
+    -----------
+    results : dict
+        Dictionary containing test results
+    alpha : float
+        Significance level
+    
+    Returns:
+    --------
+    str
+        Interpretation of results
+    """
+    interpretation = []
+    
+    # Chi-square test interpretation
+    if results['p_value'] < alpha:
+        interpretation.append(f"There is a statistically significant relationship between the variables (p-value = {results['p_value']:.4f} < {alpha}).")
+    else:
+        interpretation.append(f"There is no statistically significant relationship between the variables (p-value = {results['p_value']:.4f} > {alpha}).")
+    
+    # Cramer's V interpretation
+    cramers_v = results['cramers_v']
+    if cramers_v < 0.1:
+        strength = "negligible"
+    elif cramers_v < 0.3:
+        strength = "weak"
+    elif cramers_v < 0.5:
+        strength = "moderate"
+    else:
+        strength = "strong"
+    
+    interpretation.append(f"The strength of the association is {strength} (Cramer's V = {cramers_v:.3f}).")
+    
+    return " ".join(interpretation)
+
+import numpy as np
+from scipy import stats
+import pandas as pd
+from typing import Tuple, Dict, Union, List
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#TODO:edit it
+def analyze_cat_num(
+    data: pd.DataFrame,
+    categorical_var: str,
+    numeric_var: str,
+    alpha: float = 0.05
+) -> Dict[str, Union[str, float, Dict]]:
+    """
+    Performs statistical analysis for categorical independent variable and numeric dependent variable.
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The dataset containing both variables
+    categorical_var : str
+        Name of the categorical (independent) variable column
+    numeric_var : str
+        Name of the numeric (dependent) variable column
+    alpha : float, optional
+        Significance level for statistical tests (default is 0.05)
+        
+    Returns:
+    --------
+    Dict containing:
+        - test_type: string indicating which test was performed
+        - test_statistic: the test statistic value
+        - p_value: the p-value from the test
+        - significant: boolean indicating if result is significant
+        - descriptive_stats: dictionary of descriptive statistics by group
+        - assumption_tests: dictionary of assumption test results
+    """
+    # Validate input data
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be a pandas DataFrame")
+    if categorical_var not in data.columns or numeric_var not in data.columns:
+        raise ValueError("Specified variables must exist in the DataFrame")
+    
+    # Get unique categories and check number of groups
+    categories = data[categorical_var].unique()
+    n_groups = len(categories)
+    
+    if n_groups < 2:
+        raise ValueError("Need at least 2 groups for comparison")
+    
+    # Create groups for analysis
+    groups = [data[data[categorical_var] == cat][numeric_var].dropna() for cat in categories]
+    
+    # Calculate descriptive statistics
+    descriptive_stats = data.groupby(categorical_var)[numeric_var].agg([
+        'count', 'mean', 'std', 'min', 'max'
+    ]).round(3).to_dict('index')
+    
+    # Test for normality in each group
+    normality_tests = {}
+    for cat, group in zip(categories, groups):
+        if len(group) >= 3:  # Shapiro-Wilk test requires at least 3 samples
+            stat, p_val = stats.shapiro(group)
+            normality_tests[cat] = {
+                'statistic': stat,
+                'p_value': p_val,
+                'normal': p_val > alpha
+            }
+    
+    # Test for homogeneity of variances
+    levene_stat, levene_p = stats.levene(*groups)
+    
+    # Perform appropriate statistical test based on number of groups
+    if n_groups == 2:
+        # Perform t-test if normal, Mann-Whitney U test if not
+        all_normal = all(test['normal'] for test in normality_tests.values())
+        equal_var = levene_p > alpha
+        
+        if all_normal:
+            stat, p_value = stats.ttest_ind(groups[0], groups[1], equal_var=equal_var)
+            test_type = "Independent t-test"
+            if not equal_var:
+                test_type += " with Welch's correction"
+        else:
+            stat, p_value = stats.mannwhitneyu(groups[0], groups[1], alternative='two-sided')
+            test_type = "Mann-Whitney U test"
+    else:
+        # Perform one-way ANOVA if normal, Kruskal-Wallis if not
+        all_normal = all(test['normal'] for test in normality_tests.values())
+        equal_var = levene_p > alpha
+        
+        if all_normal and equal_var:
+            stat, p_value = stats.f_oneway(*groups)
+            test_type = "One-way ANOVA"
+        else:
+            stat, p_value = stats.kruskal(*groups)
+            test_type = "Kruskal-Wallis H test"
+    
+    # Compile results
+    results = {
+        'test_type': test_type,
+        'test_statistic': stat,
+        'p_value': p_value,
+        'significant': p_value < alpha,
+        'descriptive_stats': descriptive_stats,
+        'assumption_tests': {
+            'normality': normality_tests,
+            'homogeneity_of_variance': {
+                'statistic': levene_stat,
+                'p_value': levene_p,
+                'equal_variances': levene_p > alpha
+            }
+        }
+    }
+    
+    return results
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -1969,3 +2033,226 @@ def loggerWriter2(stdoutLvl, stderrLvl):
     sys.stdout = loggerWriter_sub(stdoutLvl)
     sys.stderr = loggerWriter_sub(stderrLvl)
     return(old_stdout, old_stderr)
+
+import os
+import sys
+import importlib.util
+
+def setup_logger(log_file):
+    """
+    Set up logger to write to console and file
+    Args:
+        log_file (str): Path to the log file
+    Returns:
+        logging.Logger: Configured logger instance
+    """
+    import logging
+    
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.dirname(log_file)
+    if log_dir:  # Only create directory if log_file includes a path
+        os.makedirs(log_dir, exist_ok=True)
+    
+    # Create logger
+    logger = logging.getLogger('intranet_downloader')
+    logger.setLevel(logging.INFO)
+    
+    # Remove any existing handlers
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    
+    # Create formatters
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_formatter = logging.Formatter('%(message)s')
+    
+    # File handler
+    try:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+    except Exception as e:
+        print(f"Warning: Could not create log file at {log_file}: {str(e)}")
+        print("Continuing with console logging only...")
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+def load_config(config_file, logger):
+    """
+    Load sensitive credentials from config.yml
+    Args:
+        config_file (str): Path to the config file
+        logger: Logger instance for logging messages
+    Returns:
+        dict: Dictionary containing credentials
+    """
+    import yaml
+    
+    try:
+        if not os.path.exists(config_file):
+            logger.error(f"Config file {config_file} not found")
+            return {'username': '', 'password': ''}
+            
+        with open(config_file, 'r') as f:
+            config = yaml.safe_load(f)
+            
+        if not config or 'internet_credentials' not in config:
+            logger.error("Invalid config file format: missing 'internet_credentials' section")
+            return {'username': '', 'password': ''}
+            
+        return config['internet_credentials']
+    except yaml.YAMLError as e:
+        logger.error(f"YAML parsing error in {config_file}: {str(e)}")
+        return {'username': '', 'password': ''}
+    except Exception as e:
+        logger.error(f"Error loading {config_file}: {str(e)}")
+        return {'username': '', 'password': ''}
+
+def load_params(param_file):
+    """
+    Load parameters from the params file
+    """
+    try:
+        spec = importlib.util.spec_from_file_location("params", param_file)
+        params = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(params)
+        return params
+    except Exception as e:
+        print(f"Error loading params file: {str(e)}")
+        sys.exit(1)
+
+# -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# --------------------------------Web Scraping and Crawling -------------------
+def download_intranet_files(url, save_location, username, password, file_extensions, chunk_size, logger):
+    """
+    Download all files from specified intranet URL using NTLM authentication
+    """
+    import requests
+    from requests_ntlm import HttpNtlmAuth
+    from bs4 import BeautifulSoup
+    from urllib.parse import urljoin
+    from tqdm import tqdm
+    import urllib3
+    
+    # Create save directory if it doesn't exist
+    os.makedirs(save_location, exist_ok=True)
+    
+    # Create session with NTLM authentication and disable SSL verification
+    session = requests.Session()
+    session.verify = False
+    
+    # Suppress SSL verification warnings
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    if username and password:
+        session.auth = HttpNtlmAuth(username, password)
+    else:
+        session.auth = HttpNtlmAuth('', '')
+
+    try:
+        logger.info(f"Accessing {url}...")
+        response = session.get(url)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        links = soup.find_all('a', href=True)
+        
+        downloaded_files = []
+        failed_files = []
+        
+        for link in links:
+            href = link.get('href')
+            if not any(href.lower().endswith(ext) for ext in file_extensions):
+                continue
+                
+            file_url = urljoin(url, href)
+            filename = os.path.basename(href)
+            save_path = os.path.join(save_location, filename)
+            
+            try:
+                logger.info(f"\nDownloading: {filename}")
+                
+                response = session.get(file_url, stream=True)
+                total_size = int(response.headers.get('content-length', 0))
+                
+                with open(save_path, 'wb') as f, tqdm(
+                    desc=filename,
+                    total=total_size,
+                    unit='B',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as pbar:
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        size = f.write(data)
+                        pbar.update(size)
+                        
+                downloaded_files.append(filename)
+                logger.info(f"Saved: {save_path}")
+                
+            except Exception as e:
+                logger.error(f"Failed to download {filename}: {str(e)}")
+                failed_files.append(filename)
+                continue
+                
+        # Print summary
+        logger.info("\nDownload Summary:")
+        logger.info(f"Successfully downloaded ({len(downloaded_files)}):")
+        for file in downloaded_files:
+            logger.info(f"  ✓ {file}")
+            
+        if failed_files:
+            logger.warning(f"\nFailed downloads ({len(failed_files)}):")
+            for file in failed_files:
+                logger.warning(f"  ✗ {file}")
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error occurred: {str(e)}")
+    finally:
+        session.close()
+
+def download_webpage_content(url, save_location, username, password, logger):
+    """Download content of a specified webpage using NTLM authentication"""
+    import requests
+    from requests_ntlm import HttpNtlmAuth
+    from bs4 import BeautifulSoup
+    import urllib3
+    import os
+
+    # Create save directory if it doesn't exist
+    os.makedirs(save_location, exist_ok=True)
+
+    # Create session with NTLM authentication and disable SSL verification
+    session = requests.Session()
+    session.verify = False
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    if username and password:
+        session.auth = HttpNtlmAuth(username, password)
+    else:
+        session.auth = HttpNtlmAuth('', '')
+
+    try:
+        logger.info(f"Accessing {url}...")
+        response = session.get(url)
+        response.raise_for_status()
+
+        # Save the webpage content
+        filename = 'webpage_content.html'
+        save_path = os.path.join(save_location, filename)
+        
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(response.text)
+            
+        logger.info(f"Successfully saved webpage content to: {save_path}")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error occurred: {str(e)}")
+    finally:
+        session.close()
