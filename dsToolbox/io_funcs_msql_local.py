@@ -2,7 +2,7 @@ import os,sys
 import datetime as dt  
 import pandas as pd
 config_file=os.path.join('dsToolbox','config.yml')
-import dsToolbox.common_funcs    as cfuncs
+import src.common_funcs    as cfuncs
 
 class cred_setup_mssql():
     def __init__(self, config_file):
@@ -11,22 +11,28 @@ class cred_setup_mssql():
         with open(config_file, 'r') as stream:
             self.config = yaml.safe_load(stream)
 
-    def MSSQL_connector__pyodbc(self):
+    def MSSQL_connector__pyodbc(self, db_server_id):
         import pyodbc 
-        MSSQL_config=   self.config['sql_server']
+        MSSQL_config=   self.config['sql_servers'][db_server_id]
+
+        self.db_server = MSSQL_config['db_server']
         cnxn = pyodbc.connect("DRIVER={SQL Server Native Client 11.0};"
-                            f"SERVER={MSSQL_config['db_server']};"
+                            f"SERVER={self.db_server};"
                             "Trusted_Connection=yes;"
                             )
+        print(f"Connected to {self.db_server}")
         return cnxn, MSSQL_config
 
-    def MSSQL_connector__sqlalchemy(self):
+    def MSSQL_connector__sqlalchemy(self, db_server_id):
         from sqlalchemy import create_engine
         import urllib
-        MSSQL_config=   self.config['sql_server']
+        MSSQL_config=   self.config['sql_servers'][db_server_id]
 
-        # db_params = urllib.parse.quote_plus('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+MSSQL_config['db_server']+';Trusted_Connection=yes;')
-        db_params = urllib.parse.quote_plus('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+MSSQL_config['db_server']+';DATABASE='+MSSQL_config['db_name']+';Trusted_Connection=yes;')
+        self.db_server = MSSQL_config['db_server']
+        # self.db_name   = MSSQL_config['db_name']
+
+        db_params = urllib.parse.quote_plus('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+self.db_server+';Trusted_Connection=yes;')
+        # db_params = urllib.parse.quote_plus('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+self.db_server+';DATABASE='+self.db_name+';Trusted_Connection=yes;')
 
         engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params}')
         
@@ -47,10 +53,10 @@ class cred_setup_mssql():
 
         return cnxn, db_params
 
-def mSql_query(sql_query, config_file=config_file, return_df=True):
+def mSql_query(sql_query, db_server_id, config_file=config_file, return_df=True):
     import pandas as pd
     try:
-        cnxn, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc()
+        cnxn, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc(db_server_id)
         ##or using cursor:
         # cursor.execute(sql_query)
         # tables = cursor.fetchall()
@@ -62,9 +68,12 @@ def mSql_query(sql_query, config_file=config_file, return_df=True):
         # cursor.fetchall(): This method is used to fetch all the rows of a query result. It returns a list of tuples where each tuple corresponds to a row in the result. You would typically use this method after executing a SELECT query to retrieve the data that the query returns.
     
         if return_df:
+            # print(sql_query)
             out=pd.read_sql_query(sql_query, cnxn)
         else:
             out=cnxn.execute(sql_query)
+        
+
     except Exception as e:
         cnxn.rollback()
         sys.exit("Error in running SQL in MS Sql Server: \n" + str(e))
@@ -85,9 +94,9 @@ def incorta_query(sql_query, config_file=config_file, return_df=True):
 
     return out
 
-def df2MSQL(df, table_name, config_file=config_file, **kwargs):
+def df2MSQL(df, table_name, db_server_id, config_file=config_file, **kwargs):
     try:
-        engine, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__sqlalchemy()
+        engine, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__sqlalchemy(db_server_id)
         df.to_sql(table_name, con = engine,
                     **kwargs)
 
@@ -98,11 +107,12 @@ def df2MSQL(df, table_name, config_file=config_file, **kwargs):
     return None
 
 def MSql_table_check(tablename,
-              config_file=config_file,
-              ):
+                    db_server_id,
+                    config_file=config_file,
+                    ):
     import pandas as pd
     try:
-        cnxn, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc()
+        cnxn, _=cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc(db_server_id)
 
         if tablename.count(".")==3:
             database, schema, tablename=tablename.split(".")[0], tablename.split(".")[1], tablename.split(".")[2]
@@ -131,24 +141,26 @@ def MSql_table_check(tablename,
         return False
 
 def last_date_MSql(db_name,
+              db_server_id,
               date_col,
-              config_file=config_file  
+              config_file=config_file,
+              logger=None  
               ):
   
-    if (MSql_table_check(db_name, config_file=config_file)): 
+    if (MSql_table_check(db_name, db_server_id, config_file=config_file)): 
         sql_query=f"""select min({date_col}) as min_time ,
                              max({date_col}) as max_time
                         from   {db_name}"""
-        saved_dates =mSql_query(sql_query, config_file=config_file) 
+        saved_dates =mSql_query(sql_query, db_server_id, config_file=config_file) 
         last_saved_date=saved_dates['max_time'].iloc[0]
         print(f"The last date found in {db_name}:{last_saved_date}")
     else:
-        print(f"{db_name} does not exist")
+        cfuncs.custom_print(f"{db_name} does not exist", logger)
         last_saved_date=None
 
     return last_saved_date
 
-def last_date_parquet(file_name, date_col):
+def last_date_parquet(file_name, date_col, logger=None):
     """
     Retrieves the most recent date from a specified date column in a Parquet file.
 
@@ -165,32 +177,54 @@ def last_date_parquet(file_name, date_col):
     if (os.path.isfile(file_name)): 
         df= pd.read_parquet(file_name)
         last_saved_date=df[date_col].max()
-        print(f"The last date found in {file_name}:{last_saved_date}")
+        cfuncs.custom_print(f"The last date found in {file_name}:{last_saved_date}", logger)
     else:
-        print(f"{file_name} does not exist")
+        cfuncs.custom_print(f"{file_name} does not exist", logger)
         last_saved_date=None
     return last_saved_date
 
-def last_date(output_list,
+def last_date(output_dict,
+              logger=None,
               **kwargs
               ):     
     import inspect 
     last_date_MSql_args = list(inspect.signature(last_date_MSql).parameters)
     kwargs_last_date_MSql= {k: kwargs.pop(k) for k in dict(kwargs) if k in last_date_MSql_args}
-    date_col=output_list['date_col']
-    if (output_list['format']=='MS_db') :
-        last_save_date = last_date_MSql(output_list['output_location'],
+    date_col=output_dict['date_col']
+    if (output_dict['format']=='MS_db') :
+        db_server_id=output_dict['db_server_id']
+        last_save_date = last_date_MSql(output_dict['output_location'],
+                                    db_server_id,
                                     date_col,
+                                    logger=logger,
                                     **kwargs_last_date_MSql
                                     )
-    elif (output_list['format']=='parquet'):
-        last_save_date = last_date_parquet(output_list['output_location'],
+    elif (output_dict['format']=='parquet'):
+        last_save_date = last_date_parquet(output_dict['output_location'],
                             date_col,
+                            logger=logger
                             )
     else:
         last_save_date=None
     
     return last_save_date
+
+def load_parquet_between_dates(ufile   , 
+                                date_col ,
+                                start_date = '2019-01-01',
+                                end_date   = '2020-01-01'):
+    
+    start_date = dt.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date   = dt.datetime.strptime(end_date, "%Y-%m-%d")
+
+    df= pd.read_parquet(ufile)
+    # df['year']  = df[date_col].dt.year
+    # df['month'] = df[date_col].dt.month
+    # display(df.groupby(['year','month'])['SecureMessageThreadId'].count())
+
+    df=df[(df[date_col]>=start_date)&(df[date_col]<end_date)]
+
+    return df
 
 ##TODO: merge the following code to last_date and remove it from spark_funcs
 # def last_date(output_name,
@@ -235,6 +269,7 @@ def update_output_specS(output_specS,
                         month_step=1,
                         firstDate=None,
                         lastDate=dt.datetime.now().date(),
+                        logger=None
                         ):
     """
     Updates the outputs list with the last saved date and generates a list of run dates.
@@ -257,10 +292,11 @@ def update_output_specS(output_specS,
     output_specS= [output_specS] if isinstance(output_specS, dict) else output_specS
     output_specS2=output_specS
     last_saved_date__all=[]
-    for con , output_list in enumerate(output_specS):
-        # print(con, output_list)
-        last_saved_date=last_date(output_list,
+    for con , output_dict in enumerate(output_specS):
+        # print(con, output_dict)
+        last_saved_date=last_date(output_dict,
                                     config_file=config_file,
+                                    logger=logger
                                     )
 
         output_specS2[con]['last_date']=last_saved_date
@@ -269,7 +305,7 @@ def update_output_specS(output_specS,
             warn_txt=False
             if (firstDate is not None):
                 if isinstance(firstDate, str):
-                    print(firstDate)
+                    cfuncs.custom_print(firstDate, logger)
                     firstDate2   = dt.datetime.strptime(firstDate, "%Y-%m-%d").date()
             elif isinstance(firstDate,pd._libs.tslibs.timestamps.Timestamp):
                 firstDate2   =firstDate.date()
@@ -279,7 +315,7 @@ def update_output_specS(output_specS,
 
             ###polish the warning, it is meaningless when last_saved_date exists
             if (warn_txt)& (last_saved_date is not None):
-                print(f"The last date is {last_saved_date}; however, the function starts from given first date: {firstDate}")
+                cfuncs.custom_print(f"The last date is {last_saved_date}; however, the function starts from given first date: {firstDate}", logger)
 
             run_dates=cfuncs.datesList(range_date__year=range_date__year, 
                                     month_step=month_step,
@@ -288,17 +324,17 @@ def update_output_specS(output_specS,
                                     )
 
             if len(run_dates)==0:
-                print("Database|file is updated")
+                cfuncs.custom_print("Database|file is updated", logger)
             else:
-                print("Date list updated to :\n", run_dates)
+                cfuncs.custom_print("Date list updated to :\n"+str(run_dates), logger)
 
     if len(set(last_saved_date__all))>1:
-        print("Warning! There are different last_date for output_specS, run_dates updated based on first element of output_specS:\t")
-        print(last_saved_date__all)
+        cfuncs.custom_print("Warning! There are different last_date for output_specS, run_dates updated based on first element of output_specS:\t", logger)
+        cfuncs.custom_print(last_saved_date__all, logger)
 
     return output_specS2, run_dates
 
-def save_outputs(output_dict, output_specS):
+def save_outputs(output_dict, output_specS, logger=None):
     """
     Save dataframes from the output dictionary to specified locations and formats.
     Parameters:
@@ -320,9 +356,17 @@ def save_outputs(output_dict, output_specS):
 
     orphan_dfs=set(flatten_ls)-set([output_list['output_df_key'] for output_list in output_specS])
     if len(orphan_dfs)>0:
-        print(f"Following dataframes are not saved: {orphan_dfs}")
-        sys.exit("Please check the output_list and return values of the dfGenerator_func")
-        return 0
+        cfuncs.custom_print(f"Following dataframes are not saved: {orphan_dfs}", logger)
+        cfuncs.custom_print("Match output_list and return values of the dfGenerator_func",logger)
+        sys.exit()
+        # return 0
+
+    orphan_outputs=set([output_list['output_df_key'] for output_list in output_specS])-set(flatten_ls)
+    if len(orphan_outputs)>0:
+        cfuncs.custom_print(f"Following outputs donot exist in dfGenerator_func: {orphan_outputs}", logger)
+        cfuncs.custom_print("Match output_list and return values of the dfGenerator_func",logger)
+        sys.exit()
+        # return 0
 
     for key_dfS, df in zip(output_dict['output_df_keys'], output_dict['dfs']):
         if df.size!=0:
@@ -332,13 +376,13 @@ def save_outputs(output_dict, output_specS):
                 output_location=output_spec__sub['output_location']
                 check_overwrite=output_spec__sub['overwrite']
 
-                print(f"saving df in {output_format} format...")
-                print(output_spec__sub)
+                cfuncs.custom_print(f"saving output {output_spec__sub['output_df_key']} in {output_spec__sub['output_location']}...", logger)
 
                 if (output_format=='MS_db'):  
-                    
+                    db_server_id=output_spec__sub['db_server_id']
                     df2MSQL(df,
                             table_name=output_location.split('.')[2],
+                            db_server_id=db_server_id,
                             config_file=config_file,
                             schema=f"{output_location.split('.')[0]}.{output_location.split('.')[1]}",
                             chunksize=200,
@@ -354,11 +398,11 @@ def save_outputs(output_dict, output_specS):
                         df=pd.concat([df_current, df], axis=0)    
                     df.to_parquet(output_location, index=False)
                     
-            print("Data saved successfully")
+            # cfuncs.custom_print("Data saved successfully",logger)
         else:
-            print("Dataframe is empty")
+            cfuncs.custom_print("Dataframe is empty", logger)
 
-    print('-'*200)
+    cfuncs.custom_print('-'*50, logger)
     return 1
 
 ##TODO: merge following codes to save_outputs and remove it from spark_funcs
@@ -404,6 +448,7 @@ def run_recursively(output_specS,
                     month_step=1,
                     firstDate=None,
                     lastDate=dt.datetime.now().date(),
+                    logger=None,
                     **kwargs
                     ):
     """
@@ -420,31 +465,34 @@ def run_recursively(output_specS,
     Raises:
         Exception: If there is an error during the execution of the data generation function or saving the outputs.
     """
-    # import src.io_funcs        as io_funcs
+    # import src.io_funcs_msql_local        as io_funcs
     import inspect
-    print("updating the outputs list...")
+    cfuncs.custom_print("Updating the outputs list...\n", logger)
     output_specS2, run_dates =update_output_specS(output_specS,
                                                 range_date__year=range_date__year,
                                                 month_step=month_step,
                                                 firstDate=firstDate,
                                                 lastDate=lastDate,
+                                                logger=logger
                                                 )
 
     dfGenerator_func_args = list(inspect.signature(dfGenerator_func).parameters)
     dfGenerator_func_args = {k: kwargs.pop(k) for k in dict(kwargs) if k in dfGenerator_func_args}
 
-    print('-'*200)
-    print('-'*200)
-  
+    cfuncs.custom_print('/'*50+'\n', logger)
+
     try: 
         for ii in range(len(run_dates)-1):
             start_date, end_date= cfuncs.extract_start_end(run_dates, ii)
-            print (f"Running {dfGenerator_func.__name__} for the period {start_date} to {end_date}...")
+            cfuncs.custom_print(f"Running {dfGenerator_func.__name__} for the period {start_date} to {end_date}...", logger)
             output_dict=dfGenerator_func(start_date, end_date,
+                                         logger=logger,
                                             **dfGenerator_func_args
                                             )
-            save_outputs(output_dict, output_specS2)
+            save_outputs(output_dict, output_specS2, logger=logger)
 
     except Exception as e:
-        print(f'***Running function {dfGenerator_func.__name__} failed: \n\t\t {str(e)}')
-        print('**********************************************************************************************')
+        cfuncs.custom_print(f'***Running function {dfGenerator_func.__name__} failed: \n\t\t {str(e)}', logger)
+        cfuncs.custom_print('************************************************************************', logger)
+        cfuncs.custom_print(f'***Running function {dfGenerator_func.__name__} failed: \n\t\t {str(e)}', logger)
+        cfuncs.custom_print('************************************************************************', logger)

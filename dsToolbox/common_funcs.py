@@ -214,21 +214,21 @@ def setOutputFolder(outputFolder, uFiles, overWrite):
                     os.path.basename(uFile)))
     return (outputFolder)
 
-def sanitize_folder_name(text):
-    # List of characters not allowed in Windows folder names
-    invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*','-']
-    
-    # Replace invalid characters with underscores
-    sanitized = text
-    for char in invalid_chars:
-        sanitized = sanitized.replace(char, '_')
-    
-    # Remove trailing spaces and periods as Windows doesn't allow them at the end
-    sanitized = sanitized.strip('. ')
-    
-    # Limit length to 255 characters (Windows max path length limitation)
-    sanitized = sanitized[:255]
-    
+#TODO: Define a more robust sanitize_filename function
+def sanitize_folder_name(filename):
+    """Sanitize a string to be used as a filename by removing invalid characters."""
+    # Remove invalid characters
+    invalid_chars = r'[\\/*?:"<>|\r\n\t]'
+    sanitized = re.sub(invalid_chars, '_', filename)
+    # Trim whitespace and ensure the filename isn't too long
+    sanitized = sanitized.strip()
+    # Windows MAX_PATH is 260, but let's be conservative
+    max_length = 100  
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length]
+    # Ensure we return something useful
+    if not sanitized or sanitized.isspace():
+        sanitized = "unnamed"
     return sanitized
 
 # -------------------------------------------------------------------------
@@ -732,7 +732,397 @@ def rle_encode(data):
         encoding += prev_char+"("+str(count) +");" 
         return encoding
 
-# -------------------------------------------------------------------------
+
+# ----------------------------Feature Eng. Functions ----------------------
+def get_dummies2_sub(x, allLabels):
+    """ a sub-function for get_dummies2 function
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+    ind = np.in1d(allLabels, x) * 1
+    return ind
+
+def sparseLabel_sub(x, splitter="; "):
+    """ a sub-function for sparseLabel function
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+    # TODO: how we can apply in two mat in parallel
+    try:
+        tmp = x[1].split(splitter)
+        x2 = x[2:]
+        x2[np.where(x2)] = np.fromstring(x[0], dtype=int, sep=splitter)
+    except Exception :
+        print("error in sparseLabel_sub")
+        print(x)
+        pdb.set_trace()
+
+    # if len(set(tmp))!=len(tmp):
+    #     tmp3=pd.Series(data=np.fromstring(x[0], dtype=int, sep=splitter)  , index=tmp)
+    #     tmp3=tmp3.groupby(tmp3.index).sum()
+    #     x2[np.where(x2)]=tmp3
+    #     # try:
+    #     #     x2[np.where(x2)]=tmp3
+    #     # except Exception:
+    #     #     print("stp1")
+    #     #     pdb.set_trace()
+    # else:
+    #     x2[np.where(x2)]=np.fromstring(x[0], dtype=int, sep=splitter)
+    #     # try:
+    #     #     x2[np.where(x2)]=np.fromstring(x[0], dtype=int, sep=splitter)
+    #     # except Exception :
+    #     #     print("stp2")
+    #     #     pdb.set_trace()
+    return x2
+
+def get_dummies2(df, splitter='; '):
+    """ a function like panda.get_dummies, however, get_dummies is very slow and has out of memory issue for large data frame
+        Convert categorical variable into dummy/indicator variables.
+
+    Parameters:
+    ----------
+    df : array-like, Series, or DataFrame Data of which to get dummy indicators.
+
+    splitter (string) default ‘; ’
+    String or regular expression to split on.
+
+    returns:
+    -------
+    DataFrame
+    Dummy-coded data.
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+
+    df = df.str.split(splitter, expand=True)
+    tmp = df.values.flatten()
+    tmp = tmp[~(pd.isnull(tmp))]
+    allLabels = np.sort(np.unique(tmp))
+    tmp1 = np.apply_along_axis(
+                                get_dummies2_sub,
+                                1,
+                                df.values,
+                                allLabels=allLabels)
+    tmp1 = pd.DataFrame(tmp1, columns=allLabels, index=df.index)
+    return tmp1
+
+def sparseLabel(df, prodCol, priceCol, splitter="; "):
+    """create a Dummy-coded data of column prodCol of dataframe df which fills with value of column priceCol
+
+    Parameters:
+    ----------
+    df(pandas dataframe) with [sample*features] format
+
+    prodCol (a list of strings): column names
+
+    priceCol (a list of strings): the value of columns
+
+    splitter (string), default ‘; ’
+    String or regular expression to split on.
+
+    returns:
+    ----------
+    DataFrame
+    Dummy-coded data of column prodCol which fills with value of priceCol
+
+    ###NOTE: prodCol and priceCol should have same order
+    Example1: prodCol=['INT10, SPN, TMN, INT20'], priceCol="10,20,30,5"
+        output= INT10, SPN, TMN, INT50
+                10   , 20 , 30,  5
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+    #---debugging:
+    # prodCol='PRODS_B4' 
+    # priceCol='MRRS_B4'
+    # splitter="; "
+
+    tmp1 = get_dummies2(df[prodCol], splitter)
+    print("dummies generated")
+
+    tmp2 = pd.concat([df[priceCol], df[prodCol], tmp1], axis=1)
+    out0 = np.apply_along_axis(sparseLabel_sub, 1, tmp2, splitter=splitter)
+
+    out = pd.DataFrame(
+        out0,
+        dtype=np.int16,
+        columns=tmp1.columns.str.upper(),
+        index=df.index)
+    return out
+
+def fill_with_colnames(udata):
+    """fills non zero elements of a dataframe with their column names
+
+    Parameters:
+    ----------
+    udata(pandas dataframe) with [sample*features] format
+
+    returns:
+    ----------
+    udata(pandas dataframe) with [sample*features] format and column names as new value for nonzero elements
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+
+    tmp = np.tile(udata.columns, [len(udata.index), 1])
+    tmp2 = pd.DataFrame(
+        np.where(
+            udata.astype(int),
+            tmp,
+            0),
+        columns=udata.columns,
+        index=udata.index)
+    # tmp2 = tmp2.replace(0, "")
+    return (tmp2)
+
+def joinNonZero(x, sep=', '):
+    """Concatenate a list or tuple of non zero vlaues with intervening occurrences of sep
+    ###TODO: it should be corrected xx!=0???
+
+    Parameters:
+    ----------
+    x (a list of strings)
+
+    sep (string): default value=', '
+    String or regular expression to split on
+
+    returns:
+    ----------
+    y string
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+    y = sep.join(list(filter(lambda xx: xx != 0, x)))
+    return(y)
+
+def prodDesc_clean(prodDesc, df):
+    """removes duplicted prodDesc values and keeps only rows in prodDesc that their  product_id  match with product_id in df
+
+    Parameters:
+    ----------
+    prodDesc(pandas dataframe) with [prodcuts*features] format: a product dataframe which consists of ['PRODUCT_ID','LOB'] columns
+
+    udata(pandas dataframe) with [sample*features] format
+
+    returns:
+    ----------
+    prodDesc2(pandas dataframe) with [sample*features] format
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+
+    prodDesc2 = prodDesc[['PRODUCT_ID', 'LOB']].drop_duplicates()
+    prodDesc2['PRODUCT_ID'] = prodDesc2['PRODUCT_ID'].str.upper()
+    prodDesc2['LOB'] = prodDesc2['LOB'].str.upper()
+
+    tmp = (pd.DataFrame(df.columns.str.upper(), columns=['PRODUCT_ID']))
+    prodDesc2 = tmp.merge(prodDesc2, on='PRODUCT_ID', how='left')
+    # prodDesc2=prodDesc2.loc[~prodDesc2['LOB'].isna(),:]
+
+    if prodDesc2.shape[0] != df.shape[1]:
+        print(prodDesc2)
+        print(df.columns)
+        # pdb.set_trace()
+        sys.exit("something is wrong with prodDesc2")
+
+    return prodDesc2
+
+def condense_cols(df, remove_prefix, umap):
+    """joins all columns in a row to a single string that are seprated with ", "
+
+    Parameters:
+    ----------
+    df(pandas dataframe) with [sample*features] format
+
+    remove_prefix (True/False): 
+    if it is Ture,prefrix with format *_ will be deleted
+
+    umap (dictionary):
+    a dictionary to map old value to new values before joining ß
+
+    returns:
+    ----------
+    df2 (pandas dataframe) with [sample*features] format
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+
+    if remove_prefix:
+        df.columns = pd.Series(["_".join(x.split('_')[1:])
+                                for x in df.columns])
+    # pdb.set_trace()
+    if len(umap) != 0:
+        df.rename(columns=umap, inplace=True)
+    df2 = fill_with_colnames(df)
+    df2 = df2.apply(joinNonZero, sep=', ', axis=1)
+    return df2
+
+def sortPrds(x, y):
+    """sort values of classifier.predict_proba(x) based on probability
+
+    Parameters:
+    ----------
+    x : a row of classifier.predict_proba(x)
+    y : column names of classifier.predict_proba(x); inother words classes of y
+
+    returns:
+    ----------
+    y and x , sorted by x
+
+
+    -------
+    Author: Reza Nourzadeh 
+    """
+    x = x.values
+    y = y.values
+    # pdb.set_trace()
+    idx = np.argsort(-x)
+    x = x[idx]
+    y = y[idx]
+
+    idx = np.argwhere(x == 0)
+    # pdb.set_trace()
+    y[idx] = ''
+
+    return y.tolist() + x.tolist()
+
+def cat2num(df,cat_decoder='OneHotEncoder'):
+    # -------Conversion cat to numerical
+    #TODO:add to functions or use existing lib
+    cat_columns = df.select_dtypes(include=['object','category']).columns.tolist()
+    if len(cat_columns) != 0:
+        df[cat_columns] = df[cat_columns].applymap(lambda x: str(x).lower().strip() if not pd.isnull(x) else x) #lower case
+        print('Categorical columns...')
+        tmp=df[cat_columns].nunique()
+        tmp.sort_values(inplace=True,ascending=False)
+        print(tmp)
+        ### debugging:         
+        # df=df0.copy()
+        # cat_columns = df.select_dtypes(include=['object']).columns.tolist()+df.select_dtypes(include=['category']).columns.tolist()
+
+        if cat_decoder=='OneHotEncoder':
+            df[cat_columns]=df[cat_columns].fillna('None').astype('category')
+            from sklearn.preprocessing import OneHotEncoder  
+            enc = OneHotEncoder()
+            tmp = enc.fit_transform(df[cat_columns]) 
+            
+            tmp2=pd.DataFrame(tmp.todense(),columns=enc.get_feature_names(cat_columns ),index=df.index)  
+            df=pd.concat([df.drop(cat_columns,axis=1),tmp2],axis=1)
+        else:
+            df[cat_columns] = df[cat_columns].apply(lambda x: x.astype('category').cat.codes)
+    
+    return df
+
+import pandas as pd
+import re
+
+def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='inner', **kwargs):
+    """
+    Join two DataFrames with flexible string matching that handles differences in:
+    - spaces, underscores, and other special characters (/, -, etc.)
+    - letter case (upper/lower)
+    
+    Parameters:
+    -----------
+    left_df : pandas DataFrame
+        Left DataFrame to join
+    right_df : pandas DataFrame
+        Right DataFrame to join
+    left_on : str or list of str, optional
+        Column(s) from left_df to use as join key(s)
+    right_on : str or list of str, optional
+        Column(s) from right_df to use as join key(s)
+    on : str or list of str, optional
+        Column name(s) to join on if column names are identical in both DataFrames
+    how : str, default 'inner'
+        Type of join to perform ('inner', 'left', 'right', 'outer')
+    **kwargs : 
+        Additional keyword arguments to pass to pd.merge()
+        
+    Returns:
+    --------
+    pandas DataFrame
+        Joined DataFrame
+    """
+    # Create copies to avoid modifying the original DataFrames
+    left_copy = left_df.copy()
+    right_copy = right_df.copy()
+    
+    # Handle the case where 'on' is specified
+    if on is not None:
+        left_on = right_on = on
+    
+    # Convert single column to list
+    if isinstance(left_on, str):
+        left_on = [left_on]
+    if isinstance(right_on, str):
+        right_on = [right_on]
+    
+    # Make sure we have valid join columns
+    if left_on is None or right_on is None:
+        raise ValueError("Must specify either 'on' or both 'left_on' and 'right_on'")
+    
+    # Make sure the lengths match
+    if len(left_on) != len(right_on):
+        raise ValueError("Length of 'left_on' must equal length of 'right_on'")
+    
+    # Create normalized versions of each join column
+    left_norm_cols = []
+    right_norm_cols = []
+    
+    for lcol, rcol in zip(left_on, right_on):
+        # Create normalized column names that include the original column names
+        left_norm_col = f"_normalized_left_{lcol}"
+        right_norm_col = f"_normalized_right_{rcol}"
+        
+        # Add to our lists of normalized columns
+        left_norm_cols.append(left_norm_col)
+        right_norm_cols.append(right_norm_col)
+        
+        # Create the normalized columns
+        left_copy[left_norm_col] = left_copy[lcol].apply(normalize_string)
+        right_copy[right_norm_col] = right_copy[rcol].apply(normalize_string)
+    
+    # Perform the join on the normalized keys
+    result = pd.merge(
+        left_copy, right_copy,
+        left_on=left_norm_cols,
+        right_on=right_norm_cols,
+        how=how,
+        **kwargs
+    )
+    
+    # Drop the temporary normalized key columns
+    result = result.drop(columns=left_norm_cols + right_norm_cols)
+    
+    return result
+
+def normalize_string(s, special_chars = r'[\s_/\\\-\.,;:]'):
+    """
+    Normalize a string by:
+    1. Converting to lowercase
+    2. Removing special characters (_, /, -, etc.) and spaces
+    """
+    if not isinstance(s, str):
+        return s
+    
+    # Convert to lowercase
+    s = s.lower()
+    
+    # Remove special characters and spaces
+    # This includes: spaces, underscore, forward slash, backslash, hyphen, period, comma, semicolon, colon
+    s = re.sub(special_chars, '', s)
+    
+    return s
+
 # -------------------------------------------------------------------------
 # ---------------------------Graph and plot functions----------------------
 def corrmap(df0, method='kendall', diagonal_plot=True, **kwargs):
