@@ -7,7 +7,6 @@ pipdeptree==2.13.2   ## is a command line utility for displaying the installed p
 typing_extensions==4.12.2
 six==1.16.0
 ipykernel==6.29.5
-loguru==0.7.2
 
 ###HTTP and web Connections:
 certifi==2022.9.14
@@ -79,27 +78,12 @@ langchain==0.2.12
 langchain-community==0.2.11
 langchain_chroma==0.1.4
 
-###document proccessing:
-sentence-transformers==2.2.2
-chromadb==0.4.18
-docling==2.3.1
-readerlm-v2==1.1.0
-
-####Web Scraping:
-beautifulsoup4==4.13.1
-requests-ntlm 
-requests-kerberos
-
-####Web Frameworks:
-streamlit==1.24.0
-
-
 #cd C:\Users\rnourzadeh\main_folder\codes\secure_messages\settings
-#echo yes Y | conda create --name tst_env python=3.9
-#conda activate tst_env
-#pip install -r  requirement.txt --user
+#echo yes Y | conda create --name rag_env python=3.9
+#conda activate rag_env
+#pip install -r  requirements.txt --user
 #pip --trusted-host github.com --trusted-host objects.githubusercontent.com install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0.tar.gz
-#python -m ipykernel install --user --name tst_env --display-name "tst_env"
+#python -m ipykernel install --user --name rag_env --display-name "rag_env"
 
 ###---NOTES:
 ###installing s-transformers models: 
@@ -125,8 +109,7 @@ streamlit==1.24.0
 ### https://www.datacamp.com/tutorial/run-llama-3-locally
 
 ###Remove Conda:
-##conda remove -n tst_env --all
-##rmdir /S C:\Users\rnourzadeh\AppData\Local\miniconda3\envs\tst_env
+##conda remove -n rag_env --all
+##rmdir /S C:\Users\rnourzadeh\AppData\Local\miniconda3\envs\rag_env
 
 ###conda install --yes --file requirement.txt
-

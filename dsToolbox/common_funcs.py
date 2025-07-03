@@ -366,106 +366,276 @@ def cellWeight(df, axis=0):
     out=df.div(df.sum(axis=1), axis=0)
   return out
 
-def compare_dfs(df1,
-                df2,
-                df_names=['df1','df2']):
+import pandas as pd
+import numpy as np
+from typing import List, Tuple
 
-    uset=set(df1.columns).intersection(set(df2.columns))
-    different_dtypes=[i  for i in uset if df1[i].dtype!=df2[i].dtype]
-
-    if len(different_dtypes)!=0:
-      print("Same columns have different data types:\n\t df1:\n", str(df1[different_dtypes].dtypes),"\n\t df2:\n",str(df2[different_dtypes].dtypes))
-      convert_dict = {i:df1[i].dtype for i in different_dtypes} 
-      df2 = df2.astype(convert_dict)
-      print("df2 dtypes match with df1 dtypes")
-      
-    ##TOdo: debug it when there are columnd with same names in a df
-    print(f"shape {df_names[0]}:",str(df1.shape))
-    print(f"shape {df_names[1]}:",str(df2.shape))
-    print(f"-----------------------------------------")    
-
-    idx_only_df1=df1[~df1.index.isin(df2.index)]
-    idx_only_df2=df2[~df2.index.isin(df1.index)]
-
-    print(f"only rows in {df_names[0]}...")
-    txt=idx_only_df1 if idx_only_df1.size!=0 else "Empty"
-    print(txt)
-
-    print(f"only rows in {df_names[1]}...")
-    txt=idx_only_df2 if idx_only_df2.size!=0 else "Empty"
-    print(txt)
-    print(f"-----------------------------------------")    
-
-    col_only_df1=df1.loc[:,~df1.columns.isin(df2.columns)]
-    col_only_df2=df2.loc[:,~df2.columns.isin(df1.columns)]
-
-    print(f"only columns in {df_names[0]}...")
-    txt=col_only_df1 if col_only_df1.size!=0 else "Empty"
-    print(txt)
-
-    print(f"only columns in {df_names[1]}...")
-    txt=col_only_df2 if col_only_df2.size!=0 else "Empty"
-    print(txt)
-    print(f"-----------------------------------------")        
-
-    common_cols=df1.columns[df1.columns.isin(df2.columns)]
-    common_idx=df1.index[df1.index.isin(df2.index)]
-
-    df1_common=df1.loc[common_idx, common_cols]
-    df2_common=df2.loc[common_idx, common_cols]
-
-    df1_common_sub1=df1_common.select_dtypes(include=['number'])
-    df2_common_sub1=df2_common.select_dtypes(include=['number'])
-    common_bol_sub1=(abs(df1_common_sub1-df2_common_sub1).fillna(0))<.001
-
-    df1_common_sub2=df1_common.select_dtypes(exclude=['number'])
-    df2_common_sub2=df2_common.select_dtypes(exclude=['number'])
-    common_bol_sub2=df1_common_sub2.fillna('')==df2_common_sub2.fillna('')
-
-    common_bol=pd.concat([common_bol_sub1,common_bol_sub2],axis=1)
-
-    #print("debug")
-    #print(all(common_bol_sub1[debugcol]))
-    #debugcol='co2_emission_t'
-    #print(abs(df1_common_sub1[debugcol]-df2_common_sub1[debugcol]))    
-    #print(pd.concat([df1_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol,'machine_energy_usage']],
-    #                 df2_common_sub1.loc[~common_bol_sub1[debugcol],[debugcol]]
-     #              ],axis=1)
-    #     )
+class DataFrameColumnComparator:
+    """A class for comparing columns between two DataFrames."""
     
-    ###TOOD: all(common_bol) leads to the wrong result why???
-    ##tmp=all((common_bol).all())
-    df1N2per=round(common_bol.sum()/common_bol.shape[0]*100,0).sort_values()  
-    if  (all(df1N2per==100))&(df1_common.size!=0):
-        print("common rows and columns have same values, shape=",str(df1_common.shape))
-        df1N2per=100
-        df1N2diff=None
-    elif (all(df1N2per==100))&(df1_common.size==0):
-        print("no Common values- Hint: unify indexes")
-        df1N2per=0
-        df1N2diff=df1_common.compare(df2_common)
-    else: 
-        print("Percentage of common values:\n",df1N2per)
-        idx=df1N2per!=100
-        df1_common_diff=df1_common[df1N2per[idx].index.tolist()]
-        df2_common_diff=df2_common[df1N2per[idx].index.tolist()]
-        df1N2diff=df1_common_diff.compare(df2_common_diff)
-        df1N2diff=df1N2diff.rename(columns={'self':df_names[0],'other':df_names[1]},level=1)
-        print(df1N2diff)
-      
-    df1_out={"only rows in df1":idx_only_df1,
-             "only columns in df1":col_only_df1,
-            }
-
-    df2_out={"only rows in df2":idx_only_df2,
-         "only columns in df2":col_only_df2,
+    def __init__(self, df1: pd.DataFrame, df2: pd.DataFrame, 
+                 df1_name: str = "DataFrame 1", df2_name: str = "DataFrame 2"):
+        """
+        Initialize the comparator with two DataFrames.
+        
+        Parameters:
+        -----------
+        df1, df2 : pd.DataFrame
+            DataFrames to compare
+        df1_name, df2_name : str
+            Names for the DataFrames (for display purposes)
+        """
+        self.df1 = df1
+        self.df2 = df2
+        self.df1_name = df1_name
+        self.df2_name = df2_name
+        self.all_columns = sorted(set(df1.columns) | set(df2.columns))
+        self.common_columns = set(df1.columns) & set(df2.columns)
+        self.df1_only = list(set(df1.columns) - set(df2.columns))
+        self.df2_only = list(set(df2.columns) - set(df1.columns))
+    
+    def compare(self, display: bool = True) -> Tuple[pd.DataFrame, dict, pd.DataFrame]:
+        """
+        Compare columns between the two DataFrames.
+        
+        Parameters:
+        -----------
+        display : bool, default True
+            Whether to display comparison results
+            
+        Returns:
+        --------
+        tuple : (comparison_table, summary_dict, type_summary)
+        """
+        
+        if display:
+            self._print_header()
+        
+        # Build comparison data
+        comparison_data = [self._build_column_comparison(col) for col in self.all_columns]
+        
+        # Create and sort comparison table
+        comparison_df = pd.DataFrame(comparison_data)
+        comparison_df = self._sort_comparison_table(comparison_df)
+        
+        # Calculate summary statistics
+        type_matches = sum(1 for col in self.common_columns if self.df1[col].dtype == self.df2[col].dtype)
+        type_match_pct = (type_matches / len(self.common_columns) * 100) if self.common_columns else 0
+        
+        # Display results
+        if display:
+            self._display_results(comparison_df, type_matches, type_match_pct)
+        
+        # Prepare outputs
+        summary_dict = self._create_summary_dict(comparison_df, type_matches, type_match_pct)
+        type_summary = self._get_type_summary()
+        
+        return comparison_df, summary_dict, type_summary
+    
+    def _print_header(self):
+        """Print comparison header."""
+        print(f"{'='*80}\nDATAFRAME COLUMN COMPARISON: {self.df1_name} vs {self.df2_name}\n{'='*80}")
+        print(f"\n📊 BASIC INFORMATION\n{'-'*50}")
+        print(f"{self.df1_name}: {self.df1.shape[0]:,} rows × {self.df1.shape[1]:,} columns")
+        print(f"{self.df2_name}: {self.df2.shape[0]:,} rows × {self.df2.shape[1]:,} columns")
+    
+    def _build_column_comparison(self, col: str) -> dict:
+        """Build comparison data for a single column."""
+        in_df1, in_df2 = col in self.df1.columns, col in self.df2.columns
+        
+        row = {
+            'Column': col,
+            'In_DF1': '✓' if in_df1 else '✗',
+            'In_DF2': '✓' if in_df2 else '✗',
+            'Type_Match': self._get_type_match(col, in_df1, in_df2),
+            'Value_Commonality_Pct': self._calculate_value_commonality(
+                self.df1[col], self.df2[col]) if in_df1 and in_df2 else 'N/A'
+        }
+        
+        # Add DF1 stats
+        if in_df1:
+            row.update(self._get_column_stats(self.df1[col], 'DF1'))
+        else:
+            row.update(self._get_empty_stats('DF1'))
+        
+        # Add DF2 stats
+        if in_df2:
+            row.update(self._get_column_stats(self.df2[col], 'DF2'))
+        else:
+            row.update(self._get_empty_stats('DF2'))
+        
+        return row
+    
+    def _get_type_match(self, col: str, in_df1: bool, in_df2: bool) -> str:
+        """Get type match indicator for a column."""
+        if in_df1 and in_df2:
+            return '✓' if self.df1[col].dtype == self.df2[col].dtype else '✗'
+        return 'N/A'
+    
+    def _get_column_stats(self, series: pd.Series, prefix: str) -> dict:
+        """Get statistics for a column."""
+        return {
+            f'{prefix}_Type': str(series.dtype),
+            f'{prefix}_Memory_MB': series.memory_usage(deep=True) / 1024**2,
+            f'{prefix}_Missing_Count': series.isnull().sum(),
+            f'{prefix}_Missing_Pct': (series.isnull().sum() / len(series)) * 100
         }
     
-    df1N2common={"Percentage of common values":df1N2per,
-                 "comparing common columns with diffrenet values":df1N2diff,
-                }
+    def _get_empty_stats(self, prefix: str) -> dict:
+        """Get empty statistics for non-existent column."""
+        return {
+            f'{prefix}_Type': 'N/A',
+            f'{prefix}_Memory_MB': 0,
+            f'{prefix}_Missing_Count': 'N/A',
+            f'{prefix}_Missing_Pct': 'N/A'
+        }
     
-    return df1_out, df2_out, df1N2common
+    def _calculate_value_commonality(self, series1: pd.Series, series2: pd.Series) -> float:
+        """Calculate percentage of matching values between two series."""
+        min_length = min(len(series1), len(series2))
+        if min_length == 0:
+            return 0.0
+        
+        s1 = series1.iloc[:min_length].reset_index(drop=True)
+        s2 = series2.iloc[:min_length].reset_index(drop=True)
+        
+        try:
+            if pd.api.types.is_numeric_dtype(s1) and pd.api.types.is_numeric_dtype(s2):
+                s1_num, s2_num = pd.to_numeric(s1, errors='coerce'), pd.to_numeric(s2, errors='coerce')
+                both_nan = s1_num.isna() & s2_num.isna()
+                both_valid = ~s1_num.isna() & ~s2_num.isna()
+                matches = both_nan | (np.isclose(s1_num, s2_num, equal_nan=False) & both_valid)
+            else:
+                s1_str, s2_str = s1.astype(str), s2.astype(str)
+                matches = (s1_str == s2_str) | ((s1_str == 'nan') & (s2_str == 'nan'))
+            
+            return round((matches.sum() / min_length) * 100, 1)
+        except:
+            return 0.0
+    
+    def _sort_comparison_table(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Sort table by commonality (desc) then alphabetically."""
+        def sort_key(row):
+            commonality = -1 if row['Value_Commonality_Pct'] == 'N/A' else float(row['Value_Commonality_Pct'])
+            return (-commonality, str(row['Column']).lower())
+        
+        sorted_indices = sorted(range(len(df)), key=lambda i: sort_key(df.iloc[i]))
+        return df.iloc[sorted_indices].reset_index(drop=True)
+    
+    def _display_results(self, comparison_df: pd.DataFrame, type_matches: int, type_match_pct: float):
+        """Display formatted comparison results."""
+        
+        # Format display table
+        display_df = self._format_display_table(comparison_df)
+        
+        print(f"\n📋 DETAILED COLUMN COMPARISON\n{display_df.to_string(index=False)}")
+        
+        # Summary stats
+        self._print_summary_stats(type_matches, type_match_pct, comparison_df)
+        
+        # Memory summary
+        self._print_memory_summary(comparison_df)
+    
+    def _format_display_table(self, comparison_df: pd.DataFrame) -> pd.DataFrame:
+        """Format the comparison table for display."""
+        display_df = comparison_df.copy()
+        
+        # Rename columns
+        display_df.columns = ['Column', 'In DF1', 'In DF2', 'Type Match', 'Value Match %', 
+                             'DF1 Type', 'DF1 Memory (MB)', 'DF1 Missing Count', 'DF1 Missing %',
+                             'DF2 Type', 'DF2 Memory (MB)', 'DF2 Missing Count', 'DF2 Missing %']
+        
+        # Format numbers
+        for col in ['DF1 Memory (MB)', 'DF2 Memory (MB)']:
+            display_df[col] = display_df[col].apply(
+                lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and x != 0 else str(x))
+        
+        for col in ['DF1 Missing %', 'DF2 Missing %', 'Value Match %']:
+            display_df[col] = display_df[col].apply(
+                lambda x: f"{x:.1f}%" if isinstance(x, (int, float)) else str(x))
+        
+        return display_df
+    
+    def _print_summary_stats(self, type_matches: int, type_match_pct: float, comparison_df: pd.DataFrame):
+        """Print summary statistics."""
+        print(f"\n📈 COLUMN SUMMARY")
+        print(f"Total unique columns: {len(comparison_df)}")
+        print(f"Common columns: {len(self.common_columns)}")
+        print(f"Only in {self.df1_name}: {len(self.df1_only)}")
+        print(f"Only in {self.df2_name}: {len(self.df2_only)}")
+        
+        if self.common_columns:
+            print(f"Common columns with matching types: {type_matches}/{len(self.common_columns)} ({type_match_pct:.1f}%)")
+            
+            # Average value commonality
+            value_commonalities = [float(row['Value_Commonality_Pct']) for _, row in comparison_df.iterrows() 
+                                  if row['Value_Commonality_Pct'] != 'N/A']
+            if value_commonalities:
+                avg_commonality = sum(value_commonalities) / len(value_commonalities)
+                print(f"Average value commonality: {avg_commonality:.1f}%")
+        
+        if self.df1_only:
+            print(f"\nColumns only in {self.df1_name}: {sorted(self.df1_only)}")
+        if self.df2_only:
+            print(f"Columns only in {self.df2_name}: {sorted(self.df2_only)}")
+    
+    def _print_memory_summary(self, comparison_df: pd.DataFrame):
+        """Print memory usage summary."""
+        mem1 = comparison_df[comparison_df['DF1_Memory_MB'] != 0]['DF1_Memory_MB'].sum()
+        mem2 = comparison_df[comparison_df['DF2_Memory_MB'] != 0]['DF2_Memory_MB'].sum()
+        
+        print(f"\n🎯 MEMORY USAGE SUMMARY\n{'='*50}")
+        print(f"{self.df1_name} total memory: {mem1:.3f} MB")
+        print(f"{self.df2_name} total memory: {mem2:.3f} MB")
+        
+        if mem1 > 0 and mem2 > 0:
+            diff_pct = ((mem2 - mem1) / mem1) * 100
+            print(f"Memory difference: {diff_pct:+.1f}% ({mem2 - mem1:+.3f} MB)")
+    
+    def _create_summary_dict(self, comparison_df: pd.DataFrame, type_matches: int, type_match_pct: float) -> dict:
+        """Create summary dictionary."""
+        return {
+            'basic_info': {
+                f'{self.df1_name}_shape': self.df1.shape,
+                f'{self.df2_name}_shape': self.df2.shape
+            },
+            'common_columns': list(self.common_columns),
+            'df1_only_columns': self.df1_only,
+            'df2_only_columns': self.df2_only,
+            'type_matches': type_matches,
+            'type_match_percentage': type_match_pct,
+            'total_memory_df1_mb': comparison_df[comparison_df['DF1_Memory_MB'] != 0]['DF1_Memory_MB'].sum(),
+            'total_memory_df2_mb': comparison_df[comparison_df['DF2_Memory_MB'] != 0]['DF2_Memory_MB'].sum()
+        }
+    
+    def _get_type_summary(self) -> pd.DataFrame:
+        """Get summary of data types in both DataFrames."""
+        df1_types = self.df1.dtypes.value_counts().to_dict()
+        df2_types = self.df2.dtypes.value_counts().to_dict()
+        all_types = sorted(set(list(df1_types.keys()) + list(df2_types.keys())), key=str)
+        
+        return pd.DataFrame([
+            {
+                'Data_Type': str(dtype),
+                f'{self.df1_name}_Count': df1_types.get(dtype, 0),
+                f'{self.df2_name}_Count': df2_types.get(dtype, 0)
+            }
+            for dtype in all_types
+        ])
+
+# Convenience function for backward compatibility
+def compare_dataframes_columns(df1: pd.DataFrame, df2: pd.DataFrame, 
+                              df1_name: str = "DataFrame 1", df2_name: str = "DataFrame 2",
+                              display: bool = True) -> Tuple[pd.DataFrame, dict, pd.DataFrame]:
+    """
+    Compare columns between two DataFrames.
+    
+    Returns:
+    --------
+    tuple : (comparison_table, summary_dict, type_summary)
+    """
+    comparator = DataFrameColumnComparator(df1, df2, df1_name, df2_name)
+    return comparator.compare(display)
 
 def cat2no(df):
     """ converts all categorical and object features of a dataframe (df) to cat.code
@@ -487,59 +657,106 @@ def cat2no(df):
             lambda x: x.astype('category').cat.codes)
     return df
 
-def reduce_mem_usage(df, obj2str_cols='all_columns', str2cat_cols='all_columns', verbose=False):
-  """ iterate through all the columns of a dataframe and modify the data type
-      to reduce memory usage.        
-  """
-  ## https://www.kaggle.com/code/konradb/ts-4-sales-and-demand-forecasting
-  
-  start_mem = df.memory_usage().sum() / 1024**2
-  print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
-  
-  from pandas.api.types import is_datetime64_any_dtype as is_datetime
+def reduce_mem_usage(df, obj2str_cols='all_columns', str2cat_cols='all_columns', 
+                    use_float16=False, verbose=False):
+    """ 
+    Iterate through all columns of a dataframe and modify data types to reduce memory usage.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        Input dataframe to optimize
+    obj2str_cols : list or 'all_columns'
+        Columns to convert from object to string before categorization
+    str2cat_cols : list or 'all_columns' 
+        Columns to convert from string to category
+    use_float16 : bool, default False
+        Whether to use float16 (can cause precision loss)
+    verbose : bool, default False
+        Whether to print conversion details
+        
+    Returns:
+    --------
+    pandas.DataFrame
+        Optimized dataframe with reduced memory usage
+    """
 
-  for col in df.columns:
-    col_type = df[col].dtype
+    import pandas as pd
+    import numpy as np
+    from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
-    if ((str(col_type)[:3]=='float') |(str(col_type)[:3]=='int')): ##((col_type != object) & ~(is_datetime(df[col])) & (col_type!='str')):
-      if verbose: print(col, ": compressing numeric column") 
-      c_min = df[col].min()
-      c_max = df[col].max()
-      if str(col_type)[:3] == 'int':
-        if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
-            df[col] = df[col].astype(np.int8)
-        elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
-            df[col] = df[col].astype(np.int16)
-        elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
-            df[col] = df[col].astype(np.int32)
-        elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
-            df[col] = df[col].astype(np.int64)  
-      else:
-        if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
-            df[col] = df[col].astype(np.float16)
-        elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
-            df[col] = df[col].astype(np.float32)
-        else:
-            df[col] = df[col].astype(np.float64)
-
-    if  (col_type==object) & ((col in obj2str_cols)| (obj2str_cols=='all_columns')) : 
-      df[col] = df[col].astype('str')
-      obj2str=True
-    else:
-      obj2str=False
-
-    if ((str(col_type)[:3]=='str')| obj2str) &  ((col in str2cat_cols)| (str2cat_cols=='all_columns')) :     ##~(is_datetime(df[col])):
-      df[col] = df[col].astype('category')
-      if (verbose) & (~obj2str):
-        print(col, f": string --> category")
-      if (verbose) & (obj2str):
-        print(col, f": object --> string --> category")
-
-  end_mem = df.memory_usage().sum() / 1024**2
-  print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
-  print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
-  
-  return df
+    start_mem = df.memory_usage(deep=True).sum() / 1024**2
+    print(f'Memory usage of dataframe is {start_mem:.2f} MB')
+    
+    for col in df.columns:
+        col_type = df[col].dtype
+        
+        # Skip datetime columns
+        if is_datetime(df[col]):
+            continue
+            
+        # Handle numeric columns
+        if pd.api.types.is_numeric_dtype(df[col]):
+            if verbose: 
+                print(f"{col}: compressing numeric column from {col_type}")
+            
+            c_min = df[col].min()
+            c_max = df[col].max()
+            
+            # Handle integer columns
+            if pd.api.types.is_integer_dtype(df[col]):
+                if c_min >= np.iinfo(np.int8).min and c_max <= np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min >= np.iinfo(np.int16).min and c_max <= np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min >= np.iinfo(np.int32).min and c_max <= np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+                # int64 is already the largest, no need to convert
+                    
+            # Handle float columns
+            elif pd.api.types.is_float_dtype(df[col]):
+                # Check if all values are finite (no inf/-inf)
+                if np.isfinite(df[col]).all():
+                    if use_float16 and c_min >= np.finfo(np.float16).min and c_max <= np.finfo(np.float16).max:
+                        # Additional check for float16 precision
+                        if np.abs(c_max - c_min) < 65504:  # float16 max value
+                            df[col] = df[col].astype(np.float16)
+                    elif c_min >= np.finfo(np.float32).min and c_max <= np.finfo(np.float32).max:
+                        df[col] = df[col].astype(np.float32)
+                    # float64 is default, no need to convert
+        
+        # Handle object columns
+        elif col_type == object:
+            obj2str = False
+            if (col in obj2str_cols) or (obj2str_cols == 'all_columns'):
+                df[col] = df[col].astype('string')  # Use pandas string dtype
+                obj2str = True
+                if verbose:
+                    print(f"{col}: object --> string")
+            
+            # Convert to category if specified
+            if ((df[col].dtype == 'string' or obj2str) and 
+                ((col in str2cat_cols) or (str2cat_cols == 'all_columns'))):
+                df[col] = df[col].astype('category')
+                if verbose:
+                    if obj2str:
+                        print(f"{col}: object --> string --> category")
+                    else:
+                        print(f"{col}: string --> category")
+        
+        # Handle string columns that weren't converted from object
+        elif pd.api.types.is_string_dtype(df[col]):
+            if (col in str2cat_cols) or (str2cat_cols == 'all_columns'):
+                df[col] = df[col].astype('category')
+                if verbose:
+                    print(f"{col}: string --> category")
+    
+    end_mem = df.memory_usage(deep=True).sum() / 1024**2
+    print(f'Memory usage after optimization is: {end_mem:.2f} MB')
+    reduction = 100 * (start_mem - end_mem) / start_mem
+    print(f'Decreased by {reduction:.1f}%')
+    
+    return df
 
 def null_per_column(df):
     null_per = df.isnull().sum() / df.shape[0] * 100
@@ -2092,7 +2309,6 @@ def extract_equation(results_pars):
     tmp=f"{sign}{row[1][0]}" if row[1]['index']=='Intercept' else f"{sign}{row[1][0]}*{row[1]['index']}"
     equation+=tmp
   return equation
-
 
 def analyze_categorical_data(data, independent_var, dependent_var, alpha=0.05):
     import numpy as np
