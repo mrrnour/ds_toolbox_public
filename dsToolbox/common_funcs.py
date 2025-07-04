@@ -250,7 +250,7 @@ def create_venn_diagram(listA, listB, similarity_threshold=60, listA_name='List 
     
     return fig
 
-def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, listA_name='List A', listB_name='List B', save_venn_path=None):
+def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, listA_name='List A', listB_name='List B', utitle='Venn Diagram - List Comparison with Fuzzy Matching', save_venn_path=None):
     """
     Create a table showing unique elements from two lists with fuzzy matching and appropriate group identification.
     Elements with similarity above threshold are marked as 'Both' with similarity percentage.
@@ -347,7 +347,7 @@ def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, list
     # Create Venn diagram if requested
     venn_fig = None
     if create_venn:
-        venn_fig = create_venn_diagram(listA, listB, similarity_threshold, listA_name, listB_name, save_venn_path)
+        venn_fig = create_venn_diagram(listA, listB, similarity_threshold, listA_name, listB_name, utitle, save_venn_path)
     
     return result_df, summary_text, venn_fig
 
