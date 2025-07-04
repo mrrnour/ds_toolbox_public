@@ -1778,7 +1778,75 @@ def xgb_tuner(X_train, y_train,
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
+
 from sklearn.decomposition import PCA
+
+##TODO: merge pca_plot and pca_explainedVar:
+def pca_plot(df):
+    import plotly.express as px
+    import plotly.graph_objects as go
+    from sklearn.decomposition import PCA
+    import numpy as np
+
+    # Figure 4: PCA Visualization (using original data)
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(df)
+    
+    segments = df.index.tolist()
+    
+    # Create a color palette similar to Set3
+    colors = px.colors.qualitative.Set3[:len(segments)]
+    if len(segments) > len(px.colors.qualitative.Set3):
+        colors = px.colors.sample_colorscale('Set3', len(segments))
+    
+    # Create the scatter plot
+    fig = go.Figure()
+    
+    for i, (segment, color) in enumerate(zip(segments, colors)):
+        fig.add_trace(go.Scatter(
+            x=[X_pca[i, 0]],
+            y=[X_pca[i, 1]],
+            mode='markers+text',
+            marker=dict(
+                size=15,
+                color=color,
+                opacity=0.7,
+                line=dict(width=2, color='black')
+            ),
+            text=segment,
+            textposition='top center',
+            textfont=dict(size=12, color='black'),
+            name=segment,
+            showlegend=False
+        ))
+    
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text='Customer Segments - PCA Visualization',
+            font=dict(size=16, color='black'),
+            x=0.5
+        ),
+        xaxis_title=f'PC1 ({pca.explained_variance_ratio_[0]:.1%} variance)',
+        yaxis_title=f'PC2 ({pca.explained_variance_ratio_[1]:.1%} variance)',
+        width=900,
+        height=600,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='white',
+        font=dict(size=12),
+        xaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(0,0,0,0.1)'
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(0,0,0,0.1)'
+        )
+    )
+    
+    fig.show()
 
 def pca_explainedVar(pcaML, output_Folder=None, plot_type='cumulative'):
   """
@@ -1914,6 +1982,113 @@ def pc_draw_vectors(transformed_features, components_, columns):
         plt.text(xvector[i]*1.2, yvector[i]*1.2, list(columns)[i], color='b', alpha=0.75)
 
     return ax
+
+##TODO:rempve it after checking canonical_correlation_analysis is the same function
+def cca_batch(X1_sub, X2_sub, n_comp=2):
+  from sklearn.preprocessing import MinMaxScaler
+  from sklearn.cross_decomposition import CCA
+
+  scaler = MinMaxScaler()
+  cca = CCA(scale=True, n_components=n_comp) 
+  cca.fit(X1_sub , X2_sub) 
+  X1_c, X2_c = cca.transform(X1_sub, X2_sub) #transform our datasests to obtain canonical variates
+
+  comp_corr =pd.Series([np.corrcoef(X1_c[:, i],
+                                    X2_c[:, i])[1][0] for i in range(n_comp)],
+                        index= [f"CC{i}" for i in range(1,n_comp+1)])
+  
+  #  coef_: ndarray of shape (n_targets, n_features)
+  # The coefficients of the linear model such that Y is approximated as Y = X @ coef_.T + intercept_.
+  coef_df = pd.DataFrame(np.round(cca.coef_, 3),
+                        index   = X2_sub.columns,
+                        columns = X1_sub.columns
+                        )
+  
+  coef_df_nrm=pd.DataFrame(2*scaler.fit_transform(coef_df)-1, index=coef_df.index , columns=coef_df.columns)
+
+  return comp_corr, coef_df, coef_df_nrm, cca
+
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.cross_decomposition import CCA
+
+def canonical_correlation_analysis(first_dataset, second_dataset, num_components=2):
+    """
+    Perform Canonical Correlation Analysis (CCA) on two datasets.
+    
+    This function finds linear combinations of variables from two datasets that are
+    maximally correlated with each other. It returns correlation coefficients,
+    raw coefficients, and normalized coefficients suitable for visualization.
+    
+    Parameters
+    ----------
+    first_dataset : pandas.DataFrame
+        First dataset with features as columns and observations as rows
+    second_dataset : pandas.DataFrame  
+        Second dataset with features as columns and observations as rows
+    num_components : int, default=2
+        Number of canonical components to extract
+        
+    Returns
+    -------
+    component_correlations : pandas.Series
+        Correlation coefficients between canonical components, indexed as CC1, CC2, etc.
+    raw_coefficients : pandas.DataFrame
+        Raw CCA coefficients matrix (second_dataset features × first_dataset features)
+    normalized_coefficients : pandas.DataFrame
+        Coefficients normalized to [-1, 1] range for visualization
+    fitted_cca_model : sklearn.cross_decomposition.CCA
+        The fitted CCA model object
+        
+    Examples
+    --------
+    >>> corr, raw_coef, norm_coef, model = canonical_correlation_analysis(X1, X2, num_components=3)
+    >>> print(f"First canonical correlation: {corr['CC1']:.3f}")
+    """
+    from sklearn.preprocessing import MinMaxScaler
+    from sklearn.cross_decomposition import CCA
+    import pandas as pd
+    import numpy as np
+    
+    # Initialize preprocessing and CCA model
+    coefficient_scaler = MinMaxScaler()
+    cca_model = CCA(scale=True, n_components=num_components)
+    
+    # Fit CCA model to find canonical correlations
+    cca_model.fit(first_dataset, second_dataset)
+    
+    # Transform datasets to obtain canonical variates
+    first_canonical_variates, second_canonical_variates = cca_model.transform(
+        first_dataset, second_dataset
+    )
+    
+    # Calculate correlation between corresponding canonical components
+    component_correlations = pd.Series(
+        [np.corrcoef(first_canonical_variates[:, i], 
+                    second_canonical_variates[:, i])[1][0] 
+         for i in range(num_components)],
+        index=[f"CC{i}" for i in range(1, num_components + 1)]
+    )
+    
+    # Create coefficient matrix (second_dataset features × first_dataset features)
+    # Note: coef_ shape is (n_targets, n_features) where Y = X @ coef_.T + intercept_
+    raw_coefficients = pd.DataFrame(
+        np.round(cca_model.coef_, 3),
+        index=second_dataset.columns,
+        columns=first_dataset.columns
+    )
+    
+    # Normalize coefficients to [-1, 1] range for visualization
+    # Formula: 2 * MinMaxScaler(coef) - 1 maps [0,1] to [-1,1]
+    normalized_coefficients = pd.DataFrame(
+        2 * coefficient_scaler.fit_transform(raw_coefficients) - 1,
+        index=raw_coefficients.index,
+        columns=raw_coefficients.columns
+    )
+    
+    return component_correlations, raw_coefficients, normalized_coefficients, cca_model  
+
 ####------------------------------other Functions--------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------------------------------

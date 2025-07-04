@@ -55,6 +55,302 @@ def inWithReg(regLst, LstAll):
     ind = np.in1d(LstAll, out)
     return out, ind
 
+import pandas as pd
+import re
+from difflib import SequenceMatcher
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.patches import Circle
+import numpy as np
+
+##TODO:merge normalize_text and normalize_string
+def normalize_text(text):
+    """
+    Normalize text by removing spaces, special characters, and converting to lowercase.
+    
+    Parameters:
+    text (str): Text to normalize
+    
+    Returns:
+    str: Normalized text
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    # Remove special characters and spaces, convert to lowercase
+    normalized = re.sub(r'[^a-zA-Z0-9]', '', text.lower())
+    return normalized
+
+def clean_column_names(column_list, replacements):
+    """
+    Clean a list of strings to be suitable for use as column names.
+    
+    Parameters:
+    column_list (list): List of strings to clean
+    replacements (dict): Dictionary of string replacements to apply
+    
+    Returns:
+    list: Cleaned column names
+    """
+    cleaned_columns = []
+    
+    for col in column_list:
+        # Convert to string if not already
+        col = str(col)
+        
+        # Apply custom replacements first
+        for old, new in replacements.items():
+            col = col.replace(old, new)
+        
+        # Remove or replace special characters (keep only alphanumeric and underscore)
+        col = re.sub(r'[^a-zA-Z0-9_]', '_', col)
+        
+        # Remove leading/trailing underscores and collapse multiple underscores
+        col = re.sub(r'_+', '_', col).strip('_')
+        
+        # Ensure column doesn't start with a number
+        if col and col[0].isdigit():
+            col = 'col_' + col
+        
+        # Handle empty strings
+        if not col:
+            col = 'unnamed_column'
+        
+        cleaned_columns.append(col)
+    
+    return cleaned_columns
+
+def find_fuzzy_matches(listA, listB, threshold=60):
+    """
+    Find fuzzy matches between two lists based on normalized text similarity.
+    
+    Parameters:
+    listA (list): First list of data
+    listB (list): Second list of data
+    threshold (float): Similarity threshold percentage (default 60)
+    
+    Returns:
+    dict: Dictionary with match information
+    """
+    matches = {}
+    used_b_indices = set()
+    
+    for i, item_a in enumerate(listA):
+        normalized_a = normalize_text(item_a)
+        best_match = None
+        best_similarity = 0
+        best_index = -1
+        
+        for j, item_b in enumerate(listB):
+            if j in used_b_indices:
+                continue
+                
+            normalized_b = normalize_text(item_b)
+            similarity = SequenceMatcher(None, normalized_a, normalized_b).ratio() * 100
+            
+            if similarity >= threshold and similarity > best_similarity:
+                best_match = item_b
+                best_similarity = similarity
+                best_index = j
+        
+        if best_match:
+            matches[item_a] = {
+                'match': best_match,
+                'similarity': best_similarity,
+                'normalized_a': normalized_a,
+                'normalized_b': normalize_text(best_match)
+            }
+            used_b_indices.add(best_index)
+    
+    return matches
+
+def create_venn_diagram(listA, listB, similarity_threshold=60, listA_name='List A', listB_name='List B', utitle='Venn Diagram - List Comparison with Fuzzy Matching', save_path=None):
+    """
+    Create a Venn diagram showing the relationship between two lists.
+    
+    Parameters:
+    listA (list): First list of data
+    listB (list): Second list of data
+    similarity_threshold (float): Similarity threshold percentage (default 60)
+    listA_name (str): Name for first list (default 'List A')
+    listB_name (str): Name for second list (default 'List B')
+    utitle (str): Title for the diagram (default 'Venn Diagram - List Comparison with Fuzzy Matching')
+    save_path (str): Path to save the diagram (optional)
+    
+    Returns:
+    matplotlib.figure.Figure: The figure object
+    """
+    # Find fuzzy matches using the existing function
+    fuzzy_matches = find_fuzzy_matches(listA, listB, similarity_threshold)
+    # Calculate counts
+    matched_a = set(fuzzy_matches.keys())
+    matched_b = set(match_info['match'] for match_info in fuzzy_matches.values())
+    unmatched_a = set(listA) - matched_a
+    unmatched_b = set(listB) - matched_b
+    
+    only_a_count = len(unmatched_a)
+    only_b_count = len(unmatched_b)
+    both_count = len(fuzzy_matches)
+    
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    
+    # Define circle parameters
+    circle_radius = 1.5
+    circle_a_center = (-0.5, 0)
+    circle_b_center = (0.5, 0)
+    
+    # Create circles
+    circle_a = Circle(circle_a_center, circle_radius, alpha=0.3, color='blue', label=listA_name)
+    circle_b = Circle(circle_b_center, circle_radius, alpha=0.3, color='red', label=listB_name)
+    
+    ax.add_patch(circle_a)
+    ax.add_patch(circle_b)
+    
+    # Add text labels with counts
+    # Only A
+    ax.text(circle_a_center[0] - 0.8, circle_a_center[1], f'{only_a_count}', 
+            fontsize=16, ha='center', va='center', weight='bold')
+    
+    # Only B
+    ax.text(circle_b_center[0] + 0.8, circle_b_center[1], f'{only_b_count}', 
+            fontsize=16, ha='center', va='center', weight='bold')
+    
+    # Both (intersection)
+    ax.text(0, 0, f'{both_count}', fontsize=16, ha='center', va='center', weight='bold')
+    
+    # Add circle labels
+    ax.text(circle_a_center[0], circle_a_center[1] + 2, listA_name, 
+            fontsize=14, ha='center', va='center', weight='bold', color='blue')
+    ax.text(circle_b_center[0], circle_b_center[1] + 2, listB_name, 
+            fontsize=14, ha='center', va='center', weight='bold', color='red')
+    
+    # Add detailed breakdown text
+    breakdown_text = f"Breakdown:\n"
+    breakdown_text += f"• Only in {listA_name}: {only_a_count} items\n"
+    breakdown_text += f"• Only in {listB_name}: {only_b_count} items\n"
+    breakdown_text += f"• Similar items (≥{similarity_threshold}%): {both_count} pairs\n"
+    breakdown_text += f"• Total unique items: {only_a_count + only_b_count + both_count}"
+    
+    ax.text(-3, -3, breakdown_text, fontsize=10, ha='left', va='top', 
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.8))
+    
+    # Set axis properties
+    ax.set_xlim(-3.5, 3.5)
+    ax.set_ylim(-3.5, 3.5)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    # Add title
+    ax.set_title(utitle, 
+                fontsize=16, weight='bold', pad=20)
+    
+    # Save if path provided
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    
+    return fig
+
+def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, listA_name='List A', listB_name='List B', save_venn_path=None):
+    """
+    Create a table showing unique elements from two lists with fuzzy matching and appropriate group identification.
+    Elements with similarity above threshold are marked as 'Both' with similarity percentage.
+    
+    Parameters:
+    listA (list): First list of data
+    listB (list): Second list of data
+    similarity_threshold (float): Similarity threshold percentage (default 60)
+    create_venn (bool): Whether to create a Venn diagram (default False)
+    listA_name (str): Name for first list in Venn diagram (default 'List A')
+    listB_name (str): Name for second list in Venn diagram (default 'List B')
+    save_venn_path (str): Path to save Venn diagram (optional)
+    
+    Returns:
+    tuple: (pd.DataFrame, str, matplotlib.figure.Figure or None) - Table with unique elements, formatted summary, and optional Venn diagram
+    """
+    # Find fuzzy matches
+    fuzzy_matches = find_fuzzy_matches(listA, listB, similarity_threshold)
+    
+    # Create sets for tracking matched items
+    matched_a = set(fuzzy_matches.keys())
+    matched_b = set(match_info['match'] for match_info in fuzzy_matches.values())
+    
+    # Find unmatched items
+    unmatched_a = set(listA) - matched_a
+    unmatched_b = set(listB) - matched_b
+    
+    # Create list of dictionaries for DataFrame
+    data = []
+    
+    # Add elements only in listA (unmatched)
+    for element in sorted(unmatched_a):
+        data.append({
+            'Element': element,
+            'Group': 'listA',
+            'Match': '',
+            'Similarity': ''
+        })
+    
+    # Add elements only in listB (unmatched)
+    for element in sorted(unmatched_b):
+        data.append({
+            'Element': element,
+            'Group': 'listB',
+            'Match': '',
+            'Similarity': ''
+        })
+    
+    # Add fuzzy matched elements
+    for item_a, match_info in sorted(fuzzy_matches.items()):
+        data.append({
+            'Element': item_a,
+            'Group': 'Both',
+            'Match': match_info['match'],
+            'Similarity': f"{match_info['similarity']:.1f}%"
+        })
+    
+    # Create DataFrame
+    result_df = pd.DataFrame(data)
+    
+    # Sort by Group first, then by Element
+    if not result_df.empty:
+        result_df = result_df.sort_values(['Group', 'Element'], ascending=[True, True])
+        result_df = result_df.reset_index(drop=True)
+        result_df.insert(0, 'Index', range(1, len(result_df) + 1))
+    
+    # Create formatted summary
+    summary_text = "Unique Elements Table with Fuzzy Matching:\n"
+    summary_text += "=" * 60 + "\n"
+    summary_text += result_df.to_string(index=False) + "\n"
+    summary_text += "\nGroup Summary:\n"
+    summary_text += "=" * 20 + "\n"
+    
+    if not result_df.empty:
+        group_counts = result_df['Group'].value_counts()
+        for group, count in group_counts.items():
+            summary_text += f"{group}: {count} elements\n"
+    
+    summary_text += f"\nFuzzy Matching Details:\n"
+    summary_text += "=" * 25 + "\n"
+    summary_text += f"Similarity threshold: {similarity_threshold}%\n"
+    summary_text += f"Fuzzy matches found: {len(fuzzy_matches)}\n"
+    
+    if fuzzy_matches:
+        summary_text += "\nDetailed Matches:\n"
+        for item_a, match_info in sorted(fuzzy_matches.items()):
+            summary_text += f"  '{item_a}' ↔ '{match_info['match']}' ({match_info['similarity']:.1f}%)\n"
+            summary_text += f"    Normalized: '{match_info['normalized_a']}' ↔ '{match_info['normalized_b']}'\n"
+    
+    summary_text += f"\nOriginal Data:\n"
+    summary_text += f"listA: {listA}\n"
+    summary_text += f"listB: {listB}"
+    
+    # Create Venn diagram if requested
+    venn_fig = None
+    if create_venn:
+        venn_fig = create_venn_diagram(listA, listB, similarity_threshold, listA_name, listB_name, save_venn_path)
+    
+    return result_df, summary_text, venn_fig
+
 def retrieve_name(var):
     import inspect
     """Getting the name of a variable as a string
