@@ -8,14 +8,11 @@ from contextlib import contextmanager
 from typing import Dict, Tuple, Any, Optional
 import logging
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 class DatabaseConnectionManager:
     """
     Unified database connection manager for SQL Server, PostgreSQL, and Incorta.
+    All connection methods return (engine, db_params) for consistency.
     """
     
     def __init__(self, config_file: str):
@@ -32,143 +29,223 @@ class DatabaseConnectionManager:
         try:
             with open(config_file, 'r') as stream:
                 config = yaml.safe_load(stream)
-            logger.info(f"Configuration loaded from {config_file}")
+            print(f"Configuration loaded from {config_file}")
             return config
         except FileNotFoundError:
-            logger.error(f"Configuration file not found: {config_file}")
+            print(f"Configuration file not found: {config_file}")
             raise
         except yaml.YAMLError as e:
-            logger.error(f"Error parsing YAML file: {e}")
+            print(f"Error parsing YAML file: {e}")
             raise
     
-    def get_mssql_connection_pyodbc(self, server_id: str) -> Tuple[pyodbc.Connection, Dict]:
+    def get_mssql_pyodbc_winauth(self, server_id: str) -> Tuple[Any, Dict]:
         """
-        Create SQL Server connection using pyodbc.
+        Create SQL Server connection using pyodbc with Windows authentication.
         
         Args:
             server_id (str): Server identifier from config
             
         Returns:
-            Tuple[pyodbc.Connection, Dict]: Connection object and config
+            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
         """
         try:
-            mssql_config = self.config['sql_servers'][server_id]
+            mssql_config = self.config['mssql_servers'][server_id]
             db_server = mssql_config['db_server']
             
-            # Use modern driver
+            # Build connection string
             connection_string = (
                 "DRIVER={ODBC Driver 17 for SQL Server};"
                 f"SERVER={db_server};"
-                "Trusted_Connection=yes;"
-                "TrustServerCertificate=yes;"  # For SSL issues
             )
+            
+            # Add trusted connection if specified in config
+            if mssql_config.get('trusted_connection', True):
+                connection_string += "Trusted_Connection=yes;"
+            
+            # Add trust server certificate if specified in config
+            if mssql_config.get('trust_server_certificate', True):
+                connection_string += "TrustServerCertificate=yes;"
             
             # Add database if specified
             if 'database' in mssql_config:
                 connection_string += f"DATABASE={mssql_config['database']};"
             
-            cnxn = pyodbc.connect(connection_string)
-            logger.info(f"Connected to SQL Server: {db_server}")
-            
-            return cnxn, mssql_config
-            
-        except KeyError as e:
-            logger.error(f"Missing configuration key: {e}")
-            raise
-        except pyodbc.Error as e:
-            logger.error(f"SQL Server connection error: {e}")
-            raise
-    
-    def get_mssql_engine_sqlalchemy(self, server_id: str) -> Tuple[Any, str]:
-        """
-        Create SQL Server engine using SQLAlchemy.
-        
-        Args:
-            server_id (str): Server identifier from config
-            
-        Returns:
-            Tuple[Engine, str]: SQLAlchemy engine and connection parameters
-        """
-        try:
-            mssql_config = self.config['sql_servers'][server_id]
-            db_server = mssql_config['db_server']
-            
-            # Build connection string
-            driver_params = (
-                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-                f"SERVER={db_server};"
-                f"Trusted_Connection=yes;"
-                f"TrustServerCertificate=yes;"
-            )
-            
-            # Add database if specified
-            if 'database' in mssql_config:
-                driver_params += f"DATABASE={mssql_config['database']};"
-            
-            db_params = urllib.parse.quote_plus(driver_params)
+            # Create SQLAlchemy engine from connection string
+            db_params = urllib.parse.quote_plus(connection_string)
             engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params}')
             
             # Test connection
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT @@VERSION"))
                 version = result.fetchone()[0]
-                logger.info(f"Connected to SQL Server: {version[:50]}...")
+                print(f"Connected to SQL Server via pyodbc")
             
-            return engine, db_params
+            # Return connection parameters as dict
+            connection_params = {
+                'db_server': db_server,
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'trusted_connection': mssql_config.get('trusted_connection', True),
+                'trust_server_certificate': mssql_config.get('trust_server_certificate', True),
+                'database': mssql_config.get('database', None),
+                'connection_string': connection_string
+            }
+            
+            return engine, connection_params
             
         except KeyError as e:
-            logger.error(f"Missing configuration key: {e}")
+            print(f"Missing configuration key: {e}")
             raise
         except Exception as e:
-            logger.error(f"SQLAlchemy SQL Server connection error: {e}")
+            print(f"SQL Server pyodbc connection error: {e}")
             raise
     
-    def get_postgresql_connection_psycopg2(self, server_id: str) -> Optional[psycopg2.extensions.connection]:
+    def get_mssql_alchemy_winauth(self, server_id: str) -> Tuple[Any, Dict]:
         """
-        Create PostgreSQL connection using psycopg2.
+        Create SQL Server connection using SQLAlchemy with Windows authentication.
         
         Args:
             server_id (str): Server identifier from config
             
         Returns:
-            psycopg2.extensions.connection: Connection object or None
+            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
+        """
+        try:
+            mssql_config = self.config['mssql_servers'][server_id]
+            db_server = mssql_config['db_server']
+            
+            # Build connection string
+            driver_params = (
+                f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+                f"SERVER={db_server};"
+            )
+            
+            # Add trusted connection if specified in config
+            if mssql_config.get('trusted_connection', True):
+                driver_params += "Trusted_Connection=yes;"
+            
+            # Add trust server certificate if specified in config
+            if mssql_config.get('trust_server_certificate', True):
+                driver_params += "TrustServerCertificate=yes;"
+            
+            # Add database if specified
+            if 'database' in mssql_config:
+                driver_params += f"DATABASE={mssql_config['database']};"
+            
+            db_params_encoded = urllib.parse.quote_plus(driver_params)
+            engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params_encoded}')
+            
+            # Test connection
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT @@VERSION"))
+                version = result.fetchone()[0]
+                print(f"Connected to SQL Server via SQLAlchemy")
+            
+            # Return connection parameters as dict
+            connection_params = {
+                'db_server': db_server,
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'trusted_connection': mssql_config.get('trusted_connection', True),
+                'trust_server_certificate': mssql_config.get('trust_server_certificate', True),
+                'database': mssql_config.get('database', None),
+                'connection_string': driver_params
+            }
+            
+            return engine, connection_params
+            
+        except KeyError as e:
+            print(f"Missing configuration key: {e}")
+            raise
+        except Exception as e:
+            print(f"SQLAlchemy SQL Server connection error: {e}")
+            raise
+    
+    def get_pg_psycopg2_creds(self, server_id: str) -> Tuple[Any, Dict]:
+        """
+        Create PostgreSQL connection using username/password credentials (psycopg2 method).
+        
+        Args:
+            server_id (str): Server identifier from config
+            
+        Returns:
+            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
         """
         try:
             pg_config = self.config['postgresql_servers'][server_id]
-            conn_params = {
-                "host": pg_config['host'],
-                "port": pg_config.get('port', 5432),
-                "database": pg_config['database'],
-                "user": pg_config['user'],
-                "password": pg_config['password']
-            }
             
-            conn = psycopg2.connect(**conn_params)
+            connection_string = (
+                f"postgresql://{pg_config['user']}:{pg_config['password']}"
+                f"@{pg_config['host']}:{pg_config.get('port', 5432)}"
+                f"/{pg_config['database']}"
+            )
+            
+            # Add SSL parameters if specified in config
+            ssl_params = []
+            if 'sslmode' in pg_config:
+                ssl_params.append(f"sslmode={pg_config['sslmode']}")
+            if 'sslcert' in pg_config:
+                ssl_params.append(f"sslcert={pg_config['sslcert']}")
+            if 'sslkey' in pg_config:
+                ssl_params.append(f"sslkey={pg_config['sslkey']}")
+            if 'sslrootcert' in pg_config:
+                ssl_params.append(f"sslrootcert={pg_config['sslrootcert']}")
+            
+            if ssl_params:
+                connection_string += "?" + "&".join(ssl_params)
+            
+            # Add SSL parameters if specified in config
+            ssl_params = []
+            if 'sslmode' in pg_config:
+                ssl_params.append(f"sslmode={pg_config['sslmode']}")
+            if 'sslcert' in pg_config:
+                ssl_params.append(f"sslcert={pg_config['sslcert']}")
+            if 'sslkey' in pg_config:
+                ssl_params.append(f"sslkey={pg_config['sslkey']}")
+            if 'sslrootcert' in pg_config:
+                ssl_params.append(f"sslrootcert={pg_config['sslrootcert']}")
+            
+            if ssl_params:
+                connection_string += "?" + "&".join(ssl_params)
+            
+            engine = create_engine(connection_string)
             
             # Test connection
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT version();")
-                db_version = cursor.fetchone()[0]
-                logger.info(f"Connected to PostgreSQL: {db_version[:50]}...")
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT version();"))
+                db_version = result.fetchone()[0]
+                print(f"Connected to PostgreSQL via psycopg2: {db_version[:50]}...")
             
-            return conn
+            # Return connection parameters as dict
+            connection_params = {
+                'host': pg_config['host'],
+                'port': pg_config.get('port', 5432),
+                'database': pg_config['database'],
+                'user': pg_config['user'],
+                'password': pg_config['password'],
+                'sslmode': pg_config.get('sslmode', None),
+                'sslcert': pg_config.get('sslcert', None),
+                'sslkey': pg_config.get('sslkey', None),
+                'sslrootcert': pg_config.get('sslrootcert', None),
+                'connection_string': connection_string
+            }
+            
+            return engine, connection_params
             
         except KeyError as e:
-            logger.error(f"Missing PostgreSQL configuration key: {e}")
-            return None
-        except psycopg2.Error as e:
-            logger.error(f"PostgreSQL connection error: {e}")
-            return None
+            print(f"Missing PostgreSQL configuration key: {e}")
+            raise
+        except Exception as e:
+            print(f"PostgreSQL psycopg2 connection error: {e}")
+            raise
     
-    def get_postgresql_engine_sqlalchemy(self, server_id: str) -> Optional[Any]:
+    def get_pg_alchemy_creds(self, server_id: str) -> Tuple[Any, Dict]:
         """
-        Create PostgreSQL engine using SQLAlchemy.
+        Create PostgreSQL connection using username/password credentials (SQLAlchemy method).
         
         Args:
             server_id (str): Server identifier from config
             
         Returns:
-            Engine: SQLAlchemy engine or None
+            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
         """
         try:
             pg_config = self.config['postgresql_servers'][server_id]
@@ -185,29 +262,43 @@ class DatabaseConnectionManager:
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT version();"))
                 db_version = result.fetchone()[0]
-                logger.info(f"Connected to PostgreSQL: {db_version[:50]}...")
+                print(f"Connected to PostgreSQL via SQLAlchemy: {db_version[:50]}...")
             
-            return engine
+            # Return connection parameters as dict
+            connection_params = {
+                'host': pg_config['host'],
+                'port': pg_config.get('port', 5432),
+                'database': pg_config['database'],
+                'user': pg_config['user'],
+                'password': pg_config['password'],
+                'sslmode': pg_config.get('sslmode', None),
+                'sslcert': pg_config.get('sslcert', None),
+                'sslkey': pg_config.get('sslkey', None),
+                'sslrootcert': pg_config.get('sslrootcert', None),
+                'connection_string': connection_string
+            }
+            
+            return engine, connection_params
             
         except KeyError as e:
-            logger.error(f"Missing PostgreSQL configuration key: {e}")
-            return None
+            print(f"Missing PostgreSQL configuration key: {e}")
+            raise
         except Exception as e:
-            logger.error(f"SQLAlchemy PostgreSQL connection error: {e}")
-            return None
+            print(f"SQLAlchemy PostgreSQL connection error: {e}")
+            raise
     
-    def get_incorta_connection(self) -> Tuple[Optional[pyodbc.Connection], Optional[Dict]]:
+    def get_incorta(self) -> Tuple[Any, Dict]:
         """
-        Create Incorta connection.
+        Create Incorta connection wrapped in SQLAlchemy.
         
         Returns:
-            Tuple[Connection, Dict]: Connection object and parameters, or (None, None)
+            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
         """
         try:
             incorta_config = self.config['incorta_server']
             
             connection_string = (
-                f"DRIVER={{Incorta ODBC Driver}};"  # Adjust driver name as needed
+                f"DRIVER={{Incorta ODBC Driver}};"
                 f"HOST={incorta_config['host']};"
                 f"PORT={incorta_config['port']};"
                 f"DATABASE={incorta_config['database']};"
@@ -215,17 +306,35 @@ class DatabaseConnectionManager:
                 f"PWD={incorta_config['password']};"
             )
             
-            cnxn = pyodbc.connect(connection_string)
-            logger.info(f"Connected to Incorta: {incorta_config['host']}")
+            # Create SQLAlchemy engine from ODBC connection string
+            db_params_encoded = urllib.parse.quote_plus(connection_string)
+            engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params_encoded}')
             
-            return cnxn, incorta_config
+            # Test connection
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT 1"))
+                result.fetchone()
+                print(f"Connected to Incorta: {incorta_config['host']}")
+            
+            # Return connection parameters as dict
+            connection_params = {
+                'host': incorta_config['host'],
+                'port': incorta_config['port'],
+                'database': incorta_config['database'],
+                'user': incorta_config['user'],
+                'password': incorta_config['password'],
+                'driver': 'Incorta ODBC Driver',
+                'connection_string': connection_string
+            }
+            
+            return engine, connection_params
             
         except KeyError as e:
-            logger.error(f"Missing Incorta configuration key: {e}")
-            return None, None
-        except pyodbc.Error as e:
-            logger.error(f"Incorta connection error: {e}")
-            return None, None
+            print(f"Missing Incorta configuration key: {e}")
+            raise
+        except Exception as e:
+            print(f"Incorta connection error: {e}")
+            raise
     
     @contextmanager
     def get_connection_context(self, db_type: str, server_id: str, use_sqlalchemy: bool = False):
@@ -235,92 +344,67 @@ class DatabaseConnectionManager:
         Args:
             db_type (str): 'mssql', 'postgresql', or 'incorta'
             server_id (str): Server identifier from config
-            use_sqlalchemy (bool): Whether to use SQLAlchemy (for mssql/postgresql)
+            use_sqlalchemy (bool): Whether to use SQLAlchemy method (for mssql/postgresql)
         
         Yields:
-            Connection or Engine object
+            Tuple[Engine, Dict]: Engine and connection parameters
         """
-        connection = None
+        engine = None
         try:
             if db_type == 'mssql':
                 if use_sqlalchemy:
-                    connection, _ = self.get_mssql_engine_sqlalchemy(server_id)
+                    engine, db_params = self.get_mssql_alchemy_winauth(server_id)
                 else:
-                    connection, _ = self.get_mssql_connection_pyodbc(server_id)
+                    engine, db_params = self.get_mssql_pyodbc_winauth(server_id)
             elif db_type == 'postgresql':
                 if use_sqlalchemy:
-                    connection = self.get_postgresql_engine_sqlalchemy(server_id)
+                    engine, db_params = self.get_pg_alchemy_creds(server_id)
                 else:
-                    connection = self.get_postgresql_connection_psycopg2(server_id)
+                    engine, db_params = self.get_pg_psycopg2_creds(server_id)
             elif db_type == 'incorta':
-                connection, _ = self.get_incorta_connection()
+                engine, db_params = self.get_incorta()
             else:
                 raise ValueError(f"Unsupported database type: {db_type}")
             
-            yield connection
+            yield engine, db_params
             
         finally:
-            if connection:
+            if engine:
                 try:
-                    if hasattr(connection, 'close'):
-                        connection.close()
-                        logger.info(f"Connection to {db_type} closed")
-                    elif hasattr(connection, 'dispose'):
-                        connection.dispose()
-                        logger.info(f"Engine for {db_type} disposed")
+                    if hasattr(engine, 'dispose'):
+                        engine.dispose()
+                        print(f"Engine for {db_type} disposed")
+                    elif hasattr(engine, 'close'):
+                        engine.close()
+                        print(f"Connection to {db_type} closed")
                 except Exception as e:
-                    logger.warning(f"Error closing connection: {e}")
+                    print(f"Error closing connection: {e}")
 
 
-# Example usage and testing
+# Example usage
 if __name__ == "__main__":
-    # Example configuration structure
-    example_config = {
-        'sql_servers': {
-            'dev': {
-                'db_server': 'localhost\\SQLEXPRESS',
-                'database': 'TestDB'  # Optional
-            },
-            'prod': {
-                'db_server': 'prod-sql-server.company.com',
-                'database': 'ProductionDB'
-            }
-        },
-        'postgresql_servers': {
-            'dev': {
-                'host': 'localhost',
-                'port': 5432,
-                'database': 'testdb',
-                'user': 'testuser',
-                'password': 'testpass'
-            }
-        },
-        'incorta_server': {
-            'host': 'incorta.company.com',
-            'port': 1433,
-            'database': 'incorta_db',
-            'user': 'incorta_user',
-            'password': 'incorta_pass'
-        }
-    }
+    # Example of how to use the standardized interface
+    db_manager = DatabaseConnectionManager('config.yaml')
     
-    # Usage examples:
+    # All methods now return (engine, db_params) consistently
     try:
-        # db_manager = DatabaseConnectionManager('config.yaml')
+        # SQL Server with Windows authentication
+        engine, params = db_manager.get_mssql_pyodbc_winauth('server1')
+        print(f"SQL Server connected: {params['db_server']}")
         
-        # Using context manager (recommended)
-        # with db_manager.get_connection_context('mssql', 'dev') as conn:
-        #     cursor = conn.cursor()
-        #     cursor.execute("SELECT GETDATE()")
-        #     result = cursor.fetchone()
-        #     print(f"Current time: {result[0]}")
+        # PostgreSQL with credentials (SQLAlchemy)
+        engine, params = db_manager.get_pg_alchemy_creds('pg_server1')
+        print(f"PostgreSQL connected: {params['host']}:{params['port']}")
         
-        # Direct connection (remember to close)
-        # conn, config = db_manager.get_mssql_connection_pyodbc('dev')
-        # # ... use connection ...
-        # conn.close()
+        # Incorta
+        engine, params = db_manager.get_incorta()
+        print(f"Incorta connected: {params['host']}")
         
-        print("Database connection manager is ready to use!")
-        
+        # Using context manager
+        with db_manager.get_connection_context('mssql', 'server1') as (engine, params):
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT GETDATE()"))
+                print(f"Current time: {result.fetchone()[0]}")
+                
     except Exception as e:
-        logger.error(f"Error in example: {e}")
+        print(f"Connection error: {e}")

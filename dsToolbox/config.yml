@@ -1,28 +1,41 @@
-General:
-  debug : True
-  log_level : info
 
-sql_server:
-  db_server : ****
-  db_name : ****
-  #db_port : 5432
-  #db_password : 123
-  #db_user : sa
+mssql_servers:
+  dev:
+    db_server: localhost\SQLEXPRESS
+    database: TestDB  # Optional
+    trusted_connection: true  # Uses Windows auth
+    trust_server_certificate: true
 
-incorta_server:
-  #host : localhost
-  #port : 5432
-  user : ****
-  password : ****
+  prod:
+    db_server: prod-sql-server.company.com
+    database: ProductionDB
+    trusted_connection: true  # Uses Windows auth
+    trust_server_certificate: true
 
+postgresql_servers:
+  local_machine:
+    host: localhost
+    port: 5431
+    user: xxxx
+    password: xxxx
+    database: xxx
+
+  Ec2_machine:
+    host: xxxx.rds.amazonaws.com
+    port: 5432
+    user: xxx
+    password: xxxx
+    database: xxx
+
+# xxx_server:
+#   host: xxx.company.com #localhost
+#   port: 1433
+#   user: xxx_user
+#   password: xxx_pass
+#   database: xxx_db
 
 # key_vault_dictS : 
-#   ###sturcture:
-#   ### the name of dictionary (It is name of storage account name for azure blob storage aswell)
-#     ###key_vault_name : key_vault_name
-#     ###secret_name    : secret_name 
-
-# ###Azure blob storages:
+# ###Azure blob storages:(It is name of storage account name for azure blob storage aswell)
 #   xxxxx:  
 #     key_vault_name : ****
 #     secret_name    : ****
