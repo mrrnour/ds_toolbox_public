@@ -63,30 +63,74 @@ import matplotlib.patches as patches
 from matplotlib.patches import Circle
 import numpy as np
 
-##TODO:merge normalize_text and normalize_string
-def normalize_text(text):
+def normalize_text(text, 
+                  remove_spaces=True, 
+                  lowercase=True, 
+                  special_chars=r'[^a-zA-Z0-9\s]',
+                  replace_with='',
+                  max_length=None,
+                  fallback_text='unnamed'):
     """
-    Normalize text by removing spaces, special characters, and converting to lowercase.
+    Flexible text normalization function.
     
     Parameters:
     text (str): Text to normalize
+    remove_spaces (bool): Remove spaces from text
+    lowercase (bool): Convert to lowercase
+    special_chars (str): Regex pattern for characters to match (default matches all except letters, numbers, and spaces)
+    replace_with (str): String to replace matched characters with (default: '', removes them)
+    max_length (int): Maximum length of the output text (default: None, no limit)
+    fallback_text (str): Text to return if result is empty or only whitespace (default: 'unnamed')
     
     Returns:
     str: Normalized text
     """
     if not isinstance(text, str):
         text = str(text)
-    # Remove special characters and spaces, convert to lowercase
-    normalized = re.sub(r'[^a-zA-Z0-9]', '', text.lower())
-    return normalized
+    
+    if lowercase:
+        text = text.lower()
+    
+    if special_chars:
+        text = re.sub(special_chars, replace_with, text)
+    
+    if remove_spaces:
+        text = re.sub(r'\s+', replace_with, text)
+    
+    text = text.strip()
+    
+    # Trim text if max_length is specified and text exceeds it
+    if max_length is not None and len(text) > max_length:
+        text = text[:max_length]
+        # Strip again after truncation in case we cut mid-word
+        text = text.strip()
+    
+    # Handle empty or whitespace-only results
+    if not text or text.isspace():
+        text = fallback_text
+    
+    return text
 
-def clean_column_names(column_list, replacements):
+###TODO: retire it:
+def sanitize_filename(filename, max_length=100):
+    """Sanitize a filename using the flexible normalize_text function."""
+    return normalize_text(
+        filename,
+        remove_spaces=False,
+        lowercase=True,
+        special_chars=r'[\\/*?:"<>|\r\n\t]',
+        replace_with='_',
+        max_length=max_length,
+        fallback_text='unnamed'
+    )
+
+def clean_column_names(column_list, replacements={}, lowercase=False):
     """
     Clean a list of strings to be suitable for use as column names.
     
     Parameters:
     column_list (list): List of strings to clean
-    replacements (dict): Dictionary of string replacements to apply
+    replacements (dict): Dictionary of string replacements to apply (default: {})
     
     Returns:
     list: Cleaned column names
@@ -101,17 +145,24 @@ def clean_column_names(column_list, replacements):
         for old, new in replacements.items():
             col = col.replace(old, new)
         
-        # Remove or replace special characters (keep only alphanumeric and underscore)
-        col = re.sub(r'[^a-zA-Z0-9_]', '_', col)
+        # Use normalize_text for most of the work
+        col = normalize_text(
+            col,
+            remove_spaces=True,
+            lowercase=lowercase,
+            special_chars=r'[^a-zA-Z0-9_]',
+            replace_with='_',
+            fallback_text='unnamed_column'
+        )
         
-        # Remove leading/trailing underscores and collapse multiple underscores
+        # Collapse multiple underscores and strip leading/trailing ones
         col = re.sub(r'_+', '_', col).strip('_')
         
         # Ensure column doesn't start with a number
         if col and col[0].isdigit():
             col = 'col_' + col
         
-        # Handle empty strings
+        # Final fallback
         if not col:
             col = 'unnamed_column'
         
@@ -285,7 +336,7 @@ def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, list
     for element in sorted(unmatched_a):
         data.append({
             'Element': element,
-            'Group': 'listA',
+            'Group': listA_name,
             'Match': '',
             'Similarity': ''
         })
@@ -294,7 +345,7 @@ def compare_lists(listA, listB, similarity_threshold=60, create_venn=False, list
     for element in sorted(unmatched_b):
         data.append({
             'Element': element,
-            'Group': 'listB',
+            'Group': listB_name,
             'Match': '',
             'Similarity': ''
         })
@@ -510,23 +561,6 @@ def setOutputFolder(outputFolder, uFiles, overWrite):
                     os.path.basename(uFile)))
     return (outputFolder)
 
-#TODO: Define a more robust sanitize_filename function
-def sanitize_folder_name(filename):
-    """Sanitize a string to be used as a filename by removing invalid characters."""
-    # Remove invalid characters
-    invalid_chars = r'[\\/*?:"<>|\r\n\t]'
-    sanitized = re.sub(invalid_chars, '_', filename)
-    # Trim whitespace and ensure the filename isn't too long
-    sanitized = sanitized.strip()
-    # Windows MAX_PATH is 260, but let's be conservative
-    max_length = 100  
-    if len(sanitized) > max_length:
-        sanitized = sanitized[:max_length]
-    # Ensure we return something useful
-    if not sanitized or sanitized.isspace():
-        sanitized = "unnamed"
-    return sanitized
-
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # --------------------------------Date time -------------------------------
@@ -591,12 +625,13 @@ def datesList(range_date__year=[2018,2099],
   # print(udates)
   return udates
 
-def extract_start_end(udates, ii):
-  import datetime as dt
-  start_date=udates[ii]
-  end_date=(dt.datetime.strptime(udates[ii+1], '%Y-%m-%d').date()- dt.timedelta(days=1)).strftime("%Y-%m-%d")
-#   print(start_date,' to ',end_date ,":")  
-  return start_date, end_date
+##TODO:remove it 
+# def extract_start_end(udates, ii):
+#   import datetime as dt
+#   start_date=udates[ii]
+#   end_date=(dt.datetime.strptime(udates[ii+1], '%Y-%m-%d').date()- dt.timedelta(days=1)).strftime("%Y-%m-%d")
+# #   print(start_date,' to ',end_date ,":")  
+#   return start_date, end_date
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -1245,7 +1280,6 @@ def rle_encode(data):
         encoding += prev_char+"("+str(count) +");" 
         return encoding
 
-
 # ----------------------------Feature Eng. Functions ----------------------
 def get_dummies2_sub(x, allLabels):
     """ a sub-function for get_dummies2 function
@@ -1534,9 +1568,6 @@ def cat2num(df,cat_decoder='OneHotEncoder'):
     
     return df
 
-import pandas as pd
-import re
-
 def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='inner', **kwargs):
     """
     Join two DataFrames with flexible string matching that handles differences in:
@@ -1617,24 +1648,6 @@ def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='
     result = result.drop(columns=left_norm_cols + right_norm_cols)
     
     return result
-
-def normalize_string(s, special_chars = r'[\s_/\\\-\.,;:]'):
-    """
-    Normalize a string by:
-    1. Converting to lowercase
-    2. Removing special characters (_, /, -, etc.) and spaces
-    """
-    if not isinstance(s, str):
-        return s
-    
-    # Convert to lowercase
-    s = s.lower()
-    
-    # Remove special characters and spaces
-    # This includes: spaces, underscore, forward slash, backslash, hyphen, period, comma, semicolon, colon
-    s = re.sub(special_chars, '', s)
-    
-    return s
 
 # -------------------------------------------------------------------------
 # ---------------------------Graph and plot functions----------------------
@@ -1724,7 +1737,7 @@ def sankey(left, right, value, thershold, utitle, filename):
     tranactions has three columns: left, right, value
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
 
     tranactions0 = pd.concat(
@@ -1837,7 +1850,7 @@ def plot3D(udata, uY, xyzLabels, utitle, outPutFile):
     the location of the plot
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
 
     # %matplotlib notebook
@@ -2282,7 +2295,7 @@ def split_sql_expressions_sub(text):
     --------
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
     # from riskmodelPipeline.py
     results = []
@@ -2378,7 +2391,7 @@ def parse_sql_file(file_name):
     --------
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
     # from riskmodelPipeline.py
     check_path(file_name)
@@ -2405,7 +2418,7 @@ def date2Num(df, dateCols):
     df[dateCols]-eval(df[dateCols].min()[0])
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
 
     tmploc, _ = inWithReg(dateCols, df.columns.values)
@@ -2432,7 +2445,7 @@ def find_low_variance(df, thresh=0.0):
     thresh(number): thersold value for variance of features
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
 
     variance = df.var(skipna=True)
@@ -2481,7 +2494,7 @@ def chi2_contingency(x, y):
     ---------
 
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
     from scipy import stats
     xtab = pd.crosstab(x, y)
@@ -2509,7 +2522,7 @@ def corr_pointbiserial(binary_data, continuous_data, data):
     -------
     out :  Point Biserial Correlation
     -------
-    Author: - Reza Nourzadeh- reza.nourzadeh@gmail.com 
+    
     """
 
     import math
@@ -2936,8 +2949,6 @@ def loggerWriter2(stdoutLvl, stderrLvl):
     sys.stderr = loggerWriter_sub(stderrLvl)
     return(old_stdout, old_stderr)
 
-import os
-import sys
 import importlib.util
 
 def setup_logger(log_file):
