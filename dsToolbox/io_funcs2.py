@@ -419,401 +419,401 @@ def query_psycopg2(query: str, engine_psycopg2) -> List[Dict]:
         print(f"Query execution error: {e}")
         raise
 
-##TODO: check AzureConnectionManager and retire db connectors from io_funcs.py
-class AzureConnectionManager:
-    """
-    Unified Azure connection manager for Blob Storage, Synapse, and PI Server.
-    All connection methods return consistent outputs for various Azure services.
-    """
+# ##TODO: check AzureConnectionManager and retire db connectors from io_funcs.py
+# class AzureConnectionManager:
+#     """
+#     Unified Azure connection manager for Blob Storage, Synapse, and PI Server.
+#     All connection methods return consistent outputs for various Azure services.
+#     """
     
-    def __init__(self, config_file: str):
-        """
-        Initialize with configuration file.
+#     def __init__(self, config_file: str):
+#         """
+#         Initialize with configuration file.
         
-        Args:
-            config_file (str): Path to YAML configuration file
-        """
-        self.config = self._load_config(config_file)
+#         Args:
+#             config_file (str): Path to YAML configuration file
+#         """
+#         self.config = self._load_config(config_file)
         
-    def _load_config(self, config_file: str) -> Dict:
-        """Load and validate configuration file."""
-        try:
-            with open(config_file, 'r') as stream:
-                config = yaml.safe_load(stream)
-            print(f"Configuration loaded from {config_file}")
-            return config
-        except FileNotFoundError:
-            print(f"Configuration file not found: {config_file}")
-            raise
-        except yaml.YAMLError as e:
-            print(f"Error parsing YAML file: {e}")
-            raise
+#     def _load_config(self, config_file: str) -> Dict:
+#         """Load and validate configuration file."""
+#         try:
+#             with open(config_file, 'r') as stream:
+#                 config = yaml.safe_load(stream)
+#             print(f"Configuration loaded from {config_file}")
+#             return config
+#         except FileNotFoundError:
+#             print(f"Configuration file not found: {config_file}")
+#             raise
+#         except yaml.YAMLError as e:
+#             print(f"Error parsing YAML file: {e}")
+#             raise
     
-    def _get_key_vault_credentials(self, storage_account: str, platform: str = 'databricks') -> str:
-        """
-        Retrieve credentials from Azure Key Vault.
+#     def _get_key_vault_credentials(self, storage_account: str, platform: str = 'databricks') -> str:
+#         """
+#         Retrieve credentials from Azure Key Vault.
         
-        Args:
-            storage_account (str): Storage account identifier
-            platform (str): Platform type (default: 'databricks')
+#         Args:
+#             storage_account (str): Storage account identifier
+#             platform (str): Platform type (default: 'databricks')
             
-        Returns:
-            str: Retrieved password/secret
-        """
-        try:
-            key_vault_dictS = self.config.get('key_vault_dictS', {})
-            KV_access_local = self.config.get('KV_access_local')
-            azure_ml_appID = self.config.get('azure_ml_appID')
+#         Returns:
+#             str: Retrieved password/secret
+#         """
+#         try:
+#             key_vault_dictS = self.config.get('key_vault_dictS', {})
+#             KV_access_local = self.config.get('KV_access_local')
+#             azure_ml_appID = self.config.get('azure_ml_appID')
             
-            if storage_account not in key_vault_dictS:
-                raise KeyError(f"Storage account '{storage_account}' not found in key vault configuration")
+#             if storage_account not in key_vault_dictS:
+#                 raise KeyError(f"Storage account '{storage_account}' not found in key vault configuration")
                 
-            cred_dict = key_vault_dictS[storage_account]
-            key_vault_name = cred_dict.get('key_vault_name')
-            secret_name = cred_dict.get('secret_name')
+#             cred_dict = key_vault_dictS[storage_account]
+#             key_vault_name = cred_dict.get('key_vault_name')
+#             secret_name = cred_dict.get('secret_name')
             
-            if not key_vault_name or not secret_name:
-                raise KeyError("Missing key_vault_name or secret_name in configuration")
+#             if not key_vault_name or not secret_name:
+#                 raise KeyError("Missing key_vault_name or secret_name in configuration")
             
-            # Note: This assumes fetch_key_value function exists in the environment
-            password = fetch_key_value(
-                key_vault_name,
-                secret_name,
-                azure_ml_appID,
-                KV_access_local,
-                platform
-            )
+#             # Note: This assumes fetch_key_value function exists in the environment
+#             password = fetch_key_value(
+#                 key_vault_name,
+#                 secret_name,
+#                 azure_ml_appID,
+#                 KV_access_local,
+#                 platform
+#             )
             
-            return password
+#             return password
             
-        except Exception as e:
-            print(f"Error retrieving key vault credentials: {e}")
-            raise
+#         except Exception as e:
+#             print(f"Error retrieving key vault credentials: {e}")
+#             raise
     
-    def get_blob_storage_connection(self, storage_account: str, 
-                                  container: str, 
-                                  filename: str = "", 
-                                  platform: str = 'databricks') -> Tuple[str, Dict]:
-        """
-        Create Azure Blob Storage connection parameters.
+#     def get_blob_storage_connection(self, storage_account: str, 
+#                                   container: str, 
+#                                   filename: str = "", 
+#                                   platform: str = 'databricks') -> Tuple[str, Dict]:
+#         """
+#         Create Azure Blob Storage connection parameters.
         
-        Args:
-            storage_account (str): Storage account identifier from config
-            container (str): Blob container name
-            filename (str): Optional filename for blob path
-            platform (str): Platform type (default: 'databricks')
+#         Args:
+#             storage_account (str): Storage account identifier from config
+#             container (str): Blob container name
+#             filename (str): Optional filename for blob path
+#             platform (str): Platform type (default: 'databricks')
             
-        Returns:
-            Tuple[str, Dict]: Connection string and connection parameters
-        """
-        try:
-            password = self._get_key_vault_credentials(storage_account, platform)
+#         Returns:
+#             Tuple[str, Dict]: Connection string and connection parameters
+#         """
+#         try:
+#             password = self._get_key_vault_credentials(storage_account, platform)
             
-            # Build connection components
-            blob_host = f"fs.azure.account.key.{storage_account}.blob.core.windows.net"
-            path = f'{container}@{storage_account}'
-            blob_path = f"wasbs://{path}.blob.core.windows.net/{filename}"
-            blob_connection_str = (
-                f'DefaultEndpointsProtocol=https;'
-                f'AccountName={storage_account};'
-                f'AccountKey={password};'
-                f'EndpointSuffix=core.windows.net'
-            )
+#             # Build connection components
+#             blob_host = f"fs.azure.account.key.{storage_account}.blob.core.windows.net"
+#             path = f'{container}@{storage_account}'
+#             blob_path = f"wasbs://{path}.blob.core.windows.net/{filename}"
+#             blob_connection_str = (
+#                 f'DefaultEndpointsProtocol=https;'
+#                 f'AccountName={storage_account};'
+#                 f'AccountKey={password};'
+#                 f'EndpointSuffix=core.windows.net'
+#             )
             
-            # Test connection would go here in a real implementation
-            print(f"Blob storage connection configured for account: {storage_account}")
+#             # Test connection would go here in a real implementation
+#             print(f"Blob storage connection configured for account: {storage_account}")
             
-            connection_params = {
-                'storage_account': storage_account,
-                'container': container,
-                'filename': filename,
-                'blob_host': blob_host,
-                'blob_path': blob_path,
-                'connection_string': blob_connection_str,
-                'platform': platform
-            }
+#             connection_params = {
+#                 'storage_account': storage_account,
+#                 'container': container,
+#                 'filename': filename,
+#                 'blob_host': blob_host,
+#                 'blob_path': blob_path,
+#                 'connection_string': blob_connection_str,
+#                 'platform': platform
+#             }
             
-            return blob_connection_str, connection_params
+#             return blob_connection_str, connection_params
             
-        except KeyError as e:
-            print(f"Missing Blob Storage configuration key: {e}")
-            raise
-        except Exception as e:
-            print(f"Blob Storage connection error: {e}")
-            raise
+#         except KeyError as e:
+#             print(f"Missing Blob Storage configuration key: {e}")
+#             raise
+#         except Exception as e:
+#             print(f"Blob Storage connection error: {e}")
+#             raise
     
-    def get_spark_connection(self, storage_account: str, 
-                           platform: str = 'databricks') -> Tuple[str, Dict]:
-        """
-        Create Spark/Data Lake connection parameters.
+#     def get_spark_connection(self, storage_account: str, 
+#                            platform: str = 'databricks') -> Tuple[str, Dict]:
+#         """
+#         Create Spark/Data Lake connection parameters.
         
-        Args:
-            storage_account (str): Storage account identifier from config
-            platform (str): Platform type (default: 'databricks')
+#         Args:
+#             storage_account (str): Storage account identifier from config
+#             platform (str): Platform type (default: 'databricks')
             
-        Returns:
-            Tuple[str, Dict]: Spark host and connection parameters
-        """
-        try:
-            key_vault_dictS = self.config.get('key_vault_dictS', {})
-            password = self._get_key_vault_credentials(storage_account, platform)
+#         Returns:
+#             Tuple[str, Dict]: Spark host and connection parameters
+#         """
+#         try:
+#             key_vault_dictS = self.config.get('key_vault_dictS', {})
+#             password = self._get_key_vault_credentials(storage_account, platform)
             
-            # Note: Original code used key_vault_name instead of storage_account
-            # This might be a bug in the original - keeping for compatibility
-            if storage_account in key_vault_dictS:
-                key_vault_name = key_vault_dictS[storage_account].get('key_vault_name')
-            else:
-                key_vault_name = storage_account
+#             # Note: Original code used key_vault_name instead of storage_account
+#             # This might be a bug in the original - keeping for compatibility
+#             if storage_account in key_vault_dictS:
+#                 key_vault_name = key_vault_dictS[storage_account].get('key_vault_name')
+#             else:
+#                 key_vault_name = storage_account
                 
-            spark_host = f"fs.azure.account.key.{key_vault_name}.dfs.core.windows.net"
+#             spark_host = f"fs.azure.account.key.{key_vault_name}.dfs.core.windows.net"
             
-            print(f"Spark connection configured for: {key_vault_name}")
+#             print(f"Spark connection configured for: {key_vault_name}")
             
-            connection_params = {
-                'storage_account': storage_account,
-                'key_vault_name': key_vault_name,
-                'spark_host': spark_host,
-                'platform': platform
-            }
+#             connection_params = {
+#                 'storage_account': storage_account,
+#                 'key_vault_name': key_vault_name,
+#                 'spark_host': spark_host,
+#                 'platform': platform
+#             }
             
-            return spark_host, connection_params
+#             return spark_host, connection_params
             
-        except Exception as e:
-            print(f"Spark connection error: {e}")
-            raise
+#         except Exception as e:
+#             print(f"Spark connection error: {e}")
+#             raise
     
-    def get_synapse_connection(self, storage_account: str, 
-                             platform: str = 'databricks') -> Tuple[Any, Dict]:
-        """
-        Create Synapse SQL connection using SQLAlchemy.
+#     def get_synapse_connection(self, storage_account: str, 
+#                              platform: str = 'databricks') -> Tuple[Any, Dict]:
+#         """
+#         Create Synapse SQL connection using SQLAlchemy.
         
-        Args:
-            storage_account (str): Storage account identifier from config
-            platform (str): Platform type (default: 'databricks')
+#         Args:
+#             storage_account (str): Storage account identifier from config
+#             platform (str): Platform type (default: 'databricks')
             
-        Returns:
-            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
-        """
-        try:
-            synapse_cred_dict = self.config.get('synapse_cred_dict', {})
-            password = self._get_key_vault_credentials(storage_account, platform)
+#         Returns:
+#             Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
+#         """
+#         try:
+#             synapse_cred_dict = self.config.get('synapse_cred_dict', {})
+#             password = self._get_key_vault_credentials(storage_account, platform)
             
-            # Get Synapse configuration
-            hostname = synapse_cred_dict.get('hostname')
-            database = synapse_cred_dict.get('database')
-            port = synapse_cred_dict.get('port')
-            username = synapse_cred_dict.get('username')
-            driver = synapse_cred_dict.get('driver')
-            driver_odbc = synapse_cred_dict.get('driver_odbc')
+#             # Get Synapse configuration
+#             hostname = synapse_cred_dict.get('hostname')
+#             database = synapse_cred_dict.get('database')
+#             port = synapse_cred_dict.get('port')
+#             username = synapse_cred_dict.get('username')
+#             driver = synapse_cred_dict.get('driver')
+#             driver_odbc = synapse_cred_dict.get('driver_odbc')
             
-            if not all([hostname, database, port, username]):
-                raise KeyError("Missing required Synapse configuration parameters")
+#             if not all([hostname, database, port, username]):
+#                 raise KeyError("Missing required Synapse configuration parameters")
             
-            # Build JDBC URL and properties
-            jdbc_url = f"jdbc:sqlserver://{hostname}:{port};database={database}"
+#             # Build JDBC URL and properties
+#             jdbc_url = f"jdbc:sqlserver://{hostname}:{port};database={database}"
             
-            properties = {
-                "user": username,
-                "password": password,
-                "driver": driver
-            }
+#             properties = {
+#                 "user": username,
+#                 "password": password,
+#                 "driver": driver
+#             }
             
-            # Build ODBC connection string
-            odbc_connector = (
-                f"DRIVER={driver_odbc};"
-                f"SERVER={hostname};"
-                f"PORT={port};"
-                f"DATABASE={database};"
-                f"UID={username};"
-                f"PWD={password};"
-                f"MARS_Connection=yes"
-            )
+#             # Build ODBC connection string
+#             odbc_connector = (
+#                 f"DRIVER={driver_odbc};"
+#                 f"SERVER={hostname};"
+#                 f"PORT={port};"
+#                 f"DATABASE={database};"
+#                 f"UID={username};"
+#                 f"PWD={password};"
+#                 f"MARS_Connection=yes"
+#             )
             
-            # Create SQLAlchemy engine
-            db_params_encoded = urllib.parse.quote_plus(odbc_connector)
-            engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params_encoded}')
+#             # Create SQLAlchemy engine
+#             db_params_encoded = urllib.parse.quote_plus(odbc_connector)
+#             engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params_encoded}')
             
-            # Test connection
-            with engine.connect() as conn:
-                result = conn.execute(text("SELECT @@VERSION"))
-                version = result.fetchone()[0]
-                print(f"Connected to Synapse: {hostname}")
+#             # Test connection
+#             with engine.connect() as conn:
+#                 result = conn.execute(text("SELECT @@VERSION"))
+#                 version = result.fetchone()[0]
+#                 print(f"Connected to Synapse: {hostname}")
             
-            connection_params = {
-                'storage_account': storage_account,
-                'hostname': hostname,
-                'database': database,
-                'port': port,
-                'username': username,
-                'driver': driver,
-                'driver_odbc': driver_odbc,
-                'jdbc_url': jdbc_url,
-                'properties': properties,
-                'odbc_connector': odbc_connector,
-                'platform': platform
-            }
+#             connection_params = {
+#                 'storage_account': storage_account,
+#                 'hostname': hostname,
+#                 'database': database,
+#                 'port': port,
+#                 'username': username,
+#                 'driver': driver,
+#                 'driver_odbc': driver_odbc,
+#                 'jdbc_url': jdbc_url,
+#                 'properties': properties,
+#                 'odbc_connector': odbc_connector,
+#                 'platform': platform
+#             }
             
-            return engine, connection_params
+#             return engine, connection_params
             
-        except KeyError as e:
-            print(f"Missing Synapse configuration key: {e}")
-            raise
-        except Exception as e:
-            print(f"Synapse connection error: {e}")
-            raise
+#         except KeyError as e:
+#             print(f"Missing Synapse configuration key: {e}")
+#             raise
+#         except Exception as e:
+#             print(f"Synapse connection error: {e}")
+#             raise
     
-    def get_pi_server_connection(self, storage_account: str, 
-                               platform: str = 'databricks') -> Tuple[str, Dict]:
-        """
-        Create PI Server OAuth connection and retrieve access token.
+#     def get_pi_server_connection(self, storage_account: str, 
+#                                platform: str = 'databricks') -> Tuple[str, Dict]:
+#         """
+#         Create PI Server OAuth connection and retrieve access token.
         
-        Args:
-            storage_account (str): Storage account identifier from config
-            platform (str): Platform type (default: 'databricks')
+#         Args:
+#             storage_account (str): Storage account identifier from config
+#             platform (str): Platform type (default: 'databricks')
             
-        Returns:
-            Tuple[str, Dict]: Access token and connection parameters
-        """
-        try:
-            pi_server_dict = self.config.get('pi_server', {})
-            password = self._get_key_vault_credentials(storage_account, platform)
+#         Returns:
+#             Tuple[str, Dict]: Access token and connection parameters
+#         """
+#         try:
+#             pi_server_dict = self.config.get('pi_server', {})
+#             password = self._get_key_vault_credentials(storage_account, platform)
             
-            # Get PI Server configuration
-            url = pi_server_dict.get('url')
-            grant_type = pi_server_dict.get('grant_type')
-            client_id = pi_server_dict.get('client_id')
-            client_secret_scope = pi_server_dict.get('client_secret')
+#             # Get PI Server configuration
+#             url = pi_server_dict.get('url')
+#             grant_type = pi_server_dict.get('grant_type')
+#             client_id = pi_server_dict.get('client_id')
+#             client_secret_scope = pi_server_dict.get('client_secret')
             
-            if not all([url, grant_type, client_id, client_secret_scope]):
-                raise KeyError("Missing required PI Server configuration parameters")
+#             if not all([url, grant_type, client_id, client_secret_scope]):
+#                 raise KeyError("Missing required PI Server configuration parameters")
             
-            # Prepare OAuth request
-            oauth_payload = {
-                'grant_type': grant_type,
-                'client_id': client_id,
-                'scope': client_secret_scope,
-                'client_secret': password
-            }
+#             # Prepare OAuth request
+#             oauth_payload = {
+#                 'grant_type': grant_type,
+#                 'client_id': client_id,
+#                 'scope': client_secret_scope,
+#                 'client_secret': password
+#             }
             
-            # Make OAuth request
-            import requests
-            oauth_response = requests.post(url, data=oauth_payload)
-            oauth_response.raise_for_status()
+#             # Make OAuth request
+#             import requests
+#             oauth_response = requests.post(url, data=oauth_payload)
+#             oauth_response.raise_for_status()
             
-            access_token = oauth_response.json().get('access_token')
+#             access_token = oauth_response.json().get('access_token')
             
-            if not access_token:
-                raise ValueError("Failed to retrieve access token from PI Server")
+#             if not access_token:
+#                 raise ValueError("Failed to retrieve access token from PI Server")
             
-            print(f"PI Server OAuth token retrieved successfully")
+#             print(f"PI Server OAuth token retrieved successfully")
             
-            connection_params = {
-                'storage_account': storage_account,
-                'url': url,
-                'grant_type': grant_type,
-                'client_id': client_id,
-                'client_secret_scope': client_secret_scope,
-                'access_token': access_token,
-                'platform': platform
-            }
+#             connection_params = {
+#                 'storage_account': storage_account,
+#                 'url': url,
+#                 'grant_type': grant_type,
+#                 'client_id': client_id,
+#                 'client_secret_scope': client_secret_scope,
+#                 'access_token': access_token,
+#                 'platform': platform
+#             }
             
-            return access_token, connection_params
+#             return access_token, connection_params
             
-        except KeyError as e:
-            print(f"Missing PI Server configuration key: {e}")
-            raise
-        except Exception as e:
-            print(f"PI Server connection error: {e}")
-            raise
+#         except KeyError as e:
+#             print(f"Missing PI Server configuration key: {e}")
+#             raise
+#         except Exception as e:
+#             print(f"PI Server connection error: {e}")
+#             raise
     
-    def get_connection_context(self, connection_type: str, 
-                             storage_account: str, 
-                             platform: str = 'databricks', 
-                             **kwargs) -> Tuple[Any, Dict]:
-        """
-        Get Azure service connection with automatic cleanup capability.
+#     def get_connection_context(self, connection_type: str, 
+#                              storage_account: str, 
+#                              platform: str = 'databricks', 
+#                              **kwargs) -> Tuple[Any, Dict]:
+#         """
+#         Get Azure service connection with automatic cleanup capability.
         
-        Args:
-            connection_type (str): 'blob', 'spark', 'synapse', or 'pi_server'
-            storage_account (str): Storage account identifier from config
-            platform (str): Platform type (default: 'databricks')
-            **kwargs: Additional parameters specific to connection type
+#         Args:
+#             connection_type (str): 'blob', 'spark', 'synapse', or 'pi_server'
+#             storage_account (str): Storage account identifier from config
+#             platform (str): Platform type (default: 'databricks')
+#             **kwargs: Additional parameters specific to connection type
         
-        Returns:
-            Tuple[Any, Dict]: Connection object/string and connection parameters
-        """
-        try:
-            if connection_type == 'blob':
-                container = kwargs.get('container')
-                filename = kwargs.get('filename', '')
-                if not container:
-                    raise ValueError("Container name is required for blob connections")
-                return self.get_blob_storage_connection(storage_account, container, filename, platform)
+#         Returns:
+#             Tuple[Any, Dict]: Connection object/string and connection parameters
+#         """
+#         try:
+#             if connection_type == 'blob':
+#                 container = kwargs.get('container')
+#                 filename = kwargs.get('filename', '')
+#                 if not container:
+#                     raise ValueError("Container name is required for blob connections")
+#                 return self.get_blob_storage_connection(storage_account, container, filename, platform)
                 
-            elif connection_type == 'spark':
-                return self.get_spark_connection(storage_account, platform)
+#             elif connection_type == 'spark':
+#                 return self.get_spark_connection(storage_account, platform)
                 
-            elif connection_type == 'synapse':
-                return self.get_synapse_connection(storage_account, platform)
+#             elif connection_type == 'synapse':
+#                 return self.get_synapse_connection(storage_account, platform)
                 
-            elif connection_type == 'pi_server':
-                return self.get_pi_server_connection(storage_account, platform)
+#             elif connection_type == 'pi_server':
+#                 return self.get_pi_server_connection(storage_account, platform)
                 
-            else:
-                raise ValueError(f"Unsupported connection type: {connection_type}")
+#             else:
+#                 raise ValueError(f"Unsupported connection type: {connection_type}")
                 
-        except Exception as e:
-            print(f"Error creating {connection_type} connection: {e}")
-            raise
+#         except Exception as e:
+#             print(f"Error creating {connection_type} connection: {e}")
+#             raise
 
-def get_dbutils():
-  import IPython
-  dbutils = IPython.get_ipython().user_ns["dbutils"]
-  return dbutils
+# def get_dbutils():
+#   import IPython
+#   dbutils = IPython.get_ipython().user_ns["dbutils"]
+#   return dbutils
 
-def get_secret_KVUri(key_vault_name, secret_name, credential):
-    from azure.keyvault.secrets import SecretClient    
-    KVUri = f"https://{key_vault_name}.vault.azure.net"
-    client = SecretClient(vault_url=KVUri, credential=credential)
-    secret = client.get_secret(secret_name).value
-    return secret
+# def get_secret_KVUri(key_vault_name, secret_name, credential):
+#     from azure.keyvault.secrets import SecretClient    
+#     KVUri = f"https://{key_vault_name}.vault.azure.net"
+#     client = SecretClient(vault_url=KVUri, credential=credential)
+#     secret = client.get_secret(secret_name).value
+#     return secret
 
-def fetch_key_value(key_vault_name, secret_name, azure_ml_appID, KV_access_local, platform='databricks'):
-    if platform == 'databricks':
-        # print('i am databricks run')
-        dbutils = get_dbutils()
-        return dbutils.secrets.get(scope=key_vault_name, key=secret_name)
+# def fetch_key_value(key_vault_name, secret_name, azure_ml_appID, KV_access_local, platform='databricks'):
+#     if platform == 'databricks':
+#         # print('i am databricks run')
+#         dbutils = get_dbutils()
+#         return dbutils.secrets.get(scope=key_vault_name, key=secret_name)
 
-    if platform == 'aml':
-        print("using azure ML and managed identity authentication")
-        if azure_ml_appID is None:
-            sys.exit("Identity Application ID is not provided")
+#     if platform == 'aml':
+#         print("using azure ML and managed identity authentication")
+#         if azure_ml_appID is None:
+#             sys.exit("Identity Application ID is not provided")
         
-        from azure.identity import ManagedIdentityCredential
-        client_id = f"{azure_ml_appID}"
-        credential = ManagedIdentityCredential(client_id=client_id)
-        credential.get_token("https://vault.azure.net/.default")
-        return get_secret_KVUri(key_vault_name, secret_name, credential=credential)
+#         from azure.identity import ManagedIdentityCredential
+#         client_id = f"{azure_ml_appID}"
+#         credential = ManagedIdentityCredential(client_id=client_id)
+#         credential.get_token("https://vault.azure.net/.default")
+#         return get_secret_KVUri(key_vault_name, secret_name, credential=credential)
 
-    if platform in ['local', 'vm_docker']:
-        print('i am locally run')
+#     if platform in ['local', 'vm_docker']:
+#         print('i am locally run')
         
-        try:
-            import os
-            if os.environ.get('AZURE_TENANT_ID') is None:
-                os.environ['AZURE_TENANT_ID'] = KV_access_local['secret_TenantID']
-            if os.environ.get('AZURE_CLIENT_ID') is None:
-                os.environ['AZURE_CLIENT_ID'] = KV_access_local['secret_ClientID__prd']
-            if os.environ.get('AZURE_CLIENT_SECRET') is None:
-                os.environ['AZURE_CLIENT_SECRET'] = KV_access_local['secret_ClientSecret__Prd']
-        except Exception as e:
-            print(f'{str(e)}')
-            if KV_access_local is None:
-                sys.exit("""set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables 
-                        or provide KV_access_local dictionary in config.yml file to extract them """)
+#         try:
+#             import os
+#             if os.environ.get('AZURE_TENANT_ID') is None:
+#                 os.environ['AZURE_TENANT_ID'] = KV_access_local['secret_TenantID']
+#             if os.environ.get('AZURE_CLIENT_ID') is None:
+#                 os.environ['AZURE_CLIENT_ID'] = KV_access_local['secret_ClientID__prd']
+#             if os.environ.get('AZURE_CLIENT_SECRET') is None:
+#                 os.environ['AZURE_CLIENT_SECRET'] = KV_access_local['secret_ClientSecret__Prd']
+#         except Exception as e:
+#             print(f'{str(e)}')
+#             if KV_access_local is None:
+#                 sys.exit("""set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables 
+#                         or provide KV_access_local dictionary in config.yml file to extract them """)
         
-        from azure.identity import DefaultAzureCredential
-        return get_secret_KVUri(key_vault_name, secret_name, credential=DefaultAzureCredential())
+#         from azure.identity import DefaultAzureCredential
+#         return get_secret_KVUri(key_vault_name, secret_name, credential=DefaultAzureCredential())
 
-    # This should not be reached, but keeping for safety
-    return None
+#     # This should not be reached, but keeping for safety
+#     return None
