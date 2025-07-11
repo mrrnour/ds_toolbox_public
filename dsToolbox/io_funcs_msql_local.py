@@ -106,6 +106,57 @@ def df2MSQL(df, table_name, db_server_id, config_file=config_file, **kwargs):
 
     return None
 
+def check_mssql_table_exists(table_name, db_server_id, config_file=config_file):
+    """
+    Check if a table exists in the specified MS SQL Server database.
+    
+    Args:
+        table_name (str): Table name in format 'schema.table' or 'database.schema.table'
+        db_server_id (str): Database server identifier
+        config_file (str): Configuration file path
+        
+    Returns:
+        bool: True if table exists, False otherwise
+    """
+    import pandas as pd
+    import sys
+    
+    connection = None
+    try:
+        connection, _ = cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc(db_server_id)
+        
+        # Parse table name components
+        table_parts = table_name.split(".")
+        if len(table_parts) == 3:
+            database, schema, table = table_parts
+            information_schema = f"{database}.information_schema.tables"
+        elif len(table_parts) == 2:
+            schema, table = table_parts
+            information_schema = "information_schema.tables"
+        else:
+            raise ValueError(f"Invalid table name format: {table_name}")
+        
+        # Build and execute query
+        query = f"""
+            SELECT COUNT(*)
+            FROM {information_schema}
+            WHERE table_name = '{table}'
+            AND TABLE_SCHEMA = '{schema}'
+        """
+        
+        result = pd.read_sql_query(query, connection)
+        return result.iloc[0, 0] == 1
+        
+    except Exception as error:
+        if connection:
+            connection.rollback()
+        sys.exit(f"Error checking table existence in MS SQL Server: {error}")
+    
+    finally:
+        if connection:
+            connection.close()
+
+##retire it after checking check_mssql_table_exists
 def MSql_table_check(tablename,
                     db_server_id,
                     config_file=config_file,
@@ -140,6 +191,42 @@ def MSql_table_check(tablename,
         cnxn.close()
         return False
 
+def get_last_date_from_mssql_table(table_name, db_server_id, date_column, 
+                                   config_file=config_file, logger=None):
+    """
+    Retrieve the most recent date from a specified column in an MS SQL table.
+    
+    Args:
+        table_name (str): Name of the database table
+        db_server_id (str): Database server identifier
+        date_column (str): Name of the date column to query
+        config_file (str): Configuration file path
+        logger: Logger instance for custom logging
+        
+    Returns:
+        datetime or None: The most recent date found, or None if table doesn't exist
+    """
+    
+    # Check if table exists before querying
+    if not MSql_table_check(table_name, db_server_id, config_file=config_file):
+        cfuncs.custom_print(f"{table_name} does not exist", logger)
+        return None
+    
+    # Query for min and max dates
+    query = f"""
+        SELECT MIN({date_column}) as min_time,
+               MAX({date_column}) as max_time
+        FROM {table_name}
+    """
+    
+    date_results = mSql_query(query, db_server_id, config_file=config_file)
+    most_recent_date = date_results['max_time'].iloc[0]
+    
+    print(f"The last date found in {table_name}: {most_recent_date}")
+    
+    return most_recent_date
+
+##retire it after checking get_last_date_from_mssql_table
 def last_date_MSql(db_name,
               db_server_id,
               date_col,
