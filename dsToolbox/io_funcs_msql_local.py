@@ -106,57 +106,38 @@ def df2MSQL(df, table_name, db_server_id, config_file=config_file, **kwargs):
 
     return None
 
-def check_mssql_table_exists(table_name, db_server_id, config_file=config_file):
+def table_exists(connection, table_name):
     """
-    Check if a table exists in the specified MS SQL Server database.
+    Check if a table exists in the database.
     
     Args:
-        table_name (str): Table name in format 'schema.table' or 'database.schema.table'
-        db_server_id (str): Database server identifier
-        config_file (str): Configuration file path
+        connection: psycopg2 database connection object
+        table_name: name of the table to check (format: [database.]schema.table)
         
     Returns:
         bool: True if table exists, False otherwise
     """
-    import pandas as pd
-    import sys
+    # Parse table name components
+    table_parts = table_name.split(".")
+    if len(table_parts) == 3:
+        database, schema, table = table_parts
+        information_schema = f"{database}.information_schema.tables"
+    elif len(table_parts) == 2:
+        schema, table = table_parts
+        information_schema = "information_schema.tables"
+    else:
+        raise ValueError(f"Invalid table name format: {table_name}")
     
-    connection = None
-    try:
-        connection, _ = cred_setup_mssql(config_file=config_file).MSSQL_connector__pyodbc(db_server_id)
-        
-        # Parse table name components
-        table_parts = table_name.split(".")
-        if len(table_parts) == 3:
-            database, schema, table = table_parts
-            information_schema = f"{database}.information_schema.tables"
-        elif len(table_parts) == 2:
-            schema, table = table_parts
-            information_schema = "information_schema.tables"
-        else:
-            raise ValueError(f"Invalid table name format: {table_name}")
-        
-        # Build and execute query
-        query = f"""
-            SELECT COUNT(*)
-            FROM {information_schema}
-            WHERE table_name = '{table}'
-            AND TABLE_SCHEMA = '{schema}'
-        """
-        
-        result = pd.read_sql_query(query, connection)
-        return result.iloc[0, 0] == 1
-        
-    except Exception as error:
-        if connection:
-            connection.rollback()
-        sys.exit(f"Error checking table existence in MS SQL Server: {error}")
-    
-    finally:
-        if connection:
-            connection.close()
+    with connection.cursor() as cursor:
+        cursor.execute(f"""
+            SELECT EXISTS (
+                SELECT FROM {information_schema}
+                WHERE table_schema = %s AND table_name = %s
+            );
+        """, (schema, table))
+        return cursor.fetchone()[0]
 
-##retire it after checking check_mssql_table_exists
+##retire it after checking table_exists
 def MSql_table_check(tablename,
                     db_server_id,
                     config_file=config_file,
