@@ -727,8 +727,8 @@ import statsmodels.api as sm
 from statsmodels.stats.diagnostic import het_breuschpagan, het_white
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-from yellowbrick.regressor import ResidualsPlot, PredictionError, CooksDistance
-from yellowbrick.features import Rank2D
+# from yellowbrick.regressor import ResidualsPlot, PredictionError, CooksDistance
+# from yellowbrick.features import Rank2D
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -1114,7 +1114,7 @@ class LinearRegressionAssumptionsChecker:
             axes[1,0].set_title('Box Plot of Residuals')
             
             # Residuals vs Normal Quantiles
-            from yellowbrick.regressor import ResidualsPlot
+            # from yellowbrick.regressor import ResidualsPlot
             # Since we can't directly use yellowbrick here, create a simple scatter
             axes[1,1].scatter(range(len(self.residuals)), sorted(self.residuals), alpha=0.7)
             axes[1,1].set_xlabel('Index')

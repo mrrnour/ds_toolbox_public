@@ -32,6 +32,8 @@ pyarrow==17.0.0
 scikit-learn==1.1.1
 tqdm==4.66.5
 iterative-stratification==0.1.9
+statsmodels==0.14.4 
+#yellowbrick==1.5
 
 ####I/O:
 fastparquet==2024.2.0
