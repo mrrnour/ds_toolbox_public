@@ -39,15 +39,17 @@ class DatabaseConnectionManager:
     
     def get_mssql_pyodbc_winauth(self, server_id: str) -> Tuple[Any, Dict]:
         """
-        Create SQL Server connection using pyodbc with Windows authentication.
+        Create SQL Server connection using direct pyodbc with Windows authentication.
         
         Args:
             server_id (str): Server identifier from config
             
         Returns:
-            Tuple[Engine, Dict]: SQLAlchemy engine and connection parameters
+            Tuple[Connection, Dict]: Direct pyodbc connection and connection parameters
         """
         try:
+            import pyodbc
+            
             mssql_config = self.config['mssql_servers'][server_id]
             db_server = mssql_config['db_server']
             
@@ -69,15 +71,15 @@ class DatabaseConnectionManager:
             if 'database' in mssql_config:
                 connection_string += f"DATABASE={mssql_config['database']};"
             
-            # Create SQLAlchemy engine from connection string
-            db_params = urllib.parse.quote_plus(connection_string)
-            engine = create_engine(f'mssql+pyodbc:///?odbc_connect={db_params}')
+            # Create direct pyodbc connection
+            conn = pyodbc.connect(connection_string)
             
             # Test connection
-            with engine.connect() as conn:
-                result = conn.execute(text("SELECT @@VERSION"))
-                version = result.fetchone()[0]
-                print(f"Connected to SQL Server via pyodbc")
+            cursor = conn.cursor()
+            cursor.execute("SELECT @@VERSION")
+            version = cursor.fetchone()[0]
+            print(f"Connected to SQL Server via direct pyodbc")
+            cursor.close()
             
             # Return connection parameters as dict
             connection_params = {
@@ -89,7 +91,7 @@ class DatabaseConnectionManager:
                 'connection_string': connection_string
             }
             
-            return engine, connection_params
+            return conn, connection_params
             
         except KeyError as e:
             print(f"Missing configuration key: {e}")
@@ -97,7 +99,7 @@ class DatabaseConnectionManager:
         except Exception as e:
             print(f"SQL Server pyodbc connection error: {e}")
             raise
-    
+
     def get_mssql_alchemy_winauth(self, server_id: str) -> Tuple[Any, Dict]:
         """
         Create SQL Server connection using SQLAlchemy with Windows authentication.

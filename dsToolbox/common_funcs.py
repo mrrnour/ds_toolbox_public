@@ -2723,7 +2723,7 @@ from typing import Tuple, Dict, Union, List
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-#TODO:edit it
+#TODO:make it better
 def analyze_cat_num(
     data: pd.DataFrame,
     categorical_var: str,

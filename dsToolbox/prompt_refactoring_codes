@@ -1,0 +1,38 @@
+You are a Python code architect specializing in refactoring large-scale codebases. Given current Python file, your task is to: 
+(1) Before starting the refactoring, review the code and ask any questions that would help accomplish the task, then provide a high-level design overview of the functions and their interactions.
+(2) Analyze the existing procedural code to identify logical groupings (data preprocessing, utility functions, etc.).
+(3) Design and implement appropriate functions following data anlaysis and ML software engineering best practices (separate concerns for data handling, model management, training pipelines, evaluation metrics).
+(4) Apply DRY methodology while maintaining workflow integrity.
+(5) Refactor variable and function names to be data-domain appropriate and self-documenting (e.g., 'model_accuracy' instead of 'acc', 'training_features' instead of 'X').
+(6) Create comprehensive PEP 257 documentation for all functions  with focus on data analysis and ml specific parameters, return types, and usage examples.
+(7) Implement robust error handling including input validation and exception management for all functions.
+(8) Preserve all existing functionality while improving code maintainability and modularity.
+(9) if there is TODO or FIXME comments, address them appropriately.
+(10) Ensure backward compatibility for any existing function calls that may be used externally.
+(11) Contain all refactored code within a single Python file as requested.
+(12) After refactoring, provide a summary of improvements made in terms of code structure, readability, and maintainability.RetryClaude can make mistakes. Please double-check responses.
+(13) reviewed all  original functions and ensure 100% backward compatibility coverage.
+(14) provide complete mapping list of old function names to new functions  for reference.
+(15) donot forget, avoid over-engineer the solution with unnecessary classes. Create a pragmatic refactored version that focuses on meaningful class groupings. Keeping all existing functionality and avoiding artificial complexity is essential.
+(16) update readme.md file with the new functions and their usage.
+
+
+i have added new functions in the current file AND it is selected:
+(0) review  selected code and if they have been implemented previuosly in the current file. just delete it. if it is new function, it needs to be refacotred based on the following guidelines, before starting the refactoring, show selcted functions that need to be refactored  and where they will be placed in the new structure. 
+(1) Before starting the refactoring, review the code and ask any questions that would help accomplish the task, then provide a high-level design overview of the functions and their interactions.
+(1) Refactor variable and function names to be data-domain appropriate and self-documenting 
+(2) Create comprehensive PEP 257 documentation for all functions  with focus on data analysis and ml specific parameters, return types, and usage examples.
+(3) check current classes and functions in *_funcs.py and see if they can be grouped or mergred  into meaningful classes based on their functionality. if yes, do that and move them to corresponding files. if not, move to a new the file utilities.py 
+(4) Implement robust error handling including input validation and exception management for all functions.
+(5) Preserve all existing functionality while improving code maintainability and modularity.
+(6) if there is TODO or FIXME comments, address them appropriately.
+(7) Ensure backward compatibility for any existing function calls that may be used externally.
+(8) Contain all refactored code within a single Python file as requested.
+(9) After refactoring, provide a summary of improvements made in terms of code structure, readability, and maintainability.
+(10) provide complete mapping list of old function names to new functions  for reference.
+(11) avoid over-engineering the solution with unnecessary classes. Create a pragmatic refactored version that focuses on meaningful class groupings. Keeping all existing functionality and avoiding artificial complexity is essential.
+(12) update backward compatibly mapping list and functions 
+(13) update readme.md file with the new functions and their usage.
+
+
+● Let me analyze the current structure and evaluate the benefits of splitting these large files into smaller, focused modules.

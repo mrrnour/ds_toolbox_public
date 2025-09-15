@@ -294,44 +294,6 @@ def load_parquet_between_dates(ufile   ,
 
     return df
 
-##TODO: merge the following code to last_date and remove it from spark_funcs
-# def last_date(output_name,
-#               date_col='date',
-#               custom_config=None,
-#               key_vault_dict='deltaTable',   ###for only delta_table
-#               platform='databricks',         ### for only blob
-#               ):
-  
-#   if (isinstance(output_name,str)) and (io_funcs.deltaTable_check(output_name)): 
-#     saved_dates = io_funcs.query_deltaTable_db(
-#                                               f"""select min({date_col}) as min_time ,
-#                                                           max({date_col}) as max_time
-#                                                   from   {output_name}""",
-#                                               key_vault_dict=key_vault_dict,
-#                                               custom_config=custom_config,
-#                                               verbose=False 
-#                                               ).toPandas()  
-#     last_save_date=saved_dates['max_time'].iloc[0]
-#     print(f"The last date found in delta_table:{last_save_date}")
-
-#   elif (isinstance(output_name, dict)) and (io_funcs.blob_check(blob_dict=output_name,
-#                                                                 custom_config=custom_config,
-#                                                                 platform=platform,)):
-#     udata = io_funcs.blob2pd(blob_dict=output_name,
-#                             custom_config=custom_config,
-#                             platform=platform,
-#                             #  **kwargs_csv,
-#                             )
-#     udata[date_col] = pd.to_datetime(udata[date_col], format="%Y-%m-%d")
-#     last_save_date= udata[date_col].max()  
-    
-#     print(f"The last date found in blob:{last_save_date}")
-
-#   else:
-#     last_save_date=None
-
-#   return last_save_date
-
 def update_output_specS(output_specS,
                         range_date__year=[2021,2099],
                         month_step=1,
@@ -473,43 +435,11 @@ def save_outputs(output_dict, output_specS, logger=None):
     cfuncs.custom_print('-'*50, logger)
     return 1
 
-##TODO: merge following codes to save_outputs and remove it from spark_funcs
-# def save_outputs(ouputs_dict_list,
-#                 **kwargs,
-#               ):
-#   import inspect
-#   import dsToolbox.io_funcs as io_funcs
-  
-#   spark2del_args = list(inspect.signature(io_funcs.spark2deltaTable).parameters)
-#   spark2del_args = {k: kwargs.pop(k) for k in dict(kwargs) if k in spark2del_args}
-#   pd2blob_args = list(inspect.signature(io_funcs.pd2blob).parameters)
-#   pd2blob_args = {k: kwargs.pop(k) for k in dict(kwargs) if k in pd2blob_args}
 
-#   outputs=ouputs_dict_list.items() if isinstance(ouputs_dict_list, dict) else ouputs_dict_list
-
-#   for (tableName_blobDict , sp) in outputs:
-#     print(tableName_blobDict)
-#     if isinstance(tableName_blobDict, str): 
-#       io_funcs.spark2deltaTable(
-#                                 sp,
-#                                 table_name    = tableName_blobDict.split('.')[1],
-#                                 schema        = tableName_blobDict.split('.')[0],
-#                                 write_mode = 'append',
-#                                 mergeSchema=True,
-#                                 **spark2del_args
-#                               )
-#     elif isinstance(tableName_blobDict, dict): 
-#       io_funcs.pd2blob(sp,
-#                       blob_dict=tableName_blobDict,
-#                       overwrite=False,
-#                       append=True,
-#                       **pd2blob_args
-#                       )
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # -----------------------Update a db table or a file recursively---------------------
-##TODO: merge following codes to update_db_recursively and remove it from spark_funcs
 def run_recursively(output_specS,
                     dfGenerator_func,
                     range_date__year=[2021,2099],

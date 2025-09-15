@@ -91,7 +91,7 @@ def control_limit_grpby(df, col, grpby_col=[]):
                                                            ]).rename_axis(cls.index.name)
   return cls
 
-def i_mr_ctrl_limits(df, cols, grpby_col):
+def i_mr_ctrl_limits(df, cols, grpby_col, coef):
   cls_all=pd.DataFrame()
   for col in cols:
     cls  =control_limit_grpby(df , col=col, grpby_col=grpby_col, coef=coef)
