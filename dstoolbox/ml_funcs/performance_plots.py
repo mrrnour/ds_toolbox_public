@@ -88,73 +88,9 @@ def ml_comparison_plot(metrics_all, outputFile=None):
       plt.close()
 
 
-def learning_curve_early_stopping(df_epochs, outputFile=None):
-  """
-  Plots the learning curve with early stopping for XGBoost models.
-  This function visualizes the training and validation performance over epochs
-  for cross-validation iterations, highlighting the point of early stopping.
-  Parameters:
-  df_epochs (pd.DataFrame): DataFrame containing the epochs data. It should include columns for epochs,
-                CV_Iteration, and best_ntree, along with performance metrics for training
-                and validation.
-  outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
-  Returns:
-  None
-  """
-  ###https://machinelearningmastery.com/avoid-overfitting-by-early-stopping-with-xgboost-in-python/
-
-  ##TODO: it is only for xgb now (best_ntree)
-  cols=df_epochs.columns[~df_epochs.columns.str.contains('Validation_|Train_')].tolist()
-  df_epochs_melted=df_epochs.melt(id_vars=cols)
-  uPlot=sns.relplot(
-                    data=df_epochs_melted,
-                    y="value",
-                    x="epochs",
-                    col="CV_Iteration",
-                    hue="variable",
-                    style="variable",
-                    kind="line",
-        #             markers=True,
-                    palette=['green', 'black'],
-                    col_wrap=3
-                )
-
-  axes = uPlot.axes.flatten()
-
-  sns.set(rc = {'figure.figsize':(60,30)})
-  for con, ax in enumerate(axes):
-      data_tmp=df_epochs_melted[df_epochs_melted['CV_Iteration']==con]
-      xc=data_tmp.loc[data_tmp['best_ntree'],'epochs']
-      ax.axvline(xc.iloc[0], ls='-', linewidth=3, color='red', alpha=0.75)
-
-  if outputFile is not None:
-    figure = uPlot.get_figure()
-    # ,"learning_curve.png")
-    figure.savefig(outputFile, bbox_inches='tight')
-    plt.close('all')
-
-
 def plot_confusion_matrix_multi(y_model, map_lbls, outputFile=None, ncol=3, all_data_flag=True):
-  """Plot per-CV-iteration confusion matrices in a grid, optionally saving to file.
-
-  Parameters
-  ----------
-  y_model : pandas.DataFrame
-      Long-form frame containing at least ``y_true``, ``y_pred``, and
-      ``CV_Iteration`` columns.
-  map_lbls : dict
-      Mapping of raw class labels to display names.
-  outputFile : str or None, optional
-      Path to write the assembled figure to (PNG). ``None`` shows it.
-  ncol : int, default 3
-      Number of columns in the grid.
-  all_data_flag : bool, default True
-      If True, also include an aggregate confusion matrix over all folds.
-
-  Returns
-  -------
-  dict
-      Per-iteration confusion matrices keyed by CV iteration id.
+  """
+  Plots confusion matrices for model predictions, optionally saving the plot to a file.
   """
   ##y_model=pd.concat([y_true, y_pred],axis=1)
 
@@ -214,3 +150,51 @@ def plot_confusion_matrix_multi(y_model, map_lbls, outputFile=None, ncol=3, all_
     plt.close('all')
 
   return confMats
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
+
+def learning_curve_early_stopping(df_epochs, outputFile=None):
+  """
+  Plots the learning curve with early stopping for XGBoost models.
+  This function visualizes the training and validation performance over epochs
+  for cross-validation iterations, highlighting the point of early stopping.
+  Parameters:
+  df_epochs (pd.DataFrame): DataFrame containing the epochs data. It should include columns for epochs,
+                CV_Iteration, and best_ntree, along with performance metrics for training
+                and validation.
+  outputFile (str, optional): Path to save the output plot. If None, the plot is not saved. Default is None.
+  Returns:
+  None
+  """
+  ###https://machinelearningmastery.com/avoid-overfitting-by-early-stopping-with-xgboost-in-python/
+
+  ##TODO: it is only for xgb now (best_ntree)
+  cols=df_epochs.columns[~df_epochs.columns.str.contains('Validation_|Train_')].tolist()
+  df_epochs_melted=df_epochs.melt(id_vars=cols)
+  uPlot=sns.relplot(
+                    data=df_epochs_melted,
+                    y="value",
+                    x="epochs",
+                    col="CV_Iteration",
+                    hue="variable",
+                    style="variable",
+                    kind="line",
+        #             markers=True,
+                    palette=['green', 'black'],
+                    col_wrap=3
+                )
+
+  axes = uPlot.axes.flatten()
+
+  sns.set(rc = {'figure.figsize':(60,30)})
+  for con, ax in enumerate(axes):
+      data_tmp=df_epochs_melted[df_epochs_melted['CV_Iteration']==con]
+      xc=data_tmp.loc[data_tmp['best_ntree'],'epochs']
+      ax.axvline(xc.iloc[0], ls='-', linewidth=3, color='red', alpha=0.75)
+
+  if outputFile is not None:
+    figure = uPlot.get_figure()
+    # ,"learning_curve.png")
+    figure.savefig(outputFile, bbox_inches='tight')
+    plt.close('all')

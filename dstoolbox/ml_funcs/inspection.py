@@ -11,7 +11,6 @@ from __future__ import annotations
 from typing import Iterable, Sequence
 
 import pandas as pd
-from sklearn.base import is_classifier
 from sklearn.pipeline import Pipeline
 
 
@@ -139,6 +138,12 @@ def is_forecaster(model: object) -> bool:
     caps = model_capabilities(model)
     return bool(caps & {"interval", "samples", "components"})
 
+
+# ===== imports preserved from public (needed by extras below) =====
+from sklearn.base import is_classifier
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
 
 def task_kind(model: object) -> str:
     """Return ``"classification"``, ``"forecasting"``, or ``"regression"``."""

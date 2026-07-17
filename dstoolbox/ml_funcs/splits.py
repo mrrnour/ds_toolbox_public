@@ -1,25 +1,17 @@
-"""Cross-validation splitters for time-series and panel data.
+"""Cross-validation splitters for time-series backtests.
 
 For a single time series, prefer :class:`sklearn.model_selection.TimeSeriesSplit`
-directly — this module exists for two things sklearn doesn't cover:
-
-1. :class:`PanelTimeSeriesSplit` — time-aware splits for panel data (multiple
-   series stacked in one ``DataFrame``). Splits by *date*, not by row index,
-   so every series contributes the same train/val date windows in each fold.
-2. :func:`time_series_split_from_config` — translate a "backtest" config block
-   (``initial_train``, ``step``, ``horizon``, ``gap``, optional rolling window)
-   into a stock :class:`TimeSeriesSplit`. Keeps notebooks free of fold-count
-   arithmetic.
+directly — this module exists for :class:`ExpandingBacktestSplit`
+(configurable ``initial_train`` / ``step`` / ``horizon`` / ``gap`` / rolling
+window) and :class:`HoldoutSplit` (single train/val fold).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Mapping
+from typing import Iterator
 
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import TimeSeriesSplit
 
 
 @dataclass(frozen=True)
@@ -36,17 +28,6 @@ class BacktestConfig:
     horizon: int
     gap: int = 0
     rolling_window: int | None = None
-
-
-def _n_splits_for(n_samples: int, cfg: BacktestConfig) -> int:
-    """How many folds fit in ``n_samples`` given an initial train + step + horizon."""
-    usable = n_samples - cfg.initial_train - cfg.gap - cfg.horizon
-    if usable < 0:
-        raise ValueError(
-            f"n_samples={n_samples} too small for initial_train={cfg.initial_train} "
-            f"+ gap={cfg.gap} + horizon={cfg.horizon}"
-        )
-    return usable // cfg.step + 1
 
 
 class ExpandingBacktestSplit:
@@ -165,28 +146,6 @@ class ExpandingBacktestSplit:
         return max(0, usable // self.step + 1)
 
 
-def time_series_split_from_config(
-    cfg: BacktestConfig | Mapping[str, int],
-    n_samples: int | None = None,  # noqa: ARG001 — kept for backwards-compat
-) -> ExpandingBacktestSplit:
-    """Build an :class:`ExpandingBacktestSplit` from a backtest config.
-
-    The translation: ``initial_train`` / ``step`` / ``horizon`` / ``gap``
-    pass through directly; ``max_train_size = rolling_window`` (``None`` for
-    expanding). ``n_samples`` is unused (kept in the signature only so older
-    notebooks that pass it keep working).
-    """
-    if not isinstance(cfg, BacktestConfig):
-        cfg = BacktestConfig(**dict(cfg))
-    return ExpandingBacktestSplit(
-        initial_train=cfg.initial_train,
-        step=cfg.step,
-        horizon=cfg.horizon,
-        gap=cfg.gap,
-        max_train_size=cfg.rolling_window,
-    )
-
-
 class HoldoutSplit:
     """Single train/val split — sklearn splitter that yields exactly one fold.
 
@@ -248,6 +207,47 @@ class HoldoutSplit:
 
     def get_n_splits(self, X=None, y=None, groups=None) -> int:
         return 1
+
+
+# ===== imports preserved from public (needed by extras below) =====
+from sklearn.model_selection import TimeSeriesSplit
+from typing import Iterator, Mapping
+import pandas as pd
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
+
+def _n_splits_for(n_samples: int, cfg: BacktestConfig) -> int:
+    """How many folds fit in ``n_samples`` given an initial train + step + horizon."""
+    usable = n_samples - cfg.initial_train - cfg.gap - cfg.horizon
+    if usable < 0:
+        raise ValueError(
+            f"n_samples={n_samples} too small for initial_train={cfg.initial_train} "
+            f"+ gap={cfg.gap} + horizon={cfg.horizon}"
+        )
+    return usable // cfg.step + 1
+
+
+def time_series_split_from_config(
+    cfg: BacktestConfig | Mapping[str, int],
+    n_samples: int | None = None,  # noqa: ARG001 — kept for backwards-compat
+) -> ExpandingBacktestSplit:
+    """Build an :class:`ExpandingBacktestSplit` from a backtest config.
+
+    The translation: ``initial_train`` / ``step`` / ``horizon`` / ``gap``
+    pass through directly; ``max_train_size = rolling_window`` (``None`` for
+    expanding). ``n_samples`` is unused (kept in the signature only so older
+    notebooks that pass it keep working).
+    """
+    if not isinstance(cfg, BacktestConfig):
+        cfg = BacktestConfig(**dict(cfg))
+    return ExpandingBacktestSplit(
+        initial_train=cfg.initial_train,
+        step=cfg.step,
+        horizon=cfg.horizon,
+        gap=cfg.gap,
+        max_train_size=cfg.rolling_window,
+    )
 
 
 class PanelTimeSeriesSplit:
@@ -340,3 +340,110 @@ class PanelTimeSeriesSplit:
     ) -> int:
         """Number of folds. Matches sklearn splitter protocol."""
         return self.n_splits
+
+
+def backtest_split(
+    *,
+    n_samples: int,
+    initial_train: int,
+    step: int,
+    horizon: int,
+    strategy: str = "expanding",
+    rolling_window: int | None = None,
+    gap: int = 0,
+    n_folds: int | None = None,
+    verbose: bool = True,
+) -> ExpandingBacktestSplit:
+    """Build an :class:`ExpandingBacktestSplit` from unpacked backtest params.
+
+    Convenience factory for notebooks / config-driven pipelines: takes the same
+    knobs as the YAML ``backtest:`` block and returns a ready-to-use splitter.
+
+    With ``n_folds`` set, the splitter pins fold count and derives ``step``
+    from ``n_samples`` + ``initial_train``. Otherwise ``step`` is used as-is
+    and ``n_samples`` is only reported in the summary. ``strategy="rolling"``
+    turns ``rolling_window`` into ``max_train_size``; ``"expanding"`` (the
+    default) ignores it.
+
+    Set ``verbose=False`` to suppress the split-parameter summary print.
+    """
+    max_train_size = rolling_window if strategy == "rolling" else None
+    if n_folds is None:
+        splitter = ExpandingBacktestSplit(
+            initial_train=initial_train,
+            step=step,
+            horizon=horizon,
+            gap=gap,
+            max_train_size=max_train_size,
+        )
+        if verbose:
+            _print_split_summary(
+                n_samples=n_samples,
+                initial_train=initial_train,
+                step=step,
+                horizon=horizon,
+                gap=gap,
+                max_train_size=max_train_size,
+                strategy=strategy,
+            )
+        return splitter
+    splitter = ExpandingBacktestSplit(
+        initial_train=initial_train,
+        horizon=horizon,
+        gap=gap,
+        max_train_size=max_train_size,
+        n_folds=n_folds,
+        n_samples=n_samples,
+    )
+    if verbose:
+        _print_split_summary(
+            n_samples=n_samples,
+            initial_train=initial_train,
+            step=getattr(splitter, "step", None),
+            horizon=horizon,
+            gap=gap,
+            max_train_size=max_train_size,
+            strategy=strategy,
+            n_folds=n_folds,
+        )
+    return splitter
+
+
+def _print_split_summary(
+    *,
+    n_samples: int,
+    initial_train: int,
+    step: int | None,
+    horizon: int,
+    gap: int,
+    max_train_size: int | None,
+    strategy: str,
+    n_folds: int | None = None,
+) -> None:
+    """Pretty-print backtest splitter params and the n_splits formula."""
+    if n_folds is None and step:
+        n_splits = (n_samples - initial_train - gap - horizon) // step + 1
+    else:
+        n_splits = n_folds
+    rows = [
+        ("strategy", strategy),
+        ("n_samples (n)", n_samples),
+        ("initial_train", initial_train),
+        ("step", step),
+        ("horizon", horizon),
+        ("gap", gap),
+        ("max_train_size", max_train_size),
+        ("n_splits", n_splits),
+    ]
+    width = max(len(k) for k, _ in rows)
+    print("ExpandingBacktestSplit parameters")
+    print("-" * (width + 20))
+    for k, v in rows:
+        print(f"  {k:<{width}} : {v}")
+    print()
+    print("  n_splits = floor((n - initial_train - gap - horizon) / step) + 1")
+    if step:
+        print(
+            f"           = floor(({n_samples} - {initial_train} - {gap} - {horizon}) / {step}) + 1"
+            f" = {n_splits}"
+        )

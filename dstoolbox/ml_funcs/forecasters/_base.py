@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
 
 
 def as_datetime_index(X: pd.DataFrame, date_col: str) -> pd.DatetimeIndex:
@@ -49,6 +48,18 @@ def horizon_to_cover(
     return len(pd.date_range(last_train + offset, target_max, freq=freq))
 
 
+def nan_intervals(n: int) -> tuple[np.ndarray, np.ndarray]:
+    """``(lo, hi)`` NaN arrays of length ``n`` — for point-only models."""
+    nan = np.full(n, np.nan, dtype=float)
+    return nan, nan.copy()
+
+
+# ===== imports preserved from public (needed by extras below) =====
+from sklearn.base import BaseEstimator, TransformerMixin
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
+
 def align_forecast(
     forecast_index: pd.DatetimeIndex,
     forecast_values: np.ndarray,
@@ -62,12 +73,6 @@ def align_forecast(
     """
     s = pd.Series(forecast_values, index=forecast_index)
     return s.reindex(target_index).to_numpy()
-
-
-def nan_intervals(n: int) -> tuple[np.ndarray, np.ndarray]:
-    """``(lo, hi)`` NaN arrays of length ``n`` — for point-only models."""
-    nan = np.full(n, np.nan, dtype=float)
-    return nan, nan.copy()
 
 
 class DropColumns(BaseEstimator, TransformerMixin):

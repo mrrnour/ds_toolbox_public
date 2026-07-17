@@ -208,25 +208,6 @@ def plot_series(
     return fig
 
 
-def plot_eda_overview(
-    df: pd.DataFrame, date_col: str, value_col: str, rolling: int = 14
-) -> go.Figure:
-    """Raw series with a rolling-mean overlay; quick visual sanity check."""
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df[date_col], y=df[value_col], mode="lines", name=value_col))
-    fig.add_trace(
-        go.Scatter(
-            x=df[date_col],
-            y=df[value_col].rolling(rolling, min_periods=1).mean(),
-            mode="lines",
-            name=f"rolling mean ({rolling})",
-            line={"width": 2, "color": "orange"},
-        )
-    )
-    fig.update_layout(title="Series + rolling mean", xaxis_title=date_col, yaxis_title=value_col)
-    return fig
-
-
 def plot_seasonality_box(
     df: pd.DataFrame, date_col: str, value_col: str, period: str = "dayofweek"
 ) -> go.Figure:
@@ -256,56 +237,133 @@ def plot_acf(values, nlags: int = 40, title: str = "Autocorrelation") -> go.Figu
     return fig
 
 
-def plot_pacf(
-    values,
-    nlags: int = 40,
-    method: str = "ywm",
-    title: str = "Partial autocorrelation",
+def plot_paired_acf(
+    values_a,
+    values_b,
+    nlags: int = 20,
+    labels: tuple[str, str] = ("A", "B"),
+    colors: tuple[str, str] = ("#1f77b4", "#d62728"),
+    title: str = "Paired autocorrelation",
+    skip_lag_zero: bool = True,
 ) -> go.Figure:
-    """PACF bar chart with Bartlett 95% CI bands.
+    """Grouped-bar ACF for two aligned series with a shared Bartlett CI band.
 
-    Mirrors :func:`plot_acf`. ``method`` is forwarded to :func:`ts_eda.pacf`.
-    A spike at lag ``p`` with cutoff afterwards suggests an AR(``p``) component;
-    likewise PACF cuts off at the seasonal lag ``s`` for seasonal AR terms.
+    Uses :func:`ts_eda.acf` for both series so the bars are directly
+    comparable. The Bartlett band is sized from the shorter of the two
+    series' valid-sample count.
+
+    Args:
+        values_a / values_b: Numeric series (missing values dropped).
+        nlags: Maximum lag to plot.
+        labels: Legend / hover labels ``(label_a, label_b)``.
+        colors: Bar colors ``(color_a, color_b)``.
+        title: Chart title.
+        skip_lag_zero: Drop the trivial ``lag=0`` bar (``ρ = 1``).
+
+    Returns:
+        Plotly ``go.Figure`` ready for ``.show()`` or ``.write_html``.
     """
-    rho = ts_eda.pacf(values, nlags=nlags, method=method)
-    n_valid = int(np.sum(~np.isnan(np.asarray(values, dtype=float))))
-    ci = ts_eda.acf_confint(n_valid) if n_valid > 1 else float("nan")
-    lags = np.arange(len(rho))
+    rho_a = ts_eda.acf(values_a, nlags=nlags)
+    rho_b = ts_eda.acf(values_b, nlags=nlags)
+    n_a = int(np.sum(~np.isnan(np.asarray(values_a, dtype=float))))
+    n_b = int(np.sum(~np.isnan(np.asarray(values_b, dtype=float))))
+    n_ref = min(n_a, n_b)
+    ci = ts_eda.acf_confint(n_ref) if n_ref > 1 else float("nan")
+
+    start = 1 if skip_lag_zero else 0
+    lags = list(range(start, len(rho_a)))
+    y_a = rho_a[start:]
+    y_b = rho_b[start:]
+
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=lags, y=rho, name="PACF"))
-    fig.add_hline(y=ci, line_dash="dot", line_color="grey")
-    fig.add_hline(y=-ci, line_dash="dot", line_color="grey")
-    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="PACF")
+    fig.add_trace(go.Bar(x=lags, y=y_a, name=labels[0], marker_color=colors[0], opacity=0.7))
+    fig.add_trace(go.Bar(x=lags, y=y_b, name=labels[1], marker_color=colors[1], opacity=0.7))
+    fig.add_hline(y=ci, line_dash="dot", line_color="grey",
+                  annotation_text=f"+{ci:.2f}", annotation_position="right")
+    fig.add_hline(y=-ci, line_dash="dot", line_color="grey",
+                  annotation_text=f"-{ci:.2f}", annotation_position="right")
+    fig.add_hline(y=0, line_color="black", line_width=0.5)
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=15)),
+        xaxis_title="lag",
+        yaxis_title="autocorrelation",
+        barmode="group",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(l=40, r=80, t=80, b=60),
+    )
     return fig
 
 
-def plot_ccf(x, y, lags: int = 40, title: str = "Cross-correlation") -> go.Figure:
-    """Stem plot of the cross-correlation function with a Bartlett 95% band.
+def plot_prewhitening_diagnostic(
+    original,
+    whitened,
+    label: str = "series",
+    title: str = "Original vs whitened residual",
+    color: str = "#1f77b4",
+) -> go.Figure:
+    """Overlay the original series and its whitened counterpart.
 
-    Lag k is ``corr(x_t, y_{t+k})``; positive k means ``y`` leads ``x``.
-    Useful for spotting which exogenous regressors (or which lag of them)
-    explain ``value_col``.
+    Assumes ``whitened`` is one sample shorter than ``original`` (as
+    produced by :func:`ts_trend.tfpw_y` and similar). If lengths match,
+    both share the same x axis.
+
+    Args:
+        original: Raw residual (or level) series.
+        whitened: Series returned by a prewhitening step.
+        label: Legend prefix (e.g. ``"pre"``).
+        title: Chart title.
+        color: Base color; the whitened trace uses a lighter dashed variant.
+
+    Returns:
+        Plotly ``go.Figure``.
     """
-    from statsmodels.tsa.stattools import ccf
-
-    x_arr = np.asarray(x, dtype=float)
-    y_arr = np.asarray(y, dtype=float)
-    rho = ccf(x_arr, y_arr)[: lags + 1]
-    ci = 2.0 / np.sqrt(len(y_arr))
-    ks = np.arange(rho.size)
+    orig = np.asarray(original, dtype=float)
+    whit = np.asarray(whitened, dtype=float)
+    x_orig = np.arange(orig.size)
+    x_whit = np.arange(orig.size - whit.size, orig.size)
 
     fig = go.Figure()
-    for k, r in zip(ks, rho):
-        fig.add_trace(go.Scatter(x=[k, k], y=[0, r], mode="lines",
-                                 line={"color": "#6F43D6"}, showlegend=False))
-    fig.add_trace(go.Scatter(x=ks, y=rho, mode="markers",
-                             marker={"color": "#6F43D6", "size": 6}, name="CCF"))
-    fig.add_hline(y=ci, line_dash="dot", line_color="grey")
-    fig.add_hline(y=-ci, line_dash="dot", line_color="grey")
-    fig.add_hline(y=0, line_color="grey", line_width=1)
-    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="CCF",
-                      template="plotly_white")
+    fig.add_trace(go.Scatter(
+        x=x_orig, y=orig.tolist(), mode="lines",
+        name=f"{label} (original)",
+        line=dict(color=color, width=1.5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=x_whit, y=whit.tolist(), mode="lines",
+        name=f"{label} (whitened)",
+        line=dict(color=color, width=1.5, dash="dot"),
+        opacity=0.7,
+    ))
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=14)),
+        xaxis_title="index",
+        yaxis_title="value",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(l=40, r=20, t=80, b=60),
+    )
+    return fig
+
+
+def plot_per_day_delta_bar(
+    per_day_df: pd.DataFrame,
+    x_col: str = "label",
+    y_col: str = "delta",
+    title: str = "Per-day-of-week Δ",
+    y_label: str = "Δ slope (per step)",
+    x_label: str = "day of week",
+) -> go.Figure:
+    """Bar chart of per-day Δ slopes with a zero reference line.
+
+    Designed for the DataFrame returned by
+    :func:`ts_trend.per_day_delta_slopes`.
+    """
+    fig = px.bar(
+        per_day_df, x=x_col, y=y_col,
+        title=title,
+        labels={x_col: x_label, y_col: y_label},
+    )
+    fig.update_traces(hovertemplate="%{x}<br>Δ=%{y:.4g}<extra></extra>")
+    fig.add_hline(y=0, line_dash="dot", line_color="grey")
     return fig
 
 
@@ -387,44 +445,28 @@ def plot_vbh_per_season(
     return fig
 
 
-def lag_plot(x, y=None, nlags=24):
-  """Plot autocorrelation (or cross-correlation) scatters at multiple lags.
+def plot_pacf(
+    values,
+    nlags: int = 40,
+    method: str = "ywm",
+    title: str = "Partial autocorrelation",
+) -> go.Figure:
+    """PACF bar chart with Bartlett 95% CI bands.
 
-  Renders a 4-column grid of matplotlib subplots; each subplot scatters
-  ``x`` vs. itself at lag ``i`` (or ``y`` vs. ``x.shift(i)`` when ``y``
-  is given). Matplotlib counterpart to :func:`plot_acf` / :func:`plot_ccf`.
-
-  Parameters
-  ----------
-  x : pandas.Series
-      Primary time series.
-  y : pandas.Series or None, optional
-      If provided, render cross-correlation panels instead of
-      autocorrelation. Default ``None``.
-  nlags : int, optional
-      Number of lag panels to draw. Default 24.
-
-  Returns
-  -------
-  None
-      The figure is shown by matplotlib's pyplot.
-  """
-  with sns.plotting_context("paper"):
-    fig, ax = plt.subplots(nrows=math.ceil((nlags)/4), ncols=4, figsize=[15, 10])
-
-    if y is None:
-      fig.suptitle(f'Auto correlation plot {x.name}', fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          pd.plotting.lag_plot(x, lag=i + 1, ax=ax_)
-          ax_.ticklabel_format(style="sci", scilimits=(0, 0))
-          ax_.set_ylabel(f"{x.name}$_t$")
-          ax_.set_xlabel(f"{x.name}$_{{t-{i}}}$")
-    else:
-      fig.suptitle(f'Cross correlation plot {x.name} vs {y.name}', fontsize=30)
-      for i, ax_ in enumerate(ax.flatten()):
-          ax_.scatter(y=y, x=x.shift(periods=i), s=10)
-          ax_.set_ylabel(f"{y.name}$_{{t}}$")
-          ax_.set_xlabel(f"{x.name}$_{{t-{i}}}$")
+    Mirrors :func:`plot_acf`. ``method`` is forwarded to :func:`ts_eda.pacf`.
+    A spike at lag ``p`` with cutoff afterwards suggests an AR(``p``) component;
+    likewise PACF cuts off at the seasonal lag ``s`` for seasonal AR terms.
+    """
+    rho = ts_eda.pacf(values, nlags=nlags, method=method)
+    n_valid = int(np.sum(~np.isnan(np.asarray(values, dtype=float))))
+    ci = ts_eda.acf_confint(n_valid) if n_valid > 1 else float("nan")
+    lags = np.arange(len(rho))
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=lags, y=rho, name="PACF"))
+    fig.add_hline(y=ci, line_dash="dot", line_color="grey")
+    fig.add_hline(y=-ci, line_dash="dot", line_color="grey")
+    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="PACF")
+    return fig
 
 
 def plot_stl_decomposition(
@@ -470,14 +512,12 @@ def plot_residual_diagnostics(
     lags: int | None = None,
     title: str = "Residual diagnostics",
 ) -> go.Figure:
-    """Five-panel residual diagnostics: series, histogram, Q-Q, ACF, PACF.
+    """Four-panel residual diagnostics: series, histogram, Q-Q, ACF.
 
-    Plotly counterpart to ``statsmodels`` ``ARIMAResults.plot_diagnostics``,
-    extended with PACF:
+    Plotly counterpart to ``statsmodels`` ``ARIMAResults.plot_diagnostics``:
 
     - row 1: standardized residuals over index | histogram + KDE + N(0, 1),
-    - row 2: normal Q-Q | ACF with Bartlett 95% band,
-    - row 3: PACF with Bartlett 95% band (spans both columns).
+    - row 2: normal Q-Q | ACF with Bartlett 95% band.
 
     Ljung-Box is intentionally text-only — see ``ts_eda.ljung_box``.
     """
@@ -495,14 +535,12 @@ def plot_residual_diagnostics(
         lags = min(40, max(5, n // 3))
 
     fig = make_subplots(
-        rows=3, cols=2,
+        rows=2, cols=2,
         subplot_titles=(
             "Standardized residuals",
             "Histogram + KDE + N(0,1)",
             "Normal Q-Q",
             f"ACF (Bartlett 95%, n={n})",
-            f"PACF (Bartlett 95%, n={n})",
-            "",
         ),
     )
     fig.add_trace(
@@ -549,19 +587,108 @@ def plot_residual_diagnostics(
         row=2, col=1,
     )
 
-    rho = ts_eda.acf(r, nlags=lags)
+    # Skip lag 0 (always == 1 by definition, carries no information and
+    # would visually dominate the plot).
+    rho = ts_eda.acf(r, nlags=lags)[1:]
     ci = ts_eda.acf_confint(n)
-    ks = np.arange(len(rho))
+    ks = np.arange(1, len(rho) + 1)
     fig.add_trace(go.Bar(x=ks, y=rho, name="acf"), row=2, col=2)
     fig.add_hline(y=ci, row=2, col=2, line_dash="dot", line_color="grey")
     fig.add_hline(y=-ci, row=2, col=2, line_dash="dot", line_color="grey")
 
-    prho = ts_eda.pacf(r, nlags=lags)
-    pks = np.arange(len(prho))
-    fig.add_trace(go.Bar(x=pks, y=prho, name="pacf"), row=3, col=1)
-    fig.add_hline(y=ci, row=3, col=1, line_dash="dot", line_color="grey")
-    fig.add_hline(y=-ci, row=3, col=1, line_dash="dot", line_color="grey")
-
-    fig.update_layout(height=900, showlegend=False, title=title,
+    fig.update_layout(height=700, showlegend=False, title=title,
                       template="plotly_white")
     return fig
+
+
+# ---------------------------------------------------------------------------
+# Public-only helpers kept from the pre-vendor-sync dstoolbox surface.
+# Not part of the trend_analysis vendor slice; retained so downstream users
+# that import `plot_eda_overview` / `plot_ccf` / `lag_plot` don't break.
+# ---------------------------------------------------------------------------
+
+def plot_eda_overview(
+    df: pd.DataFrame, date_col: str, value_col: str, rolling: int = 14
+) -> go.Figure:
+    """Raw series with a rolling-mean overlay; quick visual sanity check."""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df[date_col], y=df[value_col], mode="lines", name=value_col))
+    fig.add_trace(
+        go.Scatter(
+            x=df[date_col],
+            y=df[value_col].rolling(rolling, min_periods=1).mean(),
+            mode="lines",
+            name=f"rolling mean ({rolling})",
+            line={"width": 2, "color": "orange"},
+        )
+    )
+    fig.update_layout(title="Series + rolling mean", xaxis_title=date_col, yaxis_title=value_col)
+    return fig
+
+
+def plot_ccf(x, y, lags: int = 40, title: str = "Cross-correlation") -> go.Figure:
+    """Stem plot of the cross-correlation function with a Bartlett 95% band.
+
+    Lag k is ``corr(x_t, y_{t+k})``; positive k means ``y`` leads ``x``.
+    Useful for spotting which exogenous regressors (or which lag of them)
+    explain ``value_col``.
+    """
+    from statsmodels.tsa.stattools import ccf
+
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+    rho = ccf(x_arr, y_arr)[: lags + 1]
+    ci = 2.0 / np.sqrt(len(y_arr))
+    ks = np.arange(rho.size)
+
+    fig = go.Figure()
+    for k, r in zip(ks, rho):
+        fig.add_trace(
+            go.Scatter(x=[k, k], y=[0, r], mode="lines",
+                       line={"color": "#6F43D6"}, showlegend=False)
+        )
+    fig.add_trace(
+        go.Scatter(x=ks, y=rho, mode="markers",
+                   marker={"color": "#6F43D6", "size": 6}, name="CCF")
+    )
+    fig.add_hline(y=ci, line_dash="dot", line_color="grey")
+    fig.add_hline(y=-ci, line_dash="dot", line_color="grey")
+    fig.add_hline(y=0, line_color="grey", line_width=1)
+    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="CCF",
+                      template="plotly_white")
+    return fig
+
+
+def lag_plot(x, y=None, nlags=24):
+    """Plot autocorrelation (or cross-correlation) scatters at multiple lags.
+
+    Renders a 4-column grid of matplotlib subplots; each subplot scatters
+    ``x`` vs. itself at lag ``i`` (or ``y`` vs. ``x.shift(i)`` when ``y``
+    is given). Matplotlib counterpart to :func:`plot_acf` / :func:`plot_ccf`.
+
+    Parameters
+    ----------
+    x : pandas.Series
+        Primary time series.
+    y : pandas.Series or None, optional
+        If provided, render cross-correlation panels instead of
+        autocorrelation. Default ``None``.
+    nlags : int, optional
+        Number of lag panels to draw. Default 24.
+    """
+    with sns.plotting_context("paper"):
+        fig, ax = plt.subplots(nrows=math.ceil((nlags) / 4), ncols=4, figsize=[15, 10])
+
+        if y is None:
+            fig.suptitle(f"Auto correlation plot {x.name}", fontsize=30)
+            for i, ax_ in enumerate(ax.flatten()):
+                pd.plotting.lag_plot(x, lag=i + 1, ax=ax_)
+                ax_.ticklabel_format(style="sci", scilimits=(0, 0))
+                ax_.set_ylabel(f"{x.name}$_t$")
+                ax_.set_xlabel(f"{x.name}$_{{t-{i}}}$")
+        else:
+            fig.suptitle(f"Cross correlation plot {x.name} vs {y.name}", fontsize=30)
+            for i, ax_ in enumerate(ax.flatten()):
+                ax_.scatter(y=y, x=x.shift(periods=i), s=10)
+                ax_.set_ylabel(f"{y.name}$_{{t}}$")
+                ax_.set_xlabel(f"{x.name}$_{{t-{i}}}$")

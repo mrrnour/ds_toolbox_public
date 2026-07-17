@@ -21,13 +21,11 @@ exposes them:
    :func:`regional_homogeneity`) — ``pymannkendall.regional_test`` yields
    only the pooled regional trend, not the season / station / interaction
    breakdown.
-3. **Paired pre/post Sen-slope percentile bootstrap** (in
-   :func:`paired_slope_test_boot`) — kept for arms with strong residual
-   autocorrelation, where the analytical CI on ``theilslopes`` is too
-   tight.
-
-The default paired test (:func:`paired_slope_test`) is fully analytical
-and delegates to ``scipy.stats.theilslopes`` + ``pymannkendall``.
+3. **Paired pre/post Sen-slope moving-block bootstrap with pluggable
+   MK p-value** (in :func:`mk_delta_MBB`) — the single unified
+   paired test. Slope always comes from ``theilslopes`` on raw ``y``;
+   CI always from a moving-block percentile bootstrap; the MK variant
+   feeding the p-value is chosen via ``mk_method``.
 
 Install once with::
 
@@ -60,7 +58,7 @@ summary.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Literal, Sequence
 
 import numpy as np
 import pandas as pd
@@ -175,7 +173,106 @@ class VbhDecomposition:
 
 
 @dataclass(frozen=True)
-class PairedSlopeResult:
+class DispatchArmResult:
+    """Per-arm §4 dispatch — headline building block.
+
+    Product of :func:`dispatch_arm`: one seasonality gate + §4.2 AR-ladder
+    call followed by the picked MK variant on one arm. Slope point always
+    comes from ``theilslopes(y_arm).slope`` on raw ``y``; the closed-form
+    MK p-value comes from the dispatched variant.
+    """
+
+    n: int
+    slope: float
+    pvalue: float
+    mk_method: str
+    deseasoned: bool
+    rho1: float
+    period: int | None
+
+    def summary(self) -> str:
+        substrate = "deseasoned" if self.deseasoned else "raw"
+        return (
+            f"slope={self.slope:+.4f}/step  p={self.pvalue:.4f}  "
+            f"(n={self.n}, mk={self.mk_method}, substrate={substrate}, "
+            f"ρ1={self.rho1:+.3f})"
+        )
+
+
+@dataclass(frozen=True)
+class DispatchBranchResult:
+    """Headline result — §4 dispatch per arm plus derived Δ point.
+
+    Product of :func:`run_dispatch_branch`. All fields are closed-form
+    (no bootstrap). ``delta_slope`` is the point difference
+    ``slope_post − slope_pre``; there is no Δ CI or Δ p here — use
+    :func:`run_mbb_branch` (or :func:`mk_delta_MBB`) for those.
+    """
+
+    pre: DispatchArmResult
+    post: DispatchArmResult
+    slope_pre: float
+    slope_post: float
+    pval_pre: float
+    pval_post: float
+    delta_slope: float
+    pct_rate_change: float | None
+    n_pre: int
+    n_post: int
+
+    def summary(self) -> str:
+        if self.pct_rate_change is None:
+            pct_line = "  rate change= n/a  (slope_pre = 0)"
+        else:
+            pct_line = f"  rate change= {self.pct_rate_change * 100:+.0f}%"
+        return (
+            f"[HEADLINE — §4 dispatch per arm]\n"
+            f"  pre : {self.pre.summary()}\n"
+            f"  post: {self.post.summary()}\n"
+            f"  Δslope = {self.delta_slope:+.4f}/step  (point; no CI — see run_mbb_branch)\n"
+            f"{pct_line}"
+        )
+
+
+@dataclass(frozen=True)
+class VbhBranchResult:
+    """Optional VBH homogeneity add-on — per-arm χ² diagnostic.
+
+    Product of :func:`run_vbh_branch`. Wraps two per-arm
+    :class:`SeasonalTrendResult` calls and exposes the pair of
+    homogeneity p-values used to decide whether the pooled headline
+    hides Simpson-style per-phase cancellation.
+    """
+
+    pre: SeasonalTrendResult
+    post: SeasonalTrendResult
+    homogeneity_p_pre: float
+    homogeneity_p_post: float
+    alpha: float
+
+    @property
+    def is_inhomogeneous(self) -> bool:
+        return bool(
+            (np.isfinite(self.homogeneity_p_pre) and self.homogeneity_p_pre < self.alpha)
+            or (np.isfinite(self.homogeneity_p_post) and self.homogeneity_p_post < self.alpha)
+        )
+
+    def summary(self) -> str:
+        verdict = (
+            "INHOMOGENEOUS — report per-phase Δ_g"
+            if self.is_inhomogeneous
+            else "homogeneous — pooled Δslope OK"
+        )
+        return (
+            f"[VBH χ² homogeneity]\n"
+            f"  pre  homogeneity_p = {self.homogeneity_p_pre:.4f}\n"
+            f"  post homogeneity_p = {self.homogeneity_p_post:.4f}\n"
+            f"  → {verdict}"
+        )
+
+
+@dataclass(frozen=True)
+class MBBDeltaResult:
     """Pre/post Sen-slope comparison."""
 
     slope_pre: float
@@ -193,6 +290,21 @@ class PairedSlopeResult:
     method: str
     homogeneity_p_pre: float | None = None
     homogeneity_p_post: float | None = None
+    # ── Δ interpretation (auto-computed by :func:`mk_delta_MBB`) ─────────
+    # For ``ci_method='mbb'``: ``delta_pvalue`` is the two-sided tail-area
+    # of the paired-MBB ``{Δ_b}`` array at Δ = 0 (Efron 1979), read off
+    # the same array as ``delta_ci``; ``delta_power`` uses the empirical
+    # SD of ``{Δ_b}`` under a normal approximation.
+    # For ``ci_method='gilbert'``: both are computed via Wald inversion
+    # of ``delta_ci`` under a normal approximation (no bootstrap array).
+    alpha: float | None = None
+    delta_significant: bool | None = None
+    delta_pvalue: float | None = None
+    delta_pvalue_text: str | None = None
+    delta_power: float | None = None
+    delta_power_text: str | None = None
+    direction: str | None = None
+    meaning: str | None = None
 
     @property
     def pct_unstable(self) -> bool:
@@ -282,6 +394,440 @@ class RegionalHomogeneityResult:
 def _clean(y: Sequence[float]) -> np.ndarray:
     arr = np.asarray(y, dtype=float)
     return arr[np.isfinite(arr)]
+
+
+def sen_fit_line(y: Sequence[float], slope_per_step: float) -> np.ndarray:
+    """Return a centered Sen-style fit line for plotting.
+
+    Uses a robust intercept anchored at the median index/value pair so the
+    fitted line overlays noisy time-series data in a visually stable way.
+    """
+    arr = np.asarray(y, dtype=float)
+    step = np.arange(len(arr), dtype=float)
+    med_y = float(np.nanmedian(arr))
+    med_x = float(np.nanmedian(step))
+    return med_y + float(slope_per_step) * (step - med_x)
+
+
+def _bootstrap_tail_area(delta_boot: np.ndarray) -> float:
+    """Two-sided bootstrap p-value at Δ = 0 (Efron 1979).
+
+    ``p = 2 · min(mean(Δ_b ≤ 0), mean(Δ_b ≥ 0))``, clipped to ``[0, 1]``.
+    Returns ``nan`` when the array holds no finite entries.
+    """
+    finite = delta_boot[np.isfinite(delta_boot)]
+    if finite.size == 0:
+        return float("nan")
+    p_left = float(np.mean(finite <= 0.0))
+    p_right = float(np.mean(finite >= 0.0))
+    return float(min(1.0, 2.0 * min(p_left, p_right)))
+
+
+def _wald_tail_area(delta_slope: float, half_ci: float, confidence_level: float) -> float:
+    """Two-sided Wald-inversion p-value from a Δ point + CI half-width."""
+    z_alpha = float(norm.ppf(0.5 * (1.0 + confidence_level)))
+    if half_ci <= 0 or z_alpha <= 0:
+        return float("nan")
+    sd_delta = half_ci / z_alpha
+    z_delta = float(delta_slope / sd_delta)
+    return float(2.0 * (1.0 - norm.cdf(abs(z_delta))))
+
+
+def _compute_delta_interpretation(
+    delta_slope: float,
+    delta_ci: tuple[float, float],
+    confidence_level: float,
+    delta_boot: np.ndarray | None = None,
+) -> dict:
+    """Δ p-value + power + display strings for :class:`MBBDeltaResult`.
+
+    Two dispatch modes, aligned with the chart 6 workflow:
+
+    * **MBB path** — pass ``delta_boot`` (the paired-MBB ``{Δ_b}`` array).
+      ``delta_pvalue`` is the two-sided **tail-area** of that array at
+      ``Δ = 0`` (Efron 1979, ``p = 2 · min(mean(Δ_b ≤ 0), mean(Δ_b ≥ 0))``);
+      no Wald inversion, no independent normal assumption. ``delta_power``
+      is computed from the empirical standard deviation of ``Δ_b`` under
+      a normal approximation ``Δ ~ N(delta_slope, sd(Δ_b))``.
+    * **Gilbert / no-bootstrap path** — call with ``delta_boot=None``.
+      ``delta_pvalue`` and ``delta_power`` are both derived from the
+      half-width of ``delta_ci`` via Wald inversion under a normal
+      approximation ``sd = half-width / z_{1-α/2}``. This is only used
+      when there is no bootstrap array to read from (e.g. the closed-form
+      Gilbert CI branch inside :func:`mk_delta_MBB`).
+
+    Args:
+        delta_slope: The point Δ (``slope_post − slope_pre``).
+        delta_ci: The Δ confidence interval (any construction).
+        confidence_level: Nominal CL used to build ``delta_ci``.
+        delta_boot: Optional paired-MBB ``{Δ_b}`` array. When given,
+            drives the tail-area p-value and the empirical power calc.
+    """
+    p_floor = 1e-16
+    alpha = 1.0 - confidence_level
+    z_crit = float(norm.ppf(1.0 - alpha / 2.0))
+    half_delta = 0.5 * (delta_ci[1] - delta_ci[0])
+    delta_sig = not (delta_ci[0] <= 0 <= delta_ci[1])
+
+    if delta_boot is not None:
+        boot_arr = np.asarray(delta_boot, dtype=float)
+        delta_pval = _bootstrap_tail_area(boot_arr)
+        finite = boot_arr[np.isfinite(boot_arr)]
+        sd_delta = float(finite.std(ddof=1)) if finite.size >= 2 else 0.0
+    else:
+        delta_pval = _wald_tail_area(delta_slope, half_delta, confidence_level)
+        sd_delta = (half_delta / float(norm.ppf(0.5 * (1.0 + confidence_level)))
+                    if half_delta > 0 else 0.0)
+
+    if sd_delta > 0 and np.isfinite(sd_delta):
+        effect = abs(float(delta_slope) / sd_delta)
+        delta_power = float(norm.cdf(-z_crit - effect) + (1.0 - norm.cdf(z_crit - effect)))
+    else:
+        delta_power = float("nan")
+
+    if not np.isfinite(delta_pval):
+        p_txt = "n/a"
+    elif delta_pval < p_floor:
+        p_txt = f"<{p_floor:.0e}"
+    else:
+        p_txt = f"{delta_pval:.3g}"
+
+    power_txt = "n/a" if not np.isfinite(delta_power) else f"{delta_power:.1%}"
+
+    direction = "increase" if delta_slope > 0 else "decrease" if delta_slope < 0 else "no change"
+    if delta_sig:
+        meaning = f"Estimated post-vs-pre trend changed significantly ({direction})."
+    else:
+        meaning = "Estimated post-vs-pre trend change is not statistically distinguishable from zero."
+
+    return dict(
+        alpha=alpha,
+        delta_significant=bool(delta_sig),
+        delta_pvalue=delta_pval,
+        delta_pvalue_text=p_txt,
+        delta_power=delta_power,
+        delta_power_text=power_txt,
+        direction=direction,
+        meaning=meaning,
+    )
+
+
+def build_pre_post_sen_figure(
+    df_pre: pd.DataFrame,
+    df_post: pd.DataFrame,
+    date_col: str,
+    value_col: str,
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    result: MBBDeltaResult,
+    event_date: str | pd.Timestamp,
+    experiment: str,
+    confidence_level: float,
+):
+    """Build a pre/post scatter figure with per-arm Sen fit overlays.
+
+    This keeps notebook plotting logic thin and consistent across experiments.
+    Reads interpretation fields (``delta_significant``, ``direction``,
+    ``delta_pvalue_text``) directly off ``result``, which
+    :func:`mk_delta_MBB` populates automatically.
+    """
+    import plotly.graph_objects as go
+
+    sig_flag = "significant" if result.delta_significant else "not significant"
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=y_pre, mode="markers", name="pre points",
+        marker=dict(color="#1f77b4", size=5, opacity=0.6),
+        hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
+        connectgaps=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=y_post, mode="markers", name="post points",
+        marker=dict(color="#d62728", size=5, opacity=0.6),
+        hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
+        connectgaps=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=sen_fit_line(y_pre, result.slope_pre),
+        mode="lines", name=f"Sen pre ({result.slope_pre:+.4g}/day)",
+        line=dict(color="#1f77b4", width=3),
+        hovertemplate="date=%{x}<br>Sen pre=%{y:.4g}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=sen_fit_line(y_post, result.slope_post),
+        mode="lines", name=f"Sen post ({result.slope_post:+.4g}/day)",
+        line=dict(color="#d62728", width=3),
+        hovertemplate="date=%{x}<br>Sen post=%{y:.4g}<extra></extra>",
+    ))
+    _sig_sym = "✓" if result.delta_significant else "✗"
+    _dir_arrow = "↑" if result.direction == "increase" else "↓" if result.direction == "decrease" else "→"
+    _footer = (
+        f"Mann-Kendall ({result.method})  ·  "
+        f"95% CI [{result.delta_ci[0]:+.4g}, {result.delta_ci[1]:+.4g}]  ·  "
+        f"p-value = {result.delta_pvalue_text}  {_sig_sym} {sig_flag}"
+    )
+    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_annotation(
+        text=_footer,
+        xref="paper", yref="paper",
+        x=0.5, y=-0.18,
+        showarrow=False,
+        font=dict(size=11, color="#555555"),
+        xanchor="center",
+    )
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{experiment}</b>  —  Δ slope = {result.delta_slope:+.4g} {_dir_arrow}",
+            font=dict(size=16),
+        ),
+        xaxis_title="date",
+        yaxis_title=value_col,
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(l=40, r=20, t=80, b=80),
+    )
+    return fig
+
+
+def format_mk_result_line(
+    result: "TrendResult | SeasonalTrendResult",
+    arm_label: str,
+    alpha: float = 0.05,
+) -> str:
+    """Return a single ``arm_label → slope · direction · z · p · sig`` line.
+
+    Works for both :class:`TrendResult` (non-seasonal / Hamed-Rao) and
+    :class:`SeasonalTrendResult` (Hirsch seasonal). When a seasonal result
+    is passed, the homogeneity-p and pool verdict are appended.
+
+    Args:
+        result: A MK result dataclass produced by this module.
+        arm_label: Short label to prefix (e.g. ``"pre"``, ``"post"``).
+        alpha: Significance threshold used for the ✓/✗ marker.
+    """
+    slope = float(result.slope)
+    direction = "↑" if slope > 0 else "↓" if slope < 0 else "→"
+    sig = "✓ significant" if result.p < alpha else "✗ not significant"
+    core = (
+        f"{arm_label:>5} → slope={slope:+.6g}  {direction}  "
+        f"z={result.z:+.3f}  p={result.p:.4g}  {sig}"
+    )
+    tau = getattr(result, "tau", None)
+    if tau is not None:
+        core = core.replace(f"z={result.z:+.3f}", f"z={result.z:+.3f}  tau={tau:+.3f}")
+    if isinstance(result, SeasonalTrendResult):
+        pool = "pool OK" if result.pool_ok(alpha) else "⚠ POOL UNSAFE"
+        core += f"  homog_p={result.homogeneity_p:.4g}  ({pool})"
+    return core
+
+
+def build_mk_figure(
+    df_pre: pd.DataFrame,
+    df_post: pd.DataFrame,
+    date_col: str,
+    value_col: str,
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    mk_pre: "TrendResult | SeasonalTrendResult",
+    mk_post: "TrendResult | SeasonalTrendResult",
+    event_date: str | pd.Timestamp,
+    experiment: str,
+    alpha: float = 0.05,
+    method_label: str | None = None,
+):
+    """Pre/post scatter with per-arm MK Sen fit overlays.
+
+    Method-agnostic: works with any MK result exposing ``.slope`` and ``.p``
+    — :class:`TrendResult` (non-seasonal / Hamed-Rao / 3PW) or
+    :class:`SeasonalTrendResult` (Hirsch seasonal). No bootstrap; the Sen
+    overlay is a deterministic median-anchored projection of ``.slope``.
+    Footer annotation shows p-value + significance flag for each arm.
+
+    Args:
+        df_pre / df_post: DataFrames with the ``date_col`` column.
+        date_col / value_col: Column names.
+        y_pre / y_post: Numeric series aligned with ``df_pre / df_post``.
+        mk_pre / mk_post: MK result dataclasses per arm. Must both be the
+            same variant so the label stays consistent.
+        event_date: Intervention timestamp; drawn as a dashed vertical line.
+        experiment: Title label.
+        alpha: Significance threshold used for the ✓/✗ marker.
+        method_label: Override for the method name shown in the title /
+            legend / annotation (e.g. ``"Hamed-Rao MK"``). When ``None``,
+            auto-derived: ``"Seasonal MK"`` for :class:`SeasonalTrendResult`
+            inputs and ``"MK"`` otherwise (or taken from
+            ``mk_pre.method`` when available).
+    """
+    import plotly.graph_objects as go
+
+    if method_label is None:
+        if isinstance(mk_pre, SeasonalTrendResult):
+            method_label = "Seasonal MK"
+        else:
+            method_label = getattr(mk_pre, "method", None) or "MK"
+
+    sig_pre = "✓" if mk_pre.p < alpha else "✗"
+    sig_post = "✓" if mk_post.p < alpha else "✗"
+    dir_pre = "↑" if mk_pre.slope > 0 else "↓" if mk_pre.slope < 0 else "→"
+    dir_post = "↑" if mk_post.slope > 0 else "↓" if mk_post.slope < 0 else "→"
+    delta_slope = float(mk_post.slope) - float(mk_pre.slope)
+    dir_delta = "↑" if delta_slope > 0 else "↓" if delta_slope < 0 else "→"
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=y_pre, mode="markers", name="pre",
+        marker=dict(color="#1f77b4", size=5, opacity=0.6),
+        hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
+        connectgaps=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=y_post, mode="markers", name="post",
+        marker=dict(color="#d62728", size=5, opacity=0.6),
+        hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
+        connectgaps=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=sen_fit_line(y_pre, mk_pre.slope),
+        mode="lines", name=f"{method_label} pre",
+        line=dict(color="#1f77b4", width=3),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=sen_fit_line(y_post, mk_post.slope),
+        mode="lines", name=f"{method_label} post",
+        line=dict(color="#d62728", width=3),
+    ))
+    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_annotation(
+        text=(
+            f"pre slope={mk_pre.slope:+.4g} {dir_pre} (p={mk_pre.p:.3g} {sig_pre})  ·  "
+            f"post slope={mk_post.slope:+.4g} {dir_post} (p={mk_post.p:.3g} {sig_post})"
+        ),
+        xref="paper", yref="paper", x=0.5, y=-0.18,
+        showarrow=False, font=dict(size=11, color="#555555"), xanchor="center",
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"<b>{experiment}</b>  —  {method_label}  |  "
+                f"Δ slope = {delta_slope:+.4g} {dir_delta}"
+            ),
+            font=dict(size=15),
+        ),
+        xaxis_title="date", yaxis_title=value_col, hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(l=40, r=20, t=80, b=80),
+    )
+    return fig
+
+
+def build_seasonal_mk_figure(
+    df_pre: pd.DataFrame,
+    df_post: pd.DataFrame,
+    date_col: str,
+    value_col: str,
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    smk_pre: SeasonalTrendResult,
+    smk_post: SeasonalTrendResult,
+    event_date: str | pd.Timestamp,
+    experiment: str,
+    alpha: float = 0.05,
+):
+    """Backward-compat wrapper around :func:`build_mk_figure`.
+
+    Kept so existing notebooks that call ``build_seasonal_mk_figure(...)``
+    with ``smk_pre=`` / ``smk_post=`` keep working. New code should call
+    :func:`build_mk_figure` directly — it accepts any MK result type.
+    """
+    return build_mk_figure(
+        df_pre=df_pre,
+        df_post=df_post,
+        date_col=date_col,
+        value_col=value_col,
+        y_pre=y_pre,
+        y_post=y_post,
+        mk_pre=smk_pre,
+        mk_post=smk_post,
+        event_date=event_date,
+        experiment=experiment,
+        alpha=alpha,
+        method_label="Seasonal MK",
+    )
+
+
+def intervention_summary_row(
+    experiment: str,
+    event_date: str | pd.Timestamp,
+    result: MBBDeltaResult,
+    *,
+    regime: AcfRegime | None = None,
+    boot: MBBDeltaResult | None = None,
+    homogeneity_p_pre: float | None = None,
+    homogeneity_p_post: float | None = None,
+    guard_fires: bool | None = None,
+    delta_pvalue: float | None = None,
+    extra: dict | None = None,
+) -> dict:
+    """Flatten a paired MK analysis into a single dict (one CSV row).
+
+    All fields with no available value are recorded as ``NaN`` / ``None``
+    so downstream ``pd.DataFrame`` concatenation stays column-aligned.
+
+    Args:
+        experiment: Identifier used as the row's primary key.
+        event_date: Intervention date (formatted as ISO string).
+        result: Main :class:`MBBDeltaResult` from :func:`mk_delta_MBB`.
+        regime: Optional ACF diagnostic (adds ``heavy_acf``, ``rho_pre``,
+            ``rho_post``).
+        boot: Optional cross-check :class:`MBBDeltaResult` (adds
+            ``boot_*`` fields). Reserved for future variant sweeps; the
+            unified :func:`mk_delta_MBB` already returns bootstrap CIs.
+        homogeneity_p_pre / homogeneity_p_post: Seasonal-MK VBH p-values.
+        guard_fires: Boolean flag from the VBH guard.
+        delta_pvalue: Optional Δ p-value (defaults to ``result.delta_pvalue``
+            which :func:`mk_delta_MBB` populates automatically).
+        extra: Any additional key/value pairs to merge in last (wins on
+            conflict).
+
+    Returns:
+        Ordered ``dict`` suitable for ``pd.DataFrame([row]).to_csv(...)``.
+    """
+    row: dict = {
+        "experiment": experiment,
+        "event_date": pd.Timestamp(event_date).date().isoformat(),
+        "n_pre": int(result.n_pre),
+        "n_post": int(result.n_post),
+        "pipeline": result.method,
+        "heavy_acf": bool(regime.heavy_acf) if regime is not None else None,
+        "rho_pre": float(regime.rho_pre) if regime is not None else float("nan"),
+        "rho_post": float(regime.rho_post) if regime is not None else float("nan"),
+        "slope_pre": float(result.slope_pre),
+        "slope_pre_ci_lo": float(result.slope_ci_pre[0]),
+        "slope_pre_ci_hi": float(result.slope_ci_pre[1]),
+        "slope_post": float(result.slope_post),
+        "slope_post_ci_lo": float(result.slope_ci_post[0]),
+        "slope_post_ci_hi": float(result.slope_ci_post[1]),
+        "delta_slope": float(result.delta_slope),
+        "delta_ci_lo": float(result.delta_ci[0]),
+        "delta_ci_hi": float(result.delta_ci[1]),
+        "delta_significant": bool(not (result.delta_ci[0] <= 0 <= result.delta_ci[1])),
+        "delta_pval": float(delta_pvalue) if delta_pvalue is not None else float("nan"),
+        "pval_pre": float(result.pval_pre),
+        "pval_post": float(result.pval_post),
+        "homogeneity_p_pre": (
+            float(homogeneity_p_pre) if homogeneity_p_pre is not None else float("nan")
+        ),
+        "homogeneity_p_post": (
+            float(homogeneity_p_post) if homogeneity_p_post is not None else float("nan")
+        ),
+        "guard_fires": bool(guard_fires) if guard_fires is not None else None,
+        "boot_delta": float(boot.delta_slope) if boot is not None else float("nan"),
+        "boot_ci_lo": float(boot.delta_ci[0]) if boot is not None else float("nan"),
+        "boot_ci_hi": float(boot.delta_ci[1]) if boot is not None else float("nan"),
+    }
+    if extra:
+        row.update(extra)
+    return row
 
 
 def _to_trend_result(r, method: str, n: int) -> TrendResult:
@@ -417,9 +963,8 @@ def mk_3pw(
         raise ValueError(
             "mk_3pw requires timestamps that span at least two calendar years "
             "(mannkendall.s_test groups by year). Got a single year "
-            f"({sorted(years)[0]}). For sub-year daily data use "
-            "paired_slope_test_boot instead — see ts_trend.paired_slope_test_ar1 "
-            "for an auto-picker."
+            f"({sorted(years)[0]}). For sub-year daily data call "
+            "mk_delta_MBB(mk_method='hamed_rao') instead."
         )
 
     out = _mk.mk_temp_aggr([dts_native], [arr], resolution=float(resolution),
@@ -492,6 +1037,109 @@ def lag1_acf(y: Sequence[float]) -> float:
     if denom == 0.0:
         return float("nan")
     return float((z[1:] * z[:-1]).sum() / denom)
+
+
+def tfpw_y(y: Sequence[float]) -> tuple[np.ndarray, float]:
+    """Yue-Wang trend-free prewhitening (TFPW-Y).
+
+    Steps (Yue et al. 2002, HP; Yue and Wang 2002, WRR):
+
+    1. Estimate the Sen slope with the original Mann-Kendall test.
+    2. Detrend: subtract ``slope * t`` from the series.
+    3. Estimate lag-1 AR: ``rho1 = corr(detrended[:-1], detrended[1:])``.
+    4. Whiten: ``w[i] = detrended[i] - rho1 * detrended[i-1]``.
+    5. Re-add the trend so the whitened series carries the same slope.
+
+    Returns ``(whitened_series, rho1_used)``. The whitened series is one
+    shorter than ``y`` (first sample consumed by AR(1) subtraction).
+
+    Args:
+        y: One-dimensional numeric series (missing values are dropped).
+
+    Returns:
+        Tuple ``(whitened, rho1)`` with the trend-preserving whitened array
+        and the lag-1 coefficient that was removed.
+
+    Example:
+        >>> w, rho = tfpw_y([1.0, 2.1, 2.9, 4.2, 5.0])
+        >>> w.shape[0] == 4  # one sample shorter than input
+        True
+    """
+    import pymannkendall as _pmk
+
+    arr = _clean(y)
+    if arr.size < 3:
+        return np.asarray(arr[1:], dtype=float), float("nan")
+    slope = float(_pmk.original_test(arr).slope)
+    t = np.arange(arr.size, dtype=float)
+    detrended = arr - slope * t
+    rho1 = float(np.corrcoef(detrended[:-1], detrended[1:])[0, 1])
+    whitened = detrended[1:] - rho1 * detrended[:-1] + slope * t[1:]
+    return whitened, rho1
+
+
+@dataclass(frozen=True)
+class AcfRegime:
+    """Paired pre/post lag-1 ACF diagnostic + pipeline-dispatch verdict."""
+
+    rho_pre: float
+    rho_post: float
+    heavy_acf: bool
+    acf_cutoff: float
+    pipeline_label: str
+
+    @property
+    def max_abs_rho(self) -> float:
+        return float(max(abs(self.rho_pre), abs(self.rho_post)))
+
+    def summary(self) -> str:
+        return (
+            f"lag-1 ACF (deseasoned): pre={self.rho_pre:+.3f}  "
+            f"post={self.rho_post:+.3f}  (cutoff=±{self.acf_cutoff:.2f})\n"
+            f"→ pipeline: {self.pipeline_label}"
+        )
+
+
+def classify_acf_regime(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    period: int,
+    acf_cutoff: float = 0.20,
+) -> AcfRegime:
+    """Deseason both arms, measure lag-1 ACF, dispatch a paired-test pipeline.
+
+    Deseasons each arm via :func:`deseason` at the given period, computes
+    :func:`lag1_acf` on the residuals, then returns an :class:`AcfRegime`
+    that says whether the workflow should use the analytical (light-ACF)
+    or AR-aware (heavy-ACF) paired test.
+
+    Args:
+        y_pre: Pre-intervention series.
+        y_post: Post-intervention series.
+        period: Seasonal period (7 for daily data with weekly seasonality).
+        acf_cutoff: Absolute lag-1 ACF above which the heavy path is used.
+
+    Returns:
+        :class:`AcfRegime` with ``rho_pre``, ``rho_post``, ``heavy_acf``
+        and a human-readable ``pipeline_label``.
+    """
+    resid_pre = deseason(y_pre, period=period)
+    resid_post = deseason(y_post, period=period)
+    rho_pre = lag1_acf(resid_pre)
+    rho_post = lag1_acf(resid_post)
+    heavy = max(abs(rho_pre), abs(rho_post)) > acf_cutoff
+    label = (
+        "heavy-ACF → mk_delta_MBB(mk_method='3pw' or 'hamed_rao') + MBB CI"
+        if heavy
+        else "light-ACF → mk_delta_MBB(mk_method='seasonal') + MBB CI"
+    )
+    return AcfRegime(
+        rho_pre=float(rho_pre),
+        rho_post=float(rho_post),
+        heavy_acf=bool(heavy),
+        acf_cutoff=float(acf_cutoff),
+        pipeline_label=label,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -727,183 +1375,553 @@ def partial_mk(y: Sequence[float], covariate: Sequence[float], alpha: float = 0.
 
 
 # ---------------------------------------------------------------------------
-# Paired pre/post comparison — analytical (default) and bootstrap fallback
+# Paired pre/post comparison — unified moving-block bootstrap
 # ---------------------------------------------------------------------------
 
 
-def paired_slope_test(
-    y_pre: Sequence[float],
-    y_post: Sequence[float],
-    confidence_level: float = 0.95,
-    freq: int | None = None,
-    hr_lag: int | None = 1,
-) -> PairedSlopeResult:
-    """Pre/post Sen-slope comparison with per-arm CIs and an analytical CI on Δ.
+_MK_METHODS = ("original", "hamed_rao", "yue_wang", "tfpw", "pw", "seasonal", "3pw")
 
-    Fully package-based:
 
-    * per-arm slope + CI: ``scipy.stats.theilslopes`` (Kendall-tau CI),
-      surfaced as ``slope_ci_pre`` / ``slope_ci_post``.
-    * per-arm p-value: ``pymannkendall.hamed_rao_modification_test``, or
-      ``pymannkendall.seasonal_test`` when ``freq`` is given.
-    * Δslope CI: ``half = √(h_pre² + h_post²)`` combining two independent
-      per-arm CIs.
-    * rate-change CI: delta-method propagation through
-      ``slope_post / slope_pre``.
+def _mbb_indices(n: int, block_length: int, rng: np.random.Generator) -> np.ndarray:
+    """Moving-block-bootstrap resample of ``range(n)``.
 
-    Trade-off: ``theilslopes`` treats each arm as independent, so on
-    strongly autocorrelated arms this CI will be too tight. The p-value
-    still corrects for autocorrelation via HR. When the CI itself needs
-    to widen for autocorrelation, use :func:`paired_slope_test_boot`.
+    Draws overlapping blocks of length ``block_length`` uniformly at random
+    from the ``n - block_length + 1`` possible start positions and stitches
+    them together (last block truncated so total length is exactly ``n``).
+    Preserves short-range dependence up to ``block_length``.
+
+    ``block_length ≤ 1`` degenerates to iid resampling. Indices are returned
+    sorted so callers can safely pair them with ``np.arange(n)`` as the
+    ``x`` axis of ``theilslopes``.
+    """
+    if block_length <= 1 or n <= 1:
+        return np.sort(rng.integers(0, n, n))
+    bl = min(block_length, n)
+    n_blocks = int(np.ceil(n / bl))
+    max_start = n - bl
+    starts = rng.integers(0, max_start + 1, n_blocks)
+    idx = np.concatenate([np.arange(s, s + bl) for s in starts])[:n]
+    return np.sort(idx)
+
+
+def _mk_pvalue(
+    y: np.ndarray,
+    *,
+    mk_method: str,
+    alpha: float,
+    period: int | None,
+    dts: np.ndarray | None,
+    mk_kwargs: dict,
+) -> tuple[float, float | None, TrendResult | None]:
+    """Return ``(p_value, homogeneity_p_or_None, mk3pw_result_or_None)``.
+
+    ``homogeneity_p`` is populated only when ``mk_method`` is ``"seasonal"``
+    or ``"3pw"`` (both run :func:`seasonal_mk` on the raw arm to obtain the
+    Van Belle-Hughes χ² guard). All other methods return ``None`` for it.
+
+    ``mk3pw_result`` carries the full ``TrendResult`` from :func:`mk_3pw`
+    (slope + Gilbert-style CI + p) when ``mk_method='3pw'``, and ``None``
+    otherwise. Consumers that want ``ci_method='gilbert'`` read the CI
+    from here without paying for a second 3PW call.
     """
     import pymannkendall as pmk
 
-    y_pre = _clean(y_pre)
-    y_post = _clean(y_post)
-    n_pre, n_post = len(y_pre), len(y_post)
-
-    slope_pre, _, lo_pre, hi_pre = theilslopes(
-        y_pre, np.arange(n_pre), alpha=confidence_level,
+    if mk_method == "original":
+        return float(pmk.original_test(y, alpha=alpha).p), None, None
+    if mk_method == "hamed_rao":
+        return float(
+            pmk.hamed_rao_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p
+        ), None, None
+    if mk_method == "yue_wang":
+        return float(
+            pmk.yue_wang_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p
+        ), None, None
+    if mk_method == "tfpw":
+        return float(pmk.trend_free_pre_whitening_modification_test(y, alpha=alpha).p), None, None
+    if mk_method == "pw":
+        return float(pmk.pre_whitening_modification_test(y, alpha=alpha).p), None, None
+    if mk_method == "seasonal":
+        if period is None:
+            raise ValueError("mk_method='seasonal' requires period=<int>")
+        smk = seasonal_mk(
+            y, period=int(period), alpha=alpha, hr_lag=mk_kwargs.get("hr_lag", 1),
+        )
+        return float(smk.p), float(smk.homogeneity_p), None
+    if mk_method == "3pw":
+        if period is None:
+            raise ValueError("mk_method='3pw' requires period=<int>")
+        if dts is None:
+            raise ValueError("mk_method='3pw' requires dts_pre and dts_post")
+        # 3PW is defined on a deseasoned residual (Collaud Coen et al. 2020).
+        resid = deseason(y, period=int(period))
+        r = mk_3pw(
+            dts, resid,
+            resolution=mk_kwargs.get("resolution", 1.0),
+            alpha_mk=100.0 * (1.0 - alpha),
+            alpha_cl=100.0 * (1.0 - alpha),
+        )
+        # Homogeneity guard runs on raw y — independent of prewhitening.
+        smk = seasonal_mk(y, period=int(period), alpha=alpha)
+        return float(r.p), float(smk.homogeneity_p), r
+    raise ValueError(
+        f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}"
     )
-    slope_post, _, lo_post, hi_post = theilslopes(
-        y_post, np.arange(n_post), alpha=confidence_level,
+
+
+# ---------------------------------------------------------------------------
+# §6 workflow — per-arm dispatch + three branch wrappers
+# ---------------------------------------------------------------------------
+
+
+def _dts_span_years(dts: Sequence) -> float:
+    """Return the calendar-year span of a timestamp array (max − min, in years)."""
+    if dts is None:
+        return 0.0
+    arr = np.asarray(dts, dtype="datetime64[ns]")
+    if arr.size < 2:
+        return 0.0
+    span_s = float((arr.max() - arr.min()).astype("timedelta64[s]").astype(np.int64))
+    return span_s / (365.25 * 86400.0)
+
+
+def dispatch_arm(
+    y: Sequence[float],
+    *,
+    period: int | None = None,
+    dts: Sequence | None = None,
+    acf_cutoff: float = 0.20,
+    force_variant: str | None = None,
+    alpha: float = 0.05,
+    mk_kwargs: dict | None = None,
+) -> DispatchArmResult:
+    """Per-arm §4 dispatch (chart 4.3 Path A): seasonality gate → §4.2 AR ladder → MK variant.
+
+    Runs a single arm through the paper's dispatch pipeline and returns the
+    Sen slope point (from raw ``y``) and the closed-form MK p-value from
+    the variant §4 picked.
+
+    The dispatch rules match §4.3 Path A:
+
+    * If ``period`` is given, deseason the arm (subtract per-phase mean)
+      to obtain the residual substrate; otherwise the raw ``y`` is the
+      substrate.
+    * Measure the lag-1 ACF ``ρ_1`` of the substrate.
+    * If ``|ρ_1| ≤ acf_cutoff`` → **plain MK** (``mk_method='original'``)
+      on the substrate.
+    * Else if ``dts`` is given and spans ≥ 2 full years → **3PW**
+      (``mk_method='3pw'``); the 3PW call deseasons internally, so it is
+      passed the raw ``y`` (not the substrate) to avoid double-deseasoning.
+    * Else → **Hamed–Rao** (``mk_method='hamed_rao'``) on the substrate.
+
+    ``force_variant`` overrides the ladder and is useful for smoke tests
+    and for pinning the variant when the ACF-based choice is known to be
+    marginal.
+
+    The point slope is always ``theilslopes(y_arm).slope`` on raw ``y``
+    (never the substrate) — Sen's slope is consistent under seasonality
+    and AR(1), and stakeholders expect units of "change per step in raw y".
+    """
+    y_arr = _clean(y)
+    n = int(y_arr.size)
+    slope = float(theilslopes(y_arr, np.arange(n)).slope) if n >= 2 else float("nan")
+
+    # ── Seasonality gate ───────────────────────────────────────────────────
+    period_int = int(period) if period is not None else None
+    deseasoned = period_int is not None and period_int > 1
+    if deseasoned and period_int is not None:
+        substrate = deseason(y_arr, period=period_int)
+        substrate = substrate[np.isfinite(substrate)]
+    else:
+        substrate = y_arr
+
+    # ── §4.2 AR ladder on substrate ────────────────────────────────────────
+    rho = lag1_acf(substrate)
+    rho_f = float(rho) if np.isfinite(rho) else 0.0
+    if force_variant is not None:
+        variant = force_variant
+    elif abs(rho_f) <= acf_cutoff:
+        variant = "original"
+    else:
+        has_two_years = dts is not None and _dts_span_years(dts) >= 2.0
+        variant = "3pw" if has_two_years else "hamed_rao"
+
+    # ── Feed the variant its expected substrate ────────────────────────────
+    # 3PW deseasons internally, so it must receive raw y. Plain / HR /
+    # Yue–Wang / TFPW / PW all operate on whatever we hand them, so they
+    # get the deseasoned residual (or raw y when no seasonality gate).
+    dts_arr = None if dts is None else np.asarray(dts)
+    if variant == "3pw":
+        p, _, _ = _mk_pvalue(
+            y_arr, mk_method=variant, alpha=alpha,
+            period=period_int,
+            dts=dts_arr, mk_kwargs=dict(mk_kwargs or {}),
+        )
+    else:
+        p, _, _ = _mk_pvalue(
+            substrate, mk_method=variant, alpha=alpha,
+            period=period_int,
+            dts=dts_arr, mk_kwargs=dict(mk_kwargs or {}),
+        )
+    return DispatchArmResult(
+        n=n,
+        slope=slope,
+        pvalue=float(p),
+        mk_method=variant,
+        deseasoned=deseasoned,
+        rho1=rho_f,
+        period=period_int,
     )
 
-    alpha = 1.0 - confidence_level
-    if freq is None:
-        pval_pre = float(pmk.hamed_rao_modification_test(y_pre, alpha=alpha, lag=hr_lag).p)
-        pval_post = float(pmk.hamed_rao_modification_test(y_post, alpha=alpha, lag=hr_lag).p)
-        hp_pre: float | None = None
-        hp_post: float | None = None
+
+def run_dispatch_branch(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    *,
+    period: int | None = None,
+    dts_pre: Sequence | None = None,
+    dts_post: Sequence | None = None,
+    acf_cutoff: float = 0.20,
+    force_variant: str | None = None,
+    alpha: float = 0.05,
+    mk_kwargs: dict | None = None,
+) -> DispatchBranchResult:
+    """Headline branch (§6) — §4 dispatch on each arm + derived Δ point.
+
+    Runs :func:`dispatch_arm` independently on ``y_pre`` and ``y_post``
+    (each arm may end up with a different MK variant if its AR regime
+    differs) and returns the five required headline numbers:
+    ``slope_pre``, ``slope_post``, ``pval_pre``, ``pval_post``, and
+    ``delta_slope = slope_post − slope_pre``.
+
+    No bootstrap. For a CI or p-value on Δ, run :func:`run_mbb_branch`
+    (or :func:`mk_delta_MBB` directly) as the optional add-on.
+    """
+    pre = dispatch_arm(
+        y_pre, period=period, dts=dts_pre, acf_cutoff=acf_cutoff,
+        force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
+    )
+    post = dispatch_arm(
+        y_post, period=period, dts=dts_post, acf_cutoff=acf_cutoff,
+        force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
+    )
+    delta = float(post.slope - pre.slope)
+    if pre.slope != 0 and np.isfinite(pre.slope) and np.isfinite(post.slope):
+        pct: float | None = float(post.slope / pre.slope - 1.0)
     else:
-        # Route through seasonal_mk so the Van Belle-Hughes homogeneity guard
-        # (implemented locally: no package provides it) travels alongside p.
-        smk_pre = seasonal_mk(y_pre, period=int(freq), alpha=alpha, hr_lag=hr_lag)
-        smk_post = seasonal_mk(y_post, period=int(freq), alpha=alpha, hr_lag=hr_lag)
-        pval_pre = smk_pre.p
-        pval_post = smk_post.p
-        hp_pre = smk_pre.homogeneity_p
-        hp_post = smk_post.homogeneity_p
-
-    half_pre = 0.5 * float(hi_pre - lo_pre)
-    half_post = 0.5 * float(hi_post - lo_post)
-    half_delta = float(np.hypot(half_pre, half_post))
-    delta = float(slope_post - slope_pre)
-    delta_ci = (delta - half_delta, delta + half_delta)
-
-    # Rate-change CI via delta method:
-    #   Var(post/pre) ≈ Var(post)/pre² + post²·Var(pre)/pre⁴.
-    if slope_pre != 0:
-        z_alpha = float(norm.ppf(0.5 * (1 + confidence_level)))
-        sd_pre = half_pre / z_alpha if z_alpha > 0 else float("nan")
-        sd_post = half_post / z_alpha if z_alpha > 0 else float("nan")
-        var_ratio = (sd_post / slope_pre) ** 2 + (slope_post * sd_pre / slope_pre ** 2) ** 2
-        half_ratio = z_alpha * float(np.sqrt(var_ratio))
-        pct_change: float | None = float(slope_post / slope_pre - 1.0)
-        pct_ci: tuple[float, float] | None = (pct_change - half_ratio, pct_change + half_ratio)
-    else:
-        pct_change = None
-        pct_ci = None
-
-    return PairedSlopeResult(
-        slope_pre=float(slope_pre),
-        slope_post=float(slope_post),
-        slope_ci_pre=(float(lo_pre), float(hi_pre)),
-        slope_ci_post=(float(lo_post), float(hi_post)),
+        pct = None
+    return DispatchBranchResult(
+        pre=pre,
+        post=post,
+        slope_pre=pre.slope,
+        slope_post=post.slope,
+        pval_pre=pre.pvalue,
+        pval_post=post.pvalue,
         delta_slope=delta,
-        delta_ci=delta_ci,
-        pct_rate_change=pct_change,
-        pct_ci=pct_ci,
-        pval_pre=pval_pre,
-        pval_post=pval_post,
-        n_pre=n_pre,
-        n_post=n_post,
-        method="analytical",
-        homogeneity_p_pre=hp_pre,
-        homogeneity_p_post=hp_post,
+        pct_rate_change=pct,
+        n_pre=pre.n,
+        n_post=post.n,
     )
 
 
-def paired_slope_test_boot(
+def run_vbh_branch(
     y_pre: Sequence[float],
     y_post: Sequence[float],
-    confidence_level: float = 0.95,
-    freq: int | None = None,
-    n_boot: int = 2000,
-    seed: int | None = 0,
-    progress: bool = True,
-) -> PairedSlopeResult:
-    """Bootstrap-CI variant of :func:`paired_slope_test`.
+    *,
+    period: int,
+    alpha: float = 0.05,
+    hr_lag: int | None = 1,
+) -> VbhBranchResult:
+    """Optional VBH homogeneity branch (§6.1) — per-arm Seasonal MK + VBH χ².
 
-    Local implementation because no Python package provides a paired
-    Sen-slope percentile bootstrap. Same interface, same output type;
-    only the CIs differ. Sen slope points come from
-    ``scipy.stats.theilslopes`` (single-value form). Per-arm p-values
-    come from ``pymannkendall.hamed_rao_modification_test`` or
-    ``pymannkendall.seasonal_test``.
-
-    Use this over :func:`paired_slope_test` when arm autocorrelation
-    should also widen the CI on Δslope. Set ``progress=False`` to
-    suppress the tqdm progress bar over the bootstrap loop.
+    Runs :func:`seasonal_mk` (which computes Van Belle–Hughes χ²
+    homogeneity as a byproduct) on each arm and exposes the pair of
+    per-arm homogeneity p-values on a small result container. Use
+    :attr:`VbhBranchResult.is_inhomogeneous` to decide whether to fall
+    back to per-phase Δ reporting.
     """
-    import pymannkendall as pmk
+    pre_smk = seasonal_mk(y_pre, period=int(period), alpha=alpha, hr_lag=hr_lag)
+    post_smk = seasonal_mk(y_post, period=int(period), alpha=alpha, hr_lag=hr_lag)
+    return VbhBranchResult(
+        pre=pre_smk,
+        post=post_smk,
+        homogeneity_p_pre=float(pre_smk.homogeneity_p),
+        homogeneity_p_post=float(post_smk.homogeneity_p),
+        alpha=float(alpha),
+    )
+
+
+def run_mbb_branch(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    *,
+    mk_method: str = "hamed_rao",
+    period: int | None = None,
+    dts_pre: Sequence | None = None,
+    dts_post: Sequence | None = None,
+    confidence_level: float = 0.95,
+    n_boot: int = 2000,
+    block_length: int | None = None,
+    seed: int | None = 0,
+    mk_kwargs: dict | None = None,
+    progress: bool = True,
+) -> "MBBDeltaResult":
+    """Optional MBB branch (§6.1) — paired moving-block bootstrap for Δ inference.
+
+    Thin alias for :func:`mk_delta_MBB` with ``ci_method='mbb'``. Produces
+    ``delta_ci`` and ``delta_pvalue`` (Δ inference) plus the byproduct
+    per-arm slope CIs ``slope_ci_pre`` / ``slope_ci_post``. Use when a CI
+    or p-value on Δ is required on top of the headline point comparison
+    from :func:`run_dispatch_branch`.
+    """
+    return mk_delta_MBB(
+        y_pre, y_post,
+        mk_method=mk_method,
+        ci_method="mbb",
+        period=period,
+        dts_pre=dts_pre,
+        dts_post=dts_post,
+        confidence_level=confidence_level,
+        n_boot=n_boot,
+        block_length=block_length,
+        seed=seed,
+        mk_kwargs=mk_kwargs,
+        progress=progress,
+    )
+
+
+def mk_delta_MBB(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    *,
+    mk_method: str = "hamed_rao",
+    ci_method: Literal["mbb", "gilbert"] = "mbb",
+    period: int | None = None,
+    dts_pre: Sequence | None = None,
+    dts_post: Sequence | None = None,
+    confidence_level: float = 0.95,
+    n_boot: int = 2000,
+    block_length: int | None = None,
+    seed: int | None = 0,
+    mk_kwargs: dict | None = None,
+    progress: bool = True,
+) -> MBBDeltaResult:
+    """Pre/post Sen-slope comparison — pluggable CI and MK p-value.
+
+    Design invariants:
+
+    * **Slope point** for each arm is ``theilslopes(y).slope`` on the raw
+      series. Sen's slope is consistent under autocorrelation — AR(1) noise
+      inflates the *variance* of the estimator, not its expectation, so no
+      prewhitening is needed for the point estimate.
+    * **Per-arm slope CI and Δ CI** come from the machinery selected by
+      ``ci_method``:
+
+      - ``"mbb"`` (default) — moving-block percentile bootstrap of
+        ``theilslopes`` on **raw ``y``** with ``block_length = period`` by
+        default. The block preserves short-range dependence automatically.
+        Applicable with any ``mk_method``.
+      - ``"gilbert"`` — reuse the Gilbert-style analytical CI already
+        computed inside ``mannkendall.mk_temp_aggr``: half-widths from
+        each arm's Gilbert CI are combined in quadrature (independence
+        across disjoint pre/post arms) to form the Δ CI, and each per-arm
+        CI is recentered on the raw-``y`` Sen slope so the reported
+        centre matches ``slope_pre`` / ``slope_post``. Requires
+        ``mk_method='3pw'``. Skips the bootstrap loop entirely.
+
+    * **Δ p-value** (``delta_pvalue``) depends on the CI machinery:
+
+      - ``ci_method='mbb'`` — two-sided **tail-area** of the paired-MBB
+        ``{Δ_b}`` array at ``Δ = 0`` (Efron 1979), read off the same
+        array that produced ``delta_ci``. No Wald inversion, no second
+        loop.
+      - ``ci_method='gilbert'`` — Wald inversion of ``delta_ci`` under a
+        normal approximation (no bootstrap array to read from).
+
+    * **Per-arm p-value** is dispatched by ``mk_method``. One of
+      ``"original"``, ``"hamed_rao"`` (default), ``"yue_wang"``,
+      ``"tfpw"``, ``"pw"``, ``"seasonal"``, ``"3pw"``. Method-specific
+      extras (``hr_lag`` for HR / YW, ``resolution`` for 3PW) travel
+      through ``mk_kwargs``.
+    * **Homogeneity p-value** (Van Belle-Hughes χ²) is populated only when
+      ``mk_method`` is ``"seasonal"`` or ``"3pw"``.
+
+    Prewhitening is the caller's responsibility. To use HR / seasonal on an
+    already-whitened series, pass ``mk_method="original"`` with the whitened
+    ``y``. Slope and CI never operate on whitened input.
+
+    Parameters
+    ----------
+    y_pre, y_post : array-like of float
+        Values for the pre and post arms.
+    mk_method : {'original', 'hamed_rao', 'yue_wang', 'tfpw', 'pw', 'seasonal', '3pw'}
+        Which MK variant supplies the per-arm p-value. Default ``'hamed_rao'``.
+    ci_method : {'mbb', 'gilbert'}, default ``'mbb'``
+        Which CI machinery supplies ``slope_ci_*`` and ``delta_ci``.
+        ``'gilbert'`` is only valid together with ``mk_method='3pw'`` and
+        makes the CI internally consistent with the 3PW p-value (both come
+        from ``mannkendall.mk_temp_aggr``); ``'mbb'`` is method-agnostic.
+    period : int, optional
+        Seasonal cycle length; required by ``mk_method`` in
+        ``{'seasonal', '3pw'}``. Also used as the default ``block_length``.
+    dts_pre, dts_post : array-like of datetime, optional
+        Timestamps for the pre / post arms; required only when
+        ``mk_method='3pw'`` (``mannkendall.mk_temp_aggr`` groups by year).
+    confidence_level : float, default 0.95
+        Percentile level for the bootstrap CIs (``ci_method='mbb'``) or
+        the Gilbert CI level passed through to ``mk_temp_aggr``
+        (``ci_method='gilbert'``).
+    n_boot : int, default 2000
+        Number of bootstrap resamples. Ignored when ``ci_method='gilbert'``.
+    block_length : int, optional
+        Moving-block length. Defaults to ``period`` (or ``1`` when ``period``
+        is ``None`` — degenerates to iid resampling). Clamped to
+        ``min(n_pre, n_post)``. Ignored when ``ci_method='gilbert'``.
+    seed : int or None, default 0
+        Seed for :class:`numpy.random.default_rng`. Ignored when
+        ``ci_method='gilbert'``.
+    mk_kwargs : dict, optional
+        Extra kwargs forwarded to the ``mk_method`` handler.
+    progress : bool, default True
+        Show a tqdm bar over the bootstrap loop. Ignored when
+        ``ci_method='gilbert'``.
+    """
     from tqdm.auto import tqdm
 
-    y_pre = _clean(y_pre)
-    y_post = _clean(y_post)
-    n_pre, n_post = len(y_pre), len(y_post)
+    if mk_method not in _MK_METHODS:
+        raise ValueError(
+            f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}"
+        )
+    if ci_method not in ("mbb", "gilbert"):
+        raise ValueError(
+            f"unknown ci_method={ci_method!r}; expected 'mbb' or 'gilbert'"
+        )
+    if ci_method == "gilbert" and mk_method != "3pw":
+        raise ValueError(
+            "ci_method='gilbert' requires mk_method='3pw' — the Gilbert bounds "
+            "are only produced by mannkendall.mk_temp_aggr. Use ci_method='mbb' "
+            f"with mk_method={mk_method!r}."
+        )
+    mk_kwargs = dict(mk_kwargs or {})
 
-    slope_pre = float(theilslopes(y_pre, np.arange(n_pre)).slope)
-    slope_post = float(theilslopes(y_post, np.arange(n_post)).slope)
+    y_pre_arr = _clean(y_pre)
+    y_post_arr = _clean(y_post)
+    n_pre, n_post = len(y_pre_arr), len(y_post_arr)
+
+    slope_pre = float(theilslopes(y_pre_arr, np.arange(n_pre)).slope)
+    slope_post = float(theilslopes(y_post_arr, np.arange(n_post)).slope)
 
     alpha = 1.0 - confidence_level
-    if freq is None:
-        pval_pre = float(pmk.hamed_rao_modification_test(y_pre, alpha=alpha, lag=1).p)
-        pval_post = float(pmk.hamed_rao_modification_test(y_post, alpha=alpha, lag=1).p)
-        hp_pre: float | None = None
-        hp_post: float | None = None
-    else:
-        smk_pre = seasonal_mk(y_pre, period=int(freq), alpha=alpha)
-        smk_post = seasonal_mk(y_post, period=int(freq), alpha=alpha)
-        pval_pre = smk_pre.p
-        pval_post = smk_post.p
-        hp_pre = smk_pre.homogeneity_p
-        hp_post = smk_post.homogeneity_p
+    dts_pre_arr = None if dts_pre is None else np.asarray(dts_pre)
+    dts_post_arr = None if dts_post is None else np.asarray(dts_post)
+    pval_pre, hp_pre, mk3pw_pre = _mk_pvalue(
+        y_pre_arr, mk_method=mk_method, alpha=alpha, period=period,
+        dts=dts_pre_arr, mk_kwargs=mk_kwargs,
+    )
+    pval_post, hp_post, mk3pw_post = _mk_pvalue(
+        y_post_arr, mk_method=mk_method, alpha=alpha, period=period,
+        dts=dts_post_arr, mk_kwargs=mk_kwargs,
+    )
 
+    # ── Fast path: Gilbert CI (no bootstrap) ────────────────────────────────
+    if ci_method == "gilbert":
+        # _mk_pvalue guarantees mk3pw_* are populated when we reach here
+        # (mk_method='3pw' enforced above).
+        assert mk3pw_pre is not None and mk3pw_post is not None
+        # mannkendall.mk_temp_aggr returns slope + Gilbert CI in **per-year**
+        # units by convention (independent of the ``resolution`` kwarg, which
+        # only controls tie detection). theilslopes on the raw daily arrays
+        # returns per-step slopes. Convert Gilbert half-widths from per-year
+        # to per-step using the median timestep of each arm.
+        def _step_years(dts_arr: np.ndarray) -> float:
+            dts64 = np.asarray(dts_arr, dtype="datetime64[ns]")
+            deltas = np.diff(dts64).astype("timedelta64[s]").astype(np.float64)
+            median_step_s = float(np.median(deltas))
+            return median_step_s / (365.25 * 86400.0)
+
+        step_pre = _step_years(dts_pre_arr)
+        step_post = _step_years(dts_post_arr)
+        hw_pre = 0.5 * (mk3pw_pre.slope_ci[1] - mk3pw_pre.slope_ci[0]) * step_pre
+        hw_post = 0.5 * (mk3pw_post.slope_ci[1] - mk3pw_post.slope_ci[0]) * step_post
+        # Recenter Gilbert half-widths on the raw-y Sen slope so
+        # slope_ci_pre truly brackets slope_pre. mannkendall's Sen slope is
+        # computed on the VCTFPW-whitened deseasoned residual; the two Sen
+        # estimators track each other on the daily arms this pipeline
+        # targets, but they are not identical, so we quote widths not raw
+        # bounds.
+        slope_ci_pre = (slope_pre - hw_pre, slope_pre + hw_pre)
+        slope_ci_post = (slope_post - hw_post, slope_post + hw_post)
+        hw_delta = float(np.hypot(hw_pre, hw_post))
+        delta = slope_post - slope_pre
+        delta_ci = (delta - hw_delta, delta + hw_delta)
+        # Percentage change via first-order propagation. Skip when either
+        # half-width is not finite or slope_pre is zero.
+        if slope_pre != 0 and np.isfinite(hw_pre) and np.isfinite(hw_post):
+            pct_change: float | None = float(slope_post / slope_pre - 1.0)
+            hw_pct = float(np.hypot(hw_post / slope_pre, slope_post * hw_pre / slope_pre**2))
+            pct_ci: tuple[float, float] | None = (pct_change - hw_pct, pct_change + hw_pct)
+        else:
+            pct_change = None
+            pct_ci = None
+        interp = _compute_delta_interpretation(float(delta), delta_ci, confidence_level)
+        return MBBDeltaResult(
+            slope_pre=slope_pre,
+            slope_post=slope_post,
+            slope_ci_pre=slope_ci_pre,
+            slope_ci_post=slope_ci_post,
+            delta_slope=float(delta),
+            delta_ci=delta_ci,
+            pct_rate_change=pct_change,
+            pct_ci=pct_ci,
+            pval_pre=pval_pre,
+            pval_post=pval_post,
+            n_pre=n_pre,
+            n_post=n_post,
+            method=f"gilbert(mk={mk_method}, cl={int(round(100 * confidence_level))}%)",
+            homogeneity_p_pre=hp_pre,
+            homogeneity_p_post=hp_post,
+            **interp,
+        )
+
+    # ── Moving-block bootstrap on Δ = slope_post − slope_pre ────────────────
+    bl_requested = block_length if block_length is not None else (period or 1)
+    bl = max(1, min(int(bl_requested), min(n_pre, n_post)))
     rng = np.random.default_rng(seed)
-    slopes_pre = np.empty(n_boot)
-    slopes_post = np.empty(n_boot)
-    delta = np.empty(n_boot)
-    pct = np.empty(n_boot)
+    slopes_pre_b = np.empty(n_boot)
+    slopes_post_b = np.empty(n_boot)
+    delta_b = np.empty(n_boot)
+    pct_b = np.empty(n_boot)
     x_pre = np.arange(n_pre)
     x_post = np.arange(n_post)
     iterator = tqdm(
         range(n_boot),
-        desc="bootstrap Δslope",
+        desc=f"mbb Δslope (bl={bl})",
         disable=not progress,
         leave=False,
     )
     for b in iterator:
-        idx_pre = np.sort(rng.integers(0, n_pre, n_pre))
-        idx_post = np.sort(rng.integers(0, n_post, n_post))
-        sp = float(theilslopes(y_pre[idx_pre], x_pre).slope)
-        sq = float(theilslopes(y_post[idx_post], x_post).slope)
-        slopes_pre[b] = sp
-        slopes_post[b] = sq
-        delta[b] = sq - sp
-        pct[b] = (sq / sp - 1.0) if sp != 0 else np.nan
+        idx_pre = _mbb_indices(n_pre, bl, rng)
+        idx_post = _mbb_indices(n_post, bl, rng)
+        sp = float(theilslopes(y_pre_arr[idx_pre], x_pre).slope)
+        sq = float(theilslopes(y_post_arr[idx_post], x_post).slope)
+        slopes_pre_b[b] = sp
+        slopes_post_b[b] = sq
+        delta_b[b] = sq - sp
+        pct_b[b] = (sq / sp - 1.0) if sp != 0 else np.nan
 
     lo_q, hi_q = 100 * alpha / 2, 100 * (1 - alpha / 2)
-    delta_ci = (float(np.percentile(delta, lo_q)), float(np.percentile(delta, hi_q)))
     slope_ci_pre = (
-        float(np.percentile(slopes_pre, lo_q)),
-        float(np.percentile(slopes_pre, hi_q)),
+        float(np.percentile(slopes_pre_b, lo_q)),
+        float(np.percentile(slopes_pre_b, hi_q)),
     )
     slope_ci_post = (
-        float(np.percentile(slopes_post, lo_q)),
-        float(np.percentile(slopes_post, hi_q)),
+        float(np.percentile(slopes_post_b, lo_q)),
+        float(np.percentile(slopes_post_b, hi_q)),
     )
-    finite_pct = pct[np.isfinite(pct)]
+    delta_ci = (
+        float(np.percentile(delta_b, lo_q)),
+        float(np.percentile(delta_b, hi_q)),
+    )
+    finite_pct = pct_b[np.isfinite(pct_b)]
     if finite_pct.size and slope_pre != 0:
         pct_change: float | None = float(slope_post / slope_pre - 1.0)
         pct_ci: tuple[float, float] | None = (
@@ -914,12 +1932,16 @@ def paired_slope_test_boot(
         pct_change = None
         pct_ci = None
 
-    return PairedSlopeResult(
+    delta_point = float(slope_post - slope_pre)
+    interp = _compute_delta_interpretation(
+        delta_point, delta_ci, confidence_level, delta_boot=delta_b,
+    )
+    return MBBDeltaResult(
         slope_pre=slope_pre,
         slope_post=slope_post,
         slope_ci_pre=slope_ci_pre,
         slope_ci_post=slope_ci_post,
-        delta_slope=slope_post - slope_pre,
+        delta_slope=delta_point,
         delta_ci=delta_ci,
         pct_rate_change=pct_change,
         pct_ci=pct_ci,
@@ -927,150 +1949,10 @@ def paired_slope_test_boot(
         pval_post=pval_post,
         n_pre=n_pre,
         n_post=n_post,
-        method=f"bootstrap(n={n_boot})",
+        method=f"mbb(mk={mk_method}, bl={bl}, n={n_boot})",
         homogeneity_p_pre=hp_pre,
         homogeneity_p_post=hp_post,
-    )
-
-
-def paired_slope_test_3pw(
-    dts_pre: Sequence,
-    y_pre: Sequence[float],
-    dts_post: Sequence,
-    y_post: Sequence[float],
-    period: int = 7,
-    resolution: float = 1.0,
-    confidence_level: float = 0.95,
-) -> PairedSlopeResult:
-    """Heavy-ACF pre/post pipeline using 3PW prewhitening per arm.
-
-    Deseasons each arm point-wise, calls :func:`mk_3pw` on the residual to
-    get an autocorrelation-aware Sen slope + Gilbert CI + p-value, then
-    combines the two per-arm CIs into a Δ CI via half-widths in quadrature
-    (same rule as :func:`paired_slope_test`). Runs the Van Belle-Hughes
-    homogeneity guard from :func:`seasonal_mk` on the *raw* arms in
-    parallel — the guard verdict is independent of prewhitening.
-
-    Parameters
-    ----------
-    dts_pre, dts_post : array-like of datetime
-        Timestamps for the pre / post arms.
-    y_pre, y_post : array-like of float
-        Values for the pre / post arms.
-    period : int, default 7
-        Seasonal cycle length; ``7`` for daily data with a weekly cycle.
-    resolution : float, default 1.0
-        Instrument resolution passed to ``mannkendall.mk_temp_aggr``.
-    confidence_level : float, default 0.95
-        Confidence level for the Gilbert CI on each arm.
-    """
-    y_pre_arr = np.asarray(y_pre, dtype=float)
-    y_post_arr = np.asarray(y_post, dtype=float)
-
-    resid_pre = deseason(y_pre_arr, period=period)
-    resid_post = deseason(y_post_arr, period=period)
-
-    alpha_mk = 100.0 * confidence_level
-    alpha_cl = 100.0 * confidence_level
-    pre = mk_3pw(dts_pre, resid_pre, resolution=resolution,
-                 alpha_mk=alpha_mk, alpha_cl=alpha_cl)
-    post = mk_3pw(dts_post, resid_post, resolution=resolution,
-                  alpha_mk=alpha_mk, alpha_cl=alpha_cl)
-    if pre.slope_ci is None or post.slope_ci is None:
-        raise RuntimeError("mk_3pw returned no CI; cannot form Δ CI in quadrature")
-
-    # ``mannkendall.mk_temp_aggr`` returns slopes in units per year. Convert
-    # to units per step (matches :func:`paired_slope_test`) using the median
-    # timestamp gap so the two pipelines return comparable numbers.
-    dts_all = pd.to_datetime(np.concatenate([np.asarray(dts_pre), np.asarray(dts_post)]))
-    step_seconds = float(np.median(np.diff(dts_all.values).astype("timedelta64[s]").astype(float)))
-    year_seconds = 365.25 * 86400.0
-    per_step_factor = step_seconds / year_seconds
-    slope_pre = pre.slope * per_step_factor
-    slope_post = post.slope * per_step_factor
-    ci_pre = (pre.slope_ci[0] * per_step_factor, pre.slope_ci[1] * per_step_factor)
-    ci_post = (post.slope_ci[0] * per_step_factor, post.slope_ci[1] * per_step_factor)
-
-    half_pre = 0.5 * (ci_pre[1] - ci_pre[0])
-    half_post = 0.5 * (ci_post[1] - ci_post[0])
-    half_delta = float(np.hypot(half_pre, half_post))
-    delta = float(slope_post - slope_pre)
-    delta_ci = (delta - half_delta, delta + half_delta)
-
-    if slope_pre != 0:
-        z_alpha = float(norm.ppf(0.5 * (1 + confidence_level)))
-        sd_pre = half_pre / z_alpha if z_alpha > 0 else float("nan")
-        sd_post = half_post / z_alpha if z_alpha > 0 else float("nan")
-        var_ratio = (sd_post / slope_pre) ** 2 + (slope_post * sd_pre / slope_pre ** 2) ** 2
-        half_ratio = z_alpha * float(np.sqrt(var_ratio))
-        pct_change: float | None = float(slope_post / slope_pre - 1.0)
-        pct_ci: tuple[float, float] | None = (pct_change - half_ratio, pct_change + half_ratio)
-    else:
-        pct_change = None
-        pct_ci = None
-
-    # Homogeneity guard on the raw arms — same convention as paired_slope_test.
-    alpha = 1.0 - confidence_level
-    smk_pre = seasonal_mk(y_pre_arr, period=int(period), alpha=alpha)
-    smk_post = seasonal_mk(y_post_arr, period=int(period), alpha=alpha)
-
-    return PairedSlopeResult(
-        slope_pre=float(slope_pre),
-        slope_post=float(slope_post),
-        slope_ci_pre=(float(ci_pre[0]), float(ci_pre[1])),
-        slope_ci_post=(float(ci_post[0]), float(ci_post[1])),
-        delta_slope=delta,
-        delta_ci=delta_ci,
-        pct_rate_change=pct_change,
-        pct_ci=pct_ci,
-        pval_pre=float(pre.p),
-        pval_post=float(post.p),
-        n_pre=int(pre.n),
-        n_post=int(post.n),
-        method="3pw",
-        homogeneity_p_pre=smk_pre.homogeneity_p,
-        homogeneity_p_post=smk_post.homogeneity_p,
-    )
-
-
-def paired_slope_test_ar1(
-    dts_pre: Sequence,
-    y_pre: Sequence[float],
-    dts_post: Sequence,
-    y_post: Sequence[float],
-    period: int = 7,
-    resolution: float = 1.0,
-    confidence_level: float = 0.95,
-    n_boot: int = 2000,
-    seed: int | None = 0,
-    progress: bool = True,
-) -> PairedSlopeResult:
-    """Auto-picking heavy-ACF paired slope test.
-
-    Picks :func:`paired_slope_test_3pw` when **both arms** span at least two
-    calendar years (the regime the ``mannkendall`` package was designed for)
-    and :func:`paired_slope_test_boot` otherwise. Both return the same
-    :class:`PairedSlopeResult` type so the caller code does not branch on
-    ``method``. ``progress`` is forwarded to the bootstrap branch only
-    (3PW has no inner loop worth showing).
-
-    Use this when the notebook's ACF diagnostic classifies the arms as
-    heavy-ACF but you do not want to hand-pick between prewhitening and a
-    percentile bootstrap based on whether each arm spans multiple years.
-    """
-    dts_pre_ts = pd.to_datetime(np.asarray(dts_pre))
-    dts_post_ts = pd.to_datetime(np.asarray(dts_post))
-    years_pre = {ts.year for ts in dts_pre_ts.to_pydatetime()}
-    years_post = {ts.year for ts in dts_post_ts.to_pydatetime()}
-    if len(years_pre) >= 2 and len(years_post) >= 2:
-        return paired_slope_test_3pw(
-            dts_pre, y_pre, dts_post, y_post,
-            period=period, resolution=resolution, confidence_level=confidence_level,
-        )
-    return paired_slope_test_boot(
-        y_pre, y_post,
-        confidence_level=confidence_level, freq=period,
-        n_boot=n_boot, seed=seed, progress=progress,
+        **interp,
     )
 
 
@@ -1085,11 +1967,10 @@ def per_day_delta_slopes(
     """Per-phase Δslope = slope_post − slope_pre with per-arm Sen CIs.
 
     Used as the fallback when the Van Belle-Hughes homogeneity guard fires
-    inside :func:`paired_slope_test` or :func:`paired_slope_test_3pw` — the
-    pooled Δ hides sign cancellation across phases, so we quote one Δ per
-    day-of-week. Uses :func:`sen_slope_ci` (theilslopes, iid) inside each
-    phase; treat this as a diagnostic table, not an autocorrelation-aware
-    estimate.
+    inside :func:`mk_delta_MBB` — the pooled Δ hides sign cancellation
+    across phases, so we quote one Δ per day-of-week. Uses
+    :func:`sen_slope_ci` (theilslopes, iid) inside each phase; treat this
+    as a diagnostic table, not an autocorrelation-aware estimate.
 
     Returns a DataFrame with columns
     ``phase, label, n_pre, n_post, slope_pre, slope_pre_ci_lo, slope_pre_ci_hi,
@@ -1380,8 +2261,9 @@ __all__ = [
     "TrendResult",
     "SeasonalTrendResult",
     "VbhDecomposition",
-    "PairedSlopeResult",
+    "MBBDeltaResult",
     "RegionalHomogeneityResult",
+    "AcfRegime",
     # single-series wrappers
     "mk_original",
     "mk_hamed_rao",
@@ -1393,17 +2275,22 @@ __all__ = [
     # diagnostics
     "deseason",
     "lag1_acf",
+    "tfpw_y",
+    "classify_acf_regime",
     # seasonal / partial / correlated
     "seasonal_mk",
     "vbh_chi2_decomposition",
     "correlated_seasonal_mk",
     "partial_mk",
     # paired
-    "paired_slope_test",
-    "paired_slope_test_boot",
-    "paired_slope_test_3pw",
-    "paired_slope_test_ar1",
+    "mk_delta_MBB",
     "per_day_delta_slopes",
+    "sen_fit_line",
+    "format_mk_result_line",
+    "build_pre_post_sen_figure",
+    "build_mk_figure",
+    "build_seasonal_mk_figure",
+    "intervention_summary_row",
     # batch
     "aggregate_by_period",
     "mk_by_group",

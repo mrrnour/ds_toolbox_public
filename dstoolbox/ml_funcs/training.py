@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import warnings
 from typing import Any, Iterable
 
@@ -13,11 +14,9 @@ from sklearn.pipeline import Pipeline
 
 from .inspection import print_capability_matrix
 from .scores import ml_scores
-from .performance_plots import (
-    ml_comparison_plot,
-    plot_confusion_matrix_multi,
-)
-from .classifier_report import ProbabilisticClassifierReport
+from .performance_plots import ml_comparison_plot
+
+logger = logging.getLogger(__name__)
 
 
 def ml_prediction_sub_epochs(model):
@@ -465,6 +464,16 @@ def ml_comparison(ml_models,
       return metrics_all, predictions
     return metrics_all
 
+
+# ===== imports preserved from public (needed by extras below) =====
+from .classifier_report import ProbabilisticClassifierReport
+from .performance_plots import (
+    ml_comparison_plot,
+    plot_confusion_matrix_multi,
+)
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
 
 def classifier_performance_batch(y_model,
                         map_lbls=None,

@@ -79,7 +79,13 @@ from .splits import (
     ExpandingBacktestSplit,
     HoldoutSplit,
     PanelTimeSeriesSplit,
+    backtest_split,
     time_series_split_from_config,
+)
+
+from .metric_aliases import (
+    METRIC_ALIASES,
+    map_metric_names,
 )
 
 from .mixins import (
@@ -99,6 +105,7 @@ from .forecasters import (
     SilverkiteSklearn,
     WindowedForecaster,
     available_backends,
+    build_forecaster,
 )
 
 from .ts_intervention import (
@@ -144,27 +151,40 @@ from .ts_outliers import (
     impute_seasonal_mean,
     impute_stl_recon,
     impute_time,
+    mask_anomalies,
     replace_outliers,
 )
 
 from .ts_trend import (
-    PairedSlopeResult,
+    AcfRegime,
+    DispatchArmResult,
+    DispatchBranchResult,
+    MBBDeltaResult,
     RegionalHomogeneityResult,
     SeasonalTrendResult,
     TrendResult,
+    VbhBranchResult,
+    VbhDecomposition,
+    classify_acf_regime,
+    correlated_seasonal_mk,
+    deseason,
+    dispatch_arm,
+    lag1_acf,
     mk_3pw,
     mk_hamed_rao,
     mk_original,
     mk_pw,
     mk_tfpw,
     mk_yue_wang,
-    paired_slope_test,
-    paired_slope_test_3pw,
-    paired_slope_test_ar1,
-    paired_slope_test_boot,
+    partial_mk,
+    per_day_delta_slopes,
     regional_homogeneity,
+    run_dispatch_branch,
+    run_mbb_branch,
+    run_vbh_branch,
     seasonal_mk,
     sen_slope_ci,
+    vbh_chi2_decomposition,
 )
 
 from .ts_plots import (
@@ -172,8 +192,12 @@ from .ts_plots import (
     plot_ccf,
     plot_eda_overview,
     plot_pacf,
+    plot_paired_acf,
+    plot_per_day_delta_bar,
+    plot_prewhitening_diagnostic,
     plot_seasonality_box,
     plot_series,
+    plot_vbh_per_season,
     lag_plot,
 )
 
