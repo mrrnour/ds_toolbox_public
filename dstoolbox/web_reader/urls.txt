@@ -1,0 +1,443 @@
+# folder 'statistical tests'  name='statistical tests'  level=100  count=115
+
+# A/B Test Significance in Python
+# @folder_path: a-b-test
+https://cosmiccoding.com.au/tutorials/ab_tests
+
+# The Math Behind A/B Testing with Example Python Code | by Nguyen Ngo | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/the-math-behind-a-b-testing-with-example-code-part-1-of-2-7be752e1d06f
+
+# AB_Tests_with_Python | Kaggle
+# @folder_path: a-b-test
+https://www.kaggle.com/tammyrotem/ab-tests-with-python
+
+# A/B Testing - Udacity
+# @folder_path: a-b-test
+https://classroom.udacity.com/courses/ud257/lessons/4018018619/concepts/41149386080923
+
+# Chi Square Calculator 2x2 (includes Yates correction)
+# @folder_path: a-b-test
+https://www.socscistatistics.com/tests/chisquare/default2.aspx
+
+# Evan's Awesome A/B Tools - sample size calculator, A/B test results, and more
+# @folder_path: a-b-test
+https://www.evanmiller.org/ab-testing/
+
+# A/B Testing Design & Execution. How to conduct A/B tests… | by Barış Karaman | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/a-b-testing-design-execution-6cf9e27c6559
+
+# Confidence Interval for Population Proportion basic understanding in python. | by A AKSHAY | Medium
+# @folder_path: a-b-test
+https://medium.com/@akshaysjbit/confidence-interval-for-population-proportion-basic-understanding-in-python-56b8cc5f8320
+
+# How To Calculate Sample Size For A/B Testing And A/B Test Sample Size Formula
+# @folder_path: a-b-test
+https://www.invespcro.com/blog/calculating-sample-size-for-an-ab-test/
+
+# Determining Sample Sizes for A/B Testing Using Power Analysis | by Michael Zhang | The Startup | Medium
+# @folder_path: a-b-test
+https://medium.com/swlh/determining-sample-sizes-for-a-b-testing-using-power-analysis-34719ce9e0e9
+
+# What is a Control Group and Why It's Important in Testing | CleverTap
+# @folder_path: a-b-test
+https://clevertap.com/blog/what-is-a-control-group/
+
+# Don’t Use a T-Test for A/B Testing | by Michael Berk | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/dont-use-a-t-test-for-a-b-testing-e4d2ef7ab9b6
+
+# A/B Testing - A complete guide to statistical testing | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/a-b-testing-a-complete-guide-to-statistical-testing-e3f1db140499/
+
+# All you should know about AB testing | by Andrii Shchur | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/all-you-should-know-about-ab-testing-599724c34773
+
+# Making Sense of A/B Testing: Understand Better with Hard Questions | by Aliaksandr Kazlou | Towards Data Science
+# @folder_path: a-b-test
+https://towardsdatascience.com/making-sense-of-a-b-testing-understand-better-with-hard-questions-cfc98c2937e2
+
+# The AB testing Cookbook -Part 3. This article is third in my series… | by Ibtesam Ahmed | Medium
+# @folder_path: a-b-test
+https://medium.com/@ibtesamahmex/the-ab-testing-cookbook-part-3-3af29b7f9fa7
+
+# Mann-Whitney (Wilcoxon) rank test: the null hypothesis (not about medians) - in case you needed the references | ResearchGate
+# @folder_path: a-b-test
+https://www.researchgate.net/post/Mann-Whitney_Wilcoxon_rank_test_the_null_hypothesis_not_about_medians-in_case_you_needed_the_references
+
+# stats_test
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_the-misconception-about-ranked-tests-comparing-share-7456856084343889920-Bacy/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# (32) What is A/B testing - YouTube
+# @folder_path: a-b-test
+https://www.youtube.com/watch?v=tTDmayeLbMY
+
+# A/B tests
+# @folder_path: a-b-test
+https://www.linkedin.com/feed/update/urn:li:activity:7405545650924363777/
+
+# Network interference
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-network-interference-in-ab-test-share-7459996943780491264-Ewhd/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# A/B Testing?
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-ab-testing-in-data-science-interviews-share-7461083307406069760-xOhs/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# A/B Testing
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/ishaan-jain-ij284_ab-testing-the-parts-most-teams-skip-share-7460766754131173378-n1UK/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Non-parametric
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_i-read-yeaterday-thats-why-you-should-share-7461451556740218881-B3cR/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# stats test
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_please-dont-follow-this-panel-for-interpreting-share-7459858177883271168-5Ed4/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# normality tests
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-normality-share-7294020157369192448-G3ON/?utm_source=share&utm_medium=member_android
+
+# Multiple Comparisons Problem
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-the-multiple-comparisons-problem-share-7463619959332528128-AmFo/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# t-test OLS
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/sgirish_experimentation-abtesting-cuped-share-7463737292508106752-N8II/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# 𝐑𝐄𝐆𝐔𝐋𝐀𝐑𝐈𝐙𝐀𝐓𝐈𝐎𝐍
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/harikaran-m-421datascientist_%F0%9D%90%91%F0%9D%90%84%F0%9D%90%86%F0%9D%90%94%F0%9D%90%8B%F0%9D%90%80%F0%9D%90%91%F0%9D%90%88%F0%9D%90%99%F0%9D%90%80%F0%9D%90%93%F0%9D%90%88%F0%9D%90%8E%F0%9D%90%8D-regularization-share-7463854809037627392-W2Lb/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# 𝐇𝐘𝐏𝐎𝐓𝐇𝐄𝐒𝐈𝐒 𝐓𝐄𝐒𝐓𝐈𝐍𝐆
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/harikaran-m-421datascientist_%F0%9D%90%87%F0%9D%90%98%F0%9D%90%8F%F0%9D%90%8E%F0%9D%90%93%F0%9D%90%87%F0%9D%90%84%F0%9D%90%92%F0%9D%90%88%F0%9D%90%92-%F0%9D%90%93%F0%9D%90%84%F0%9D%90%92%F0%9D%90%93%F0%9D%90%88%F0%9D%90%8D%F0%9D%90%86-hypothesis-share-7463575784608374784--Cxy/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# a/b test
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/abdullahzahid77_machinelearning-datascience-mlops-share-7465007954086354944-Ikcm/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Measure Less to Learn More: Using Fewer, Higher-quality Metrics to Capture What Matters
+# @folder_path: a-b-test
+https://discord.com/blog/measure-less-to-learn-more-using-fewer-higher-quality-metrics-to-capture-what-matters
+
+# ANOVA/ANCOVA
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_dear-aspiring-data-scientists-when-you-perform-share-7466889446831980545-lQMb/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# comparing two survival curves
+# @folder_path: a-b-test
+https://www.linkedin.com/feed/update/urn:li:groupPost:792577-7466461883798118401/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Hotest_correction
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_sequentual-multiple-testing-ugcPost-7419052966957121537-QmzX/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# som concepts
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/ashish68_datascience-abtesting-statistics-share-7466016214633615360-tsYR/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# 𝘀𝗲𝗻𝘀𝗶𝘁𝗶𝘃𝗶𝘁𝘆-𝗯𝗼𝗼𝘀𝘁𝗶𝗻𝗴 𝘁𝗲𝗰𝗵𝗻𝗶𝗾𝘂𝗲
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-interleaving-in-ab-test-interviews-share-7466156707589599233-hR0F/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# switchback experiment
+# @folder_path: a-b-test
+https://www.linkedin.com/feed/
+
+# Mann-Whitney U Test
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-the-mann-whitney-u-test-in-data-share-7468693252179820545-1see/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# non inferirority
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/shivani-galande_biostatistics-clinicaltrials-pharmaresearch-share-7468587710719455233-pu1c/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# A/B Testing in Data Science Interviews by a Google Data Scientist | DataInterview - YouTube
+# @folder_path: a-b-test
+https://www.youtube.com/watch?v=DUNk4GPZ9bw
+
+# 5 concepts of A/B testing you should know as a Data Scientist - YouTube
+# @folder_path: a-b-test
+https://www.youtube.com/watch?v=KC1nwY7YCUE
+
+# A/B Testing in Data Science Interviews by a Google Data Scientist | DataInterview - YouTube
+# @folder_path: a-b-test
+https://www.youtube.com/watch?v=DUNk4GPZ9bw&t=6s
+
+# Complete guide to hands-on A/B Testing | A/B testing in Python | All that you need to know - YouTube
+# @folder_path: a-b-test
+https://www.youtube.com/watch?v=AQC7b68H7LU
+
+# Kolmogorov-Smirnov Test
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-the-kolmogorov-smirnov-test-in-share-7470142858088513537-TfxE/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Embedding clinical importance in the frequentist hypothesis testing in randomised controlled clinical trials (RCTs)
+# @folder_path: a-b-test
+https://aolszewski.substack.com/p/embedding-clinical-importance-in
+
+# Post | LinkedIn
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/adrianolszewski_statistical-significance-is-not-the-same-share-7470130186991128577-MF7_/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Selection Bias
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/what-is-selection-bias-in-ab-test-interviews-share-7462170435477176322-X_gC/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# diagnostics plot for regrssion
+# @folder_path: a-b-test
+https://www.linkedin.com/posts/amira-badr-khalefa_biostatistics-statistics-dataanalysis-share-7471923911778267136-3Y0O/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# How to perform a test using R to see if data follows normal distribution - Cross Validated
+# @folder_path: normality
+https://stats.stackexchange.com/questions/3136/how-to-perform-a-test-using-r-to-see-if-data-follows-normal-distribution
+
+# Linear regression with correlated data | R-bloggers
+# @folder_path: normality
+https://www.r-bloggers.com/linear-regression-with-correlated-data/
+
+# r - How to interpret a QQ plot - Cross Validated
+# @folder_path: normality
+https://stats.stackexchange.com/questions/101274/how-to-interpret-a-qq-plot
+
+# ggplot2 qq plot (quantile - quantile graph) : Quick start guide - R software and data visualization - Easy Guides - Wiki - STHDA
+# @folder_path: normality
+http://www.sthda.com/english/wiki/ggplot2-qq-plot-quantile-quantile-graph-quick-start-guide-r-software-and-data-visualization
+
+# Creating plots in R using ggplot2 - part 7: histograms
+# @folder_path: normality
+http://t-redactyl.io/blog/2016/02/creating-plots-in-r-using-ggplot2-part-7-histograms.html
+
+# Plotting distributions (ggplot2)
+# @folder_path: normality
+http://www.cookbook-r.com/Graphs/Plotting_distributions_(ggplot2)/
+
+# Call by reference in R | R-bloggers
+# @folder_path: normality
+https://www.r-bloggers.com/call-by-reference-in-r/
+
+# Interpreting the normal QQ-plot - YouTube
+# @folder_path: normality
+https://www.youtube.com/watch?v=-KXy4i8awOg
+
+# 1.3.3.24. Quantile-Quantile Plot
+# @folder_path: normality
+https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm
+
+# Q–Q plot - Wikipedia
+# @folder_path: normality
+https://en.wikipedia.org/wiki/Q%E2%80%93Q_plot
+
+# How can one determine if a data set is normally distributed? - Quora
+# @folder_path: normality
+https://www.quora.com/How-can-one-determine-if-a-data-set-is-normally-distributed
+
+# normal distribution and t test
+# @folder_path: normality
+https://www.linkedin.com/posts/adrianolszewski_t-test-and-the-normal-distribution-activity-7280602953479053312-9iBk/?utm_source=share&utm_medium=member_desktop
+
+# facts about (non)normality tests.
+# @folder_path: normality
+https://www.linkedin.com/posts/adrianolszewski_key-facts-about-the-nonnormality-tests-activity-7310068109384519680-Y4ug/?utm_source=social_share_send&utm_medium=android_app&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8&utm_campaign=share_via
+
+# normal data
+# @folder_path: normality
+https://www.linkedin.com/posts/adrianolszewski_survivalanalysis-activity-7235261703444197376-aQhr/?utm_source=share&utm_medium=member_android
+
+# KRUSKAL-WALLIS
+# @folder_path: normality
+https://www.linkedin.com/posts/dr-yury-zablotski-3765b378_kruskal-wallis-in-r-in-one-line-of-code-activity-7234494319292817410-q6I4/?utm_source=share&utm_medium=member_android
+
+# normality tests
+# @folder_path: normality
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-normality-activity-7294020158572945408-HjDQ/?utm_source=share&utm_medium=member_android
+
+# (7) Post | LinkedIn
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-abtesting-activity-7252683648464809984-ShCc/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# simplicity
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/fkane_back-when-i-worked-at-amazon-during-its-adolescent-activity-7183463693181931521-IKDP/?utm_source=share&utm_medium=member_android
+
+# The ASA Statement on p-Values: Context, Process, and Purpose
+# @folder_path: p-value-prob-and-etc
+https://www.tandfonline.com/doi/epdf/10.1080/00031305.2016.1154108?needAccess=true
+
+# P_Value
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/feed/update/urn:li:activity:7041063234652536833/?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7041063234652536833%29
+
+# p_value
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/karunt_what-does-a-p-value-actually-mean-most-activity-7395090639283130368-me2q/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# meaning of p value and t value
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/feed/update/urn:li:activity:7035856918568984576/?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7035856918568984576%29
+
+# P - VALUE AND CONFIDENCE INTERVALS – FACTS AND FARCES - PMC
+# @folder_path: p-value-prob-and-etc
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4111020/#:~:text=The%20appropriate%20measure%20of%20association,not%20be%20a%20significant%20interval.
+
+# (18) Probability is not Likelihood. Find out why!!! - YouTube
+# @folder_path: p-value-prob-and-etc
+https://www.youtube.com/watch?v=pYxNSUDSFH4
+
+# A beginner's guide to interpreting odds ratios, confidence intervals and p-values - Students 4 Best Evidence
+# @folder_path: p-value-prob-and-etc
+https://s4be.cochrane.org/blog/2013/08/13/a-beginners-guide-to-interpreting-odds-ratios-confidence-intervals-and-p-values-the-nuts-and-bolts-20-minute-tutorial/#:~:text=Confidence%20interval%20(CI)&text=If%20the%20confidence%20interval%20crosses,between%20arms%20of%20the%20study.
+
+# Log_transformation
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/feed/update/urn:li:activity:6902150575056678912/
+
+# Ten common statistical mistakes to watch out for when writing or reviewing a manuscript
+# @folder_path: p-value-prob-and-etc
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6785265/
+
+# hypothesis testing - What is the meaning of p values and t values in statistical tests? - Cross Validated
+# @folder_path: p-value-prob-and-etc
+https://stats.stackexchange.com/questions/31/what-is-the-meaning-of-p-values-and-t-values-in-statistical-tests?newreg=22cdaf6d8dc34f80aca26b43d9068cc6
+
+# interpret an observed one-sided p-value
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/geoffrey-s-johnson_here-is-a-super-cool-way-to-interpret-an-activity-7192182512452825089-6bF_/?utm_source=share&utm_medium=member_android
+
+# prompot example
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/percivalphakathi_llms-machinelearning-datascience-share-7457571092665237504-vdjt/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# p-value
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/karunt_what-does-a-p-value-actually-mean-most-share-7461606397932204032--l7F/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Post | LinkedIn
+# @folder_path: p-value-prob-and-etc
+https://www.linkedin.com/posts/michael-bagalman_statistical-significance-is-the-most-over-celebrated-share-7463364071514427392-Nnwv/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# combine statistical discernibility (aka significance) with the 𝙥𝙧𝙖𝙘𝙩𝙞𝙘𝙖𝙡 𝙨𝙞𝙜𝙣𝙞𝙛𝙞𝙘𝙖𝙣𝙘𝙚
+# @folder_path: advanced
+https://www.linkedin.com/posts/adrianolszewski_how-to-combine-statistical-discernibility-activity-7304330059333459969-2IF-/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Correlation coefficients
+# @folder_path: correlations
+https://www.linkedin.com/posts/shimon-shrem-5411b51_correlation-coefficients-are-powerful-tools-activity-7310311906777473025-CA8a/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# Choosing a Sequential Testing Framework — Comparisons and Discussions | Spotify Engineering
+# @folder_path: sequential-testing
+https://engineering.atspotify.com/2023/03/choosing-sequential-testing-framework-comparisons-and-discussions
+
+# (2) Understanding Sequential Testing | LinkedIn
+# @folder_path: sequential-testing
+https://www.linkedin.com/pulse/understanding-sequential-testing-marcin-majka-cwtgf/
+
+# Uber Engineering: Sequential Testing Method in A/B Experimentation. - YouTube
+# @folder_path: sequential-testing
+https://www.youtube.com/watch?v=4rWOx5fOJbg
+
+# Confession time: Sequential testing and why machines won't replace us any time soon - YouTube
+# @folder_path: sequential-testing
+https://www.youtube.com/watch?v=jHPWq_Nmi44
+
+# Stanford Seminar: Peeking at A/B Tests - Why It Matters and What to Do About It - YouTube
+# @folder_path: sequential-testing
+https://www.youtube.com/watch?v=AJX4W3MwKzU&t=201s
+
+# Easy as ABC: A Quick Introduction to Bayesian A/B Testing in Python (Will Barker) - YouTube
+# @folder_path: sequential-testing
+https://www.youtube.com/watch?v=nRLI_KbvZTQ
+
+# Stanford CS547 - Human-Computer Interaction Seminar Series - YouTube
+# @folder_path: sequential-testing
+https://www.youtube.com/playlist?list=PLoROMvodv4rMyupDF2O00r19JsmolyXdD
+
+# Comparison of the statistical power of sequential tests: SPRT, AGILE, and Always Valid Inference | Analytics-Toolkit.com
+# @folder_path: sequential-testing
+https://blog.analytics-toolkit.com/2022/comparison-of-the-statistical-power-of-sequential-tests/
+
+# What is sequential testing? (with examples)
+# @folder_path: sequential-testing
+https://www.geteppo.com/blog/sequential-testing
+
+# Experimentation | Python | Data Science | Advanced AB Testing | Medium
+# @folder_path: sequential-testing
+https://medium.com/@denim.bluu/experimentation-analysis-sequential-test-designs-88b0ac41a9f5
+
+# What is Sequential Testing (sequential monitoring)? | Glossary of online controlled experiments. | Analytics ToolKit
+# @folder_path: sequential-testing
+https://www.analytics-toolkit.com/glossary/sequential-testing/#:~:text=Sequential%20testing%20is%20the%20practice,error%20rate%20of%20the%20procedure.%29
+
+# Stop A/B Tests Early: The Complete Guide to Sequential Testing (mSPRT) in Python | HackerNoon
+# @folder_path: sequential-testing
+https://hackernoon.com/stop-ab-tests-early-the-complete-guide-to-sequential-testing-msprt-in-python
+
+# Sequential Probability Ratio Test: SPRT and Mixture SPRT (mSPRT) | by Carey Chou | Medium
+# @folder_path: sequential-testing
+https://medium.com/@carey.chou/sequential-probability-ratio-test-sprt-and-mixture-sprt-msprt-d2a6ef85ff77
+
+# Enterprise-grade A/B testing software — Dynamic Yield
+# @folder_path: sequential-testing
+https://www.dynamicyield.com/optimization/?gad_campaignid=21186326794&gad_source=1&gbraid=0AAAAADohSP9D5vautJArbnwitrsVBkI37&gclid=Cj0KCQjwlqTRBhCBARIsANrkrxj83-QXNhqYCm__maezRDjkmJiiHT7THIUjNuu7JSbYanI-1FTf8kYaAt5NEALw_wcB&utm_campaign=ab_testing_website_experimentation&utm_medium=paidsearch&utm_source=google&utm_term=nam
+
+# How to Compare Two or More Distributions | by Matteo Courthoud | Towards Data Science
+https://towardsdatascience.com/how-to-compare-two-or-more-distributions-9b06ee4d30bf#:~:text=Histogram,of%20observations%20within%20each%20bin.
+
+# (7) Post | LinkedIn
+https://www.linkedin.com/posts/adrianolszewski_a-few-statistical-tips-that-may-be-useful-activity-7289619667818569728-XDWa/?utm_source=share&utm_medium=member_android
+
+# non_parametric
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-research-activity-7260992032452603905-f207/?utm_source=share&utm_medium=member_android
+
+# (6) Activity | Adrian Olszewski | LinkedIn
+https://www.linkedin.com/in/adrianolszewski/recent-activity/all/
+
+# statistical tests
+https://www.linkedin.com/posts/adrianolszewski_a-few-topics-in-statistics-that-may-interest-activity-7285702689773015040-nw9l/?utm_source=share&utm_medium=member_desktop
+
+# non-parametric statistical tests
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-research-activity-7260992032452603905-f207/?utm_source=share&utm_medium=member_desktop
+
+# non_parameteric_test
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-activity-7264734123406098432-7qCy/?utm_source=share&utm_medium=member_desktop
+
+# median
+https://www.linkedin.com/feed/update/urn:li:activity:7275181799473926144/?commentUrn=urn%3Ali%3Acomment%3A%28activity%3A7275181799473926144%2C7275274746139693056%29&dashCommentUrn=urn%3Ali%3Afsd_comment%3A%287275274746139693056%2Curn%3Ali%3Aactivity%3A7275181799473926144%29
+
+# z-test
+https://www.linkedin.com/posts/nsinghphd_statbits-statistics-datascience-activity-7259961494837043200-agMq/?utm_source=share&utm_medium=member_android
+
+# Anova
+https://www.linkedin.com/feed/update/urn:li:activity:7052176867046420480/?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7052176867046420480%29
+
+# ANCOVA
+https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-activity-7315217107879649281-dJl5/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# ANCOVA2
+https://www.linkedin.com/posts/adrianolszewski_anova-statistics-datascience-activity-7315635778657644545-GKUu/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+
+# null hypothesis interpretation
+https://www.linkedin.com/posts/adrianolszewski_data-compatible-with-the-null-hypothesis-activity-7246135125707509760-B9r2/?utm_source=share&utm_medium=member_android
+
+# Central Limit Theorem
+https://www.linkedin.com/posts/adrianolszewski_the-central-limit-theorem-7-important-facts-activity-7272984605299793921-o-pQ/?utm_source=share&utm_medium=member_android
+
+# Size Calculations
+https://www.linkedin.com/posts/robert-rachford_sample-size-calculations-are-a-critical-component-activity-7223643456466739200-7iKH/?utm_source=share&utm_medium=member_android
+
+# How do you address non-normality in your data when conducting a hypothesis test?
+https://www.linkedin.com/advice/1/how-do-you-address-non-normality-your-data-when-conducting-ei1sf?contributionUrn=urn%3Ali%3Acomment%3A%28articleSegment%3A%28urn%3Ali%3AlinkedInArticle%3A7191149526005510145%2C7191149527737741313%29%2C7191442636644171776%29&trk=cbyn
+
+# link to good ref
+https://www.linkedin.com/posts/adrianolszewski_%F0%9D%99%8D%F0%9D%99%9A%F0%9D%99%96%F0%9D%99%99%F0%9D%99%AE-%F0%9D%99%A9%F0%9D%99%A4-%F0%9D%99%9A%F0%9D%99%AD%F0%9D%99%A5%F0%9D%99%A1%F0%9D%99%A4%F0%9D%99%A7%F0%9D%99%9A-%F0%9D%99%96-%F0%9D%99%9B%F0%9D%99%9A%F0%9D%99%AC-activity-7291528394381438976-Tr07/?utm_source=share&utm_medium=member_android
+
+# Why is transforming the response in regression analysis and hypothesis testing so dangerous? ☠️
+https://www.linkedin.com/pulse/why-transforming-response-regression-analysis-testing-olszewski/?lipi=urn%3Ali%3Apage%3Ad_flagship3_feed%3BAkEJDBsmRAGoVRY0viS8SA%3D%3D

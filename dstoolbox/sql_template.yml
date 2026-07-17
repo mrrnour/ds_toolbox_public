@@ -1,0 +1,15 @@
+template1:
+  db:  azure_synapse
+  query: >+
+    (SELECT *                      
+    FROM xxx
+    ) query
+
+template2:
+  db:  deltaTable
+  query: >+
+    select *
+    from xxx
+    where time between 'start___date'
+      and 'end___date'
+

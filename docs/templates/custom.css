@@ -1,0 +1,39 @@
+/*! dstoolbox custom pdoc overrides */
+
+/* Shrink module title and remove the "look-like-a-link" affordance on
+ * the parent-package breadcrumb; the sidebar already handles nav. */
+.pdoc h1.modulename,
+.pdoc section.module-info h1.modulename {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0.4rem 0 0.8rem;
+    padding: 0;
+    line-height: 1.2;
+}
+
+.pdoc h1.modulename a,
+.pdoc h1.modulename a:hover {
+    color: var(--text);
+    text-decoration: none;
+    pointer-events: none;
+    cursor: default;
+    font-weight: 600;
+}
+
+/* Sidebar submodule list: expanded by default; clicking any entry
+ * navigates as usual. Slightly denser so the whole list is visible. */
+nav.pdoc h2 {
+    font-size: 1rem;
+    margin-top: 1.25rem;
+}
+
+nav.pdoc ul.memberlist li a {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+}
+
+/* Keep the logo compact so it doesn't dominate the sidebar. */
+nav.pdoc .logo {
+    max-height: 18vh;
+    margin-bottom: 0.75rem;
+}

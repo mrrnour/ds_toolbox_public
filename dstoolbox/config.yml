@@ -1,0 +1,69 @@
+# =============================================================================
+# dstoolbox configuration
+# =============================================================================
+# Single namespace `data_sources:`. Each entry declares `kind` (what world it
+# talks to) and `auth` (how to resolve the secret). The seam is
+# `dstoolbox.io_funcs.data_sources.get(target_id)`.
+# See CONTEXT.md and docs/adr/0001-data-sources-seam.md.
+# =============================================================================
+
+data_sources:
+
+  # ----- on-prem MSSQL with Windows trusted auth -----
+  # prod_sql:
+  #   kind: mssql
+  #   auth: windows_trusted
+  #   db_server: prod-sql-server.company.com
+  #   database: ProductionDB         # optional
+  #   trust_server_certificate: true # default true
+
+  # ----- Azure Synapse with Key Vault password -----
+  # azure_synapse:
+  #   kind: synapse
+  #   auth: azure_keyvault
+  #   key_vault: my-key-vault
+  #   secret: synapse-password
+  #   hostname: mysynapse.sql.azuresynapse.net
+  #   database: warehouse
+  #   port: 1433
+  #   username: svc_user
+  #   # driver:      com.microsoft.sqlserver.jdbc.SQLServerDriver   # optional
+  #   # driver_odbc: "{ODBC Driver 17 for SQL Server}"              # optional
+
+  # ----- Azure Blob storage with Key Vault account key -----
+  # example_blob:
+  #   kind: blob
+  #   auth: azure_keyvault
+  #   key_vault: kv-example
+  #   secret: blob-account-key
+  #   storage_account: sadatascienceexample
+
+  # ----- ADLS Gen2 -----
+  # data_lake:
+  #   kind: adls
+  #   auth: azure_keyvault
+  #   key_vault: kv-data
+  #   secret: adls-key
+  #   storage_account: mylake01
+
+  # ----- PI Web API with OAuth client_credentials grant -----
+  # pi_webapi:
+  #   kind: pi
+  #   auth: azure_keyvault
+  #   key_vault: kv-pi
+  #   secret: pi-client-secret
+  #   url: https://pi.example.com/oauth/token
+  #   grant_type: client_credentials
+  #   client_id: my-client-id
+  #   scope: pi.read
+
+  # ----- PostgreSQL with inline password -----
+  # local_pg:
+  #   kind: postgres
+  #   auth: inline_password
+  #   host: localhost
+  #   port: 5432
+  #   user: alice
+  #   password: changeme
+  #   database: appdb
+  #   # sslmode: require   # optional

@@ -1,0 +1,81 @@
+# project_webreader.yaml
+# Run: python render.py project_webreader.yaml
+
+app:
+  description: "reads a text file of URLs, crawls or scrapes each website, saves raw HTML, then converts to clean Markdown files"
+  constraints: "Step 1 (crawl/scrape) requires network; Step 2 (convert) is fully offline; public sites only — no authentication"
+
+orchestrator: none
+project_type: CLI
+scaffold: full
+tdd: true
+
+pipeline:
+  - crawl.py
+  - convert.py
+
+steps:
+  crawl.py:
+    description: "fetch HTML content from input URLs; --mode scrape fetches listed URLs only; --mode crawl follows links recursively from each seed URL"
+    input: urls.txt
+    input_type: file
+    output: crawling_summary.jsonl
+    output_type: file
+    format: "JSONL — one record per fetched page: {url, html_path, depth, status_code, content_length, scraped_at, error}"
+    flags:
+      - "--mode (choices: scrape, crawl; default: scrape) — scrape=fetch only the listed URLs; crawl=follow all in-page links recursively from each seed URL"
+      - "--max-depth INT (default: 3) — maximum link-follow depth; ignored in scrape mode"
+      - "--max-workers INT (default: 4) — number of parallel download threads"
+      - "--timeout INT (default: 30) — per-request timeout in seconds"
+      - "--same-domain-only (flag; default: enabled) — when crawling, restrict discovered links to the seed URL's domain"
+      - "--html-dir PATH (default: data/html) — directory where raw .html files are saved"
+    post_processing: "on any HTTP error or connection timeout, halt immediately and print the failing URL, HTTP status code, and error message; skip URLs that return empty body; write one .html file per page to --html-dir/<url_slug>.html"
+    setup: |
+      Refactor WebCrawler_Processor and WebScraper_Processor from
+      /home/reza/codes/works/05_APS/RAG/src/rag_funcs.py as the base:
+      - keep BFS link-following logic and ThreadPoolExecutor approach
+      - remove IPython, NTLM/BASIC auth, docling, langchain, and DB imports — public sites only
+      - remove multi-paragraph docstrings; keep only non-obvious inline comments
+      - auth_type is always 'none'; credentials dict is always empty
+      - replace class-level state mutation with explicit return values where possible
+    sink: false
+
+  convert.py:
+    description: "convert raw HTML files (listed in crawling_summary.jsonl) to clean Markdown .md files using BeautifulSoup + markdownify"
+    input: crawling_summary.jsonl
+    input_type: file
+    output: conversion_summary.jsonl
+    output_type: file
+    format: "JSONL — one record per converted file: {url, md_path, char_count, converted_at, skipped, skip_reason}"
+    flags:
+      - "--html-dir PATH (default: data/html) — must match --html-dir from crawl.py"
+      - "--output-dir PATH (default: data/markdown) — directory where .md files are saved"
+      - "--min-length INT (default: 200) — skip HTML files where extracted text is shorter than N characters"
+    post_processing: |
+      Strip boilerplate before converting: remove <script>, <style>, <nav>, <header>, <footer>, <aside> tags.
+      Preserve: headings (h1-h4), paragraphs, ordered/unordered lists, links, tables, code blocks.
+      Prepend YAML frontmatter to each .md file:
+        ---
+        url: <original_url>
+        scraped_at: <ISO timestamp>
+        depth: <crawl_depth>
+        ---
+      Pages below --min-length are written to conversion_summary with skipped=true; do not halt.
+    setup: ""
+    sink: true
+
+libraries: [requests, beautifulsoup4, markdownify, tqdm]
+
+env_vars: []
+
+params:
+  input_var: URLS_PATH
+  settings:
+    - name: HTML_DIR
+      default: "data/html"
+    - name: MARKDOWN_DIR
+      default: "data/markdown"
+    - name: MAX_WORKERS
+      default: "4"
+    - name: REQUEST_TIMEOUT
+      default: "30"

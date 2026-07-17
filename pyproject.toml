@@ -1,0 +1,218 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dstoolbox"
+version = "0.4.0"
+description = "Data-science utilities: I/O (Azure/MSSQL/Synapse/Delta/PI), ML training/scoring, NLP/LLM tagging, RAG pipelines, Spark ETL, SPC, plotting."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Mohammadreza Nourzadeh" }]
+keywords = ["data-science", "machine-learning", "azure", "spark", "rag"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+
+# Base install keeps SDK-heavy deps out; use extras for platform-specific stacks.
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scipy>=1.10",
+    "scikit-learn>=1.2",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "plotly>=5.13",
+    "pyyaml>=6.0",
+    "tqdm>=4.65",
+]
+
+[project.optional-dependencies]
+azure = [
+    "azure-core>=1.26",
+    "azure-storage-blob>=12.16",
+    "azure-identity>=1.13",
+    "azure-keyvault-secrets>=4.7",
+]
+mssql = [
+    "pyodbc>=4.0.39",
+    "sqlalchemy>=2.0",
+]
+spark = [
+    "pyspark>=3.4",
+]
+rag = [
+    "docling>=1.0",
+    "langchain>=0.1",
+    "langchain-chroma>=0.1",
+    "langchain-community>=0.0.30",
+    "langchain-core>=0.1",
+    "langchain-huggingface>=0.0.3",
+    "langchain-milvus>=0.1",
+    "beautifulsoup4>=4.12",
+    "requests>=2.31",
+]
+webreader = [
+    "beautifulsoup4>=4.12",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+    "markdownify>=0.11",
+    "pypdf>=4.0",
+    "requests-ntlm>=1.2",
+    "tqdm>=4.65",
+    "docling>=1.0",
+]
+# Optional stealth backend (only imported when --fetcher stealthy is passed).
+webreader-stealth = [
+    "dstoolbox[webreader]",
+    "scrapling>=0.4",
+    "curl_cffi",
+    "patchright",
+    "msgspec",
+    "camoufox",
+]
+nlp = [
+    "spacy>=3.5",
+    "sentence-transformers>=2.2",
+]
+pi = [
+    "requests>=2.31",
+    "requests-ntlm>=1.2",
+]
+ml = [
+    "xgboost>=1.7",
+    "lightgbm>=3.3",
+    "optuna>=3.3",
+    "shap>=0.42",
+    "hyperopt>=0.2.7",
+    "researchpy>=0.3",
+    "statsmodels>=0.14",
+]
+dev = [
+    "pre-commit>=3.5",
+    "ruff>=0.4",
+    "black>=24.0",
+    "mypy>=1.8",
+    "types-PyYAML",
+    "types-requests",
+]
+test = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.11",
+]
+docs = [
+    "pdoc>=15",
+    "dstoolbox[all]",
+]
+all = [
+    "dstoolbox[azure,mssql,spark,rag,webreader,nlp,pi,ml]",
+]
+
+
+[tool.setuptools.packages.find]
+include = ["dstoolbox*"]
+exclude = ["tests*", "dstoolbox.web_reader.tests*"]
+
+[tool.setuptools.package-data]
+"dstoolbox" = ["config.yml", "sql_template.yml", "*.yml"]
+"dstoolbox.web_reader" = ["project_webreader.yaml", ".env.example", "urls.txt"]
+
+[project.scripts]
+# web_reader CLIs — previously invoked as `python scraper.py` from inside the
+# folder; now installable console entry points.
+webreader-scrape = "dstoolbox.web_reader.scraper:main"
+webreader-harvest = "dstoolbox.web_reader.harvest:main"
+webreader-convert = "dstoolbox.web_reader.convert:main"
+webreader-pipeline = "dstoolbox.web_reader.run_pipeline:main"
+
+# ---------------------------------------------------------------------------
+# Tooling
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = [
+    "docs",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "B",         # flake8-bugbear
+    "UP",        # pyupgrade
+    "S",         # flake8-bandit (security)
+    "PL",        # pylint
+    "SIM",       # flake8-simplify
+]
+ignore = [
+    "PLR0913",   # too many arguments
+    "PLR2004",   # magic value used in comparison
+    "PLR0915",   # too many statements
+    "PLR0912",   # too many branches
+    "PLR0911",   # too many return statements
+    "S101",      # assert used (fine in tests / preconditions)
+    "S301",      # pickle usage (needed in some ML flows)
+    "S608",      # possible SQL injection (SQL builders are internal)
+    "E501",      # line-too-long (formatter handles)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S", "PL"]
+"dstoolbox/web_reader/**/*.py" = ["S603", "S607"]  # subprocess usage is intentional
+"**/__init__.py" = ["F401", "F403"]                # re-exports
+
+[tool.ruff.lint.isort]
+known-first-party = ["dstoolbox"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = false
+# Start strict on the seam module; expand coverage over time.
+files = ["dstoolbox/utils", "dstoolbox/io_funcs/data_sources.py", "dstoolbox/io_funcs/exceptions.py"]
+
+[[tool.mypy.overrides]]
+module = "dstoolbox.utils.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning:dstoolbox.utils.logging_utils",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["dstoolbox"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
