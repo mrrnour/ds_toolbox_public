@@ -228,6 +228,8 @@ def ml_scores(y_model, scores_names,
     return scores
 
 
+# ===== public-only extensions (preserved on vendor merge) =====
+
 def ml_scores_crossvalidate(**kwargs):
     """
     Perform cross-validation on a given estimator and return the results as a DataFrame.

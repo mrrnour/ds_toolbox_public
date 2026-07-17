@@ -38,7 +38,8 @@ cheap imputer first (``linear`` or ``seasonal_mean``) or call
 
 from __future__ import annotations
 
-from typing import Literal
+from collections.abc import Sequence
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -50,12 +51,6 @@ ImputeMethod = Literal["linear", "time", "rolling_median", "seasonal_mean", "ffi
 # ---------------------------------------------------------------------------
 # Detectors
 # ---------------------------------------------------------------------------
-
-def _as_series(values, index=None) -> pd.Series:
-    if isinstance(values, pd.Series):
-        return values.astype(float)
-    return pd.Series(np.asarray(values, dtype=float), index=index)
-
 
 def detect_zscore(s: pd.Series, k: float = 3.0) -> pd.Series:
     """Global z-score: ``|x - mean| / std > k``. Non-robust (mean/std are pulled by the outliers themselves)."""
@@ -261,3 +256,69 @@ def replace_outliers(
     out[value_col] = clean.values
     mask_aligned = pd.Series(mask.values, index=out.index, name="is_outlier")
     return out, mask_aligned
+
+
+# ---------------------------------------------------------------------------
+# Manual window masking (known-bad periods)
+# ---------------------------------------------------------------------------
+
+def _window_bounds(window: Any) -> tuple[Any, Any]:
+    """Return ``(start, end)`` from either an object with ``.start``/``.end`` or a 2-tuple."""
+    if hasattr(window, "start") and hasattr(window, "end"):
+        return window.start, window.end
+    start, end = window
+    return start, end
+
+
+def mask_anomalies(
+    df: pd.DataFrame,
+    date_col: str,
+    value_col: str,
+    anomalies: Sequence[Any],
+    *,
+    fill: ImputeMethod | None = None,
+    fill_kwargs: dict | None = None,
+) -> pd.DataFrame:
+    """Return a copy of ``df`` with ``value_col`` set to NaN inside each anomaly window.
+
+    Each entry in ``anomalies`` is either a 2-tuple ``(start, end)`` or any object
+    exposing ``.start`` / ``.end`` attributes (e.g. a pydantic ``AnomalyWindow``
+    model). Bounds are inclusive on both ends.
+
+    When ``fill`` is ``None`` (default), the masked rows stay NaN. NaN-intolerant
+    forecasters (Greykite, Darts, sklearn-lag) will reject the frame; pass one of
+    the imputer names from :data:`ImputeMethod` to bridge the gap in the same call:
+
+    - ``"linear"`` / ``"time"`` — pandas interpolation (``"time"`` requires a
+      ``DatetimeIndex``, which this function builds internally).
+    - ``"ffill_bfill"`` — last-observation-carried-forward then back-fill.
+    - ``"rolling_median"`` / ``"seasonal_mean"`` / ``"stl_recon"`` — dispatched
+      through :func:`impute_outliers`; forward extra arguments via ``fill_kwargs``
+      (e.g. ``fill_kwargs={"season_length": 7}``).
+
+    Mask-only is the right choice if the downstream model tolerates NaN
+    (``auto_arima``, ``mean_baseline``); use ``fill="linear"`` for a neutral
+    bridge that keeps every forecaster happy.
+    """
+    if not anomalies:
+        return df
+    out = df.copy()
+    dates = pd.to_datetime(out[date_col])
+    mask = pd.Series(False, index=out.index)
+    for window in anomalies:
+        start, end = _window_bounds(window)
+        mask |= (dates >= pd.Timestamp(start)) & (dates <= pd.Timestamp(end))
+    out.loc[mask, value_col] = float("nan")
+    if fill is None or not mask.any():
+        return out
+
+    idx = pd.DatetimeIndex(dates.to_numpy())
+    s = pd.Series(
+        pd.to_numeric(out[value_col], errors="coerce").to_numpy(),
+        index=idx,
+        name=value_col,
+    )
+    mask_aligned = pd.Series(mask.to_numpy(), index=idx)
+    filled = impute_outliers(s, mask_aligned, method=fill, **(fill_kwargs or {}))
+    out[value_col] = filled.to_numpy()
+    return out

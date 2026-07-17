@@ -3,10 +3,9 @@
 All adapters expose the standard sklearn surface ``fit(X, y) / predict(X)`` so
 they plug into :func:`dstoolbox.ml_funcs.ml_comparison` alongside plain
 regressors. Each adapter additionally requires ``X`` to contain a date column
-(``date_col=``); pure regressors should drop it via
-:class:`~dstoolbox.ml_funcs.forecasters._base.DropColumns`.
+(``date_col=``).
 
-Light adapters (no heavy deps): :class:`SeasonalNaive`, :class:`LagRegressor`.
+Light adapters (no heavy deps): :class:`MeanBaseline`, :class:`SeasonalNaive`.
 
 Heavy adapters (optional deps loaded lazily — import them only if the
 underlying backend is installed):
@@ -22,22 +21,17 @@ its underlying module is touched.
 
 from __future__ import annotations
 
-from ._base import DropColumns
-
 # Light adapters — always importable.
 from .naive import MeanBaseline, SeasonalNaive
-from .sklearn_lag import LagRegressor
 from .windowed import WindowedForecaster
 
 # Heavy adapters — wrap in try/except so a missing backend doesn't break the
 # package. The adapter classes themselves still import fine because each
 # uses :func:`optional_import` for its backend.
 __all__ = [
-    "DropColumns",
     "MeanBaseline",
     "SeasonalNaive",
     "WindowedForecaster",
-    "LagRegressor",
     "AutoArimaSklearn",
     "SilverkiteSklearn",
     "DartsThetaSklearn",
@@ -96,3 +90,12 @@ def available_backends() -> dict[str, bool]:
         "DartsThetaSklearn": _has("darts"),
         "DartsNBEATSSklearn": _has("darts"),
     }
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
+
+from ._base import DropColumns, align_forecast  # noqa: E402,F401
+from .sklearn_lag import LagRegressor  # noqa: E402,F401
+from .factory import build_forecaster  # noqa: E402,F401
+
+__all__ += ["DropColumns", "align_forecast", "LagRegressor", "build_forecaster"]

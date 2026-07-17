@@ -1,21 +1,55 @@
 """Plotly figures for intervention / synthetic-control analysis.
 
 Generic counterparts to the project-specific plots that previously lived in
-``synthetic_control/src/plotting.py``. All take an :class:`InterventionResult`
-(or a dict of them) and explicit ``date_col`` / ``value_col`` / ``event_date``
-kwargs — no project ``ExperimentConfig`` dependency.
+``synthetic_control/src/plotting.py``. Takes the ``post_preds`` frame produced
+by :func:`dstoolbox.ml_funcs.ts_intervention.effect_from_preds` — no project
+``ExperimentConfig`` dependency.
 """
 
 from __future__ import annotations
 
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
+
+def plot_cumulative_effect_from_preds(
+    post_preds: pd.DataFrame,
+    *,
+    date_col: str = "ts",
+    model_col: str = "model",
+    effect_col: str = "effect",
+) -> go.Figure:
+    """Cumulative observed-minus-forecast lift, one line per model.
+
+    ``post_preds`` is the frame returned by
+    :func:`dstoolbox.ml_funcs.ts_intervention.effect_from_preds` — the
+    post-window rows with an ``effect`` column already computed.
+    """
+    fig = go.Figure()
+    for name, g in post_preds.sort_values(date_col).groupby(model_col):
+        fig.add_trace(go.Scatter(
+            x=g[date_col], y=g[effect_col].cumsum(), mode="lines", name=name,
+        ))
+    fig.add_hline(y=0, line_dash="dot", line_color="grey")
+    fig.update_layout(
+        title="Cumulative effect (observed − forecast)",
+        xaxis_title=date_col,
+        yaxis_title="cumulative lift",
+    )
+    return fig
+
+
+# ===== imports preserved from public (needed by extras below) =====
 from .ts_intervention import InterventionResult
 from .ts_plots import plot_acf
+from plotly.subplots import make_subplots
+
+
+# ===== public-only extensions (preserved on vendor merge) =====
 
 _PI_FILL = "rgba(111,67,214,0.20)"
+
+
 _PI_LINE = "rgba(111,67,214,0.0)"
 
 
@@ -147,35 +181,6 @@ def plot_cumulative_effect(results: dict[str, InterventionResult]) -> go.Figure:
     fig.update_layout(
         title="Cumulative effect (observed − forecast)",
         xaxis_title="ts",
-        yaxis_title="cumulative lift",
-    )
-    return fig
-
-
-def plot_cumulative_effect_from_preds(
-    post_preds: pd.DataFrame,
-    *,
-    date_col: str = "ts",
-    model_col: str = "model",
-    effect_col: str = "effect",
-) -> go.Figure:
-    """Cumulative observed-minus-forecast lift, one line per model.
-
-    Preds-frame counterpart to :func:`plot_cumulative_effect` for the
-    ``ml_comparison`` + 1-fold ``HoldoutSplit`` workflow. ``post_preds`` is
-    the frame returned by
-    :func:`dsToolbox.ml_funcs.ts_intervention.effect_from_preds` — the
-    post-window rows with an ``effect`` column already computed.
-    """
-    fig = go.Figure()
-    for name, g in post_preds.sort_values(date_col).groupby(model_col):
-        fig.add_trace(go.Scatter(
-            x=g[date_col], y=g[effect_col].cumsum(), mode="lines", name=name,
-        ))
-    fig.add_hline(y=0, line_dash="dot", line_color="grey")
-    fig.update_layout(
-        title="Cumulative effect (observed − forecast)",
-        xaxis_title=date_col,
         yaxis_title="cumulative lift",
     )
     return fig
