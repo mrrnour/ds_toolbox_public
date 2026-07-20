@@ -1131,7 +1131,7 @@ def mk_power_curve_figure(
     *,
     alpha: float = 0.05,
     n_range: tuple[int, int] = (5, 400),
-    sample_ns: Sequence[int] = (20, 30, 50, 75, 100, 150, 200, 300, 400),
+    sample_ns: Sequence[int] = (50, 100, 200, 400),
     arm_label: str = "post",
 ):
     """One-picture explanation of MK power vs sample size at fixed ``tau``.
@@ -1139,10 +1139,14 @@ def mk_power_curve_figure(
     Runs :func:`mk_power_curve` on ``y``, then renders the closed-form
     MK ``p(n)`` curve with:
 
-    * markers at ``sample_ns`` labelled with ``n`` and ``p``,
+    * bare dots at ``sample_ns`` (no text labels),
     * a red dashed line at ``p = alpha``,
-    * a red ✕ at the observed ``(n_obs, p_obs)`` ("you are here"),
-    * a green ★ at ``n_needed`` when the curve crosses ``alpha``.
+    * a red ✕ at ``(n_obs, p_obs)`` labelled "you are here",
+    * a green ★ at ``n_needed`` labelled with ``(n, α)`` when the curve
+      crosses ``alpha``.
+
+    Only the two highlight points (``n_obs`` and ``n_needed``) carry
+    text annotations to keep the plot readable.
 
     Useful for stakeholder-facing "why isn't this p-value < 0.05?"
     conversations: the plot makes the ``p \\propto 1/\\sqrt{n}`` scaling
@@ -1162,43 +1166,45 @@ def mk_power_curve_figure(
 
     curve = mk_power_curve(y, alpha=alpha, n_range=n_range)
 
-    # Labelled sample markers — always include n_obs + n_needed. Alternate
-    # label positions so text blocks don't overlap at small n.
+    # Reference markers on the curve (no text labels) — only n_obs and
+    # n_needed get annotated below, everything else is a bare dot.
     n_min, n_max = int(n_range[0]), int(n_range[1])
-    candidate = list(sample_ns) + [curve.n_obs]
+    highlight_ns = {int(curve.n_obs)}
     if curve.n_needed is not None:
-        candidate.append(curve.n_needed)
-    marker_ns = sorted({int(n) for n in candidate if n_min <= n <= n_max})
+        highlight_ns.add(int(curve.n_needed))
+    marker_ns = sorted({int(n) for n in sample_ns if n_min <= n <= n_max}
+                       - highlight_ns)
     marker_ps = [mk_asymptotic_pvalue(curve.tau_obs, n) for n in marker_ns]
-    text_pos = ["top center" if i % 2 == 0 else "bottom center"
-                for i in range(len(marker_ns))]
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=curve.n_grid, y=curve.p_grid, mode="lines",
-        name=f"MK p at τ = {curve.tau_obs:+.3f}",
-        line=dict(color="#1f77b4", width=3),
+        name=f"MK p(n) at fixed τ = {curve.tau_obs:+.3f}",
+        line=dict(color="#1f77b4", width=2),
     ))
     fig.add_trace(go.Scatter(
-        x=marker_ns, y=marker_ps, mode="markers+text",
-        marker=dict(color="#1f77b4", size=8, symbol="circle"),
-        text=[f"n={n}<br>p={p:.3f}" for n, p in zip(marker_ns, marker_ps)],
-        textposition=text_pos, textfont=dict(size=10),
+        x=marker_ns, y=marker_ps, mode="markers",
+        marker=dict(color="#1f77b4", size=7, symbol="circle"),
         name="sample n → p", showlegend=False,
     ))
     fig.add_hline(
         y=alpha, line=dict(color="#d62728", dash="dash"),
         annotation_text=f"α = {alpha:g}", annotation_position="top right",
+        annotation_font_size=10,
     )
     fig.add_trace(go.Scatter(
-        x=[curve.n_obs], y=[curve.p_obs], mode="markers",
-        marker=dict(color="#d62728", size=16, symbol="x"),
+        x=[curve.n_obs], y=[curve.p_obs], mode="markers+text",
+        marker=dict(color="#d62728", size=13, symbol="x"),
+        text=[f"n={curve.n_obs}<br>p={curve.p_obs:.3f}"],
+        textposition="top right", textfont=dict(size=10, color="#d62728"),
         name=f"you are here (n={curve.n_obs}, p={curve.p_obs:.3f})",
     ))
     if curve.n_needed is not None:
         fig.add_trace(go.Scatter(
-            x=[curve.n_needed], y=[alpha], mode="markers",
-            marker=dict(color="#2ca02c", size=16, symbol="star"),
+            x=[curve.n_needed], y=[alpha], mode="markers+text",
+            marker=dict(color="#2ca02c", size=13, symbol="star"),
+            text=[f"n={curve.n_needed}<br>p={alpha:g}"],
+            textposition="top right", textfont=dict(size=10, color="#2ca02c"),
             name=f"n needed to reject α={alpha:g} (n≈{curve.n_needed})",
         ))
 
@@ -1206,17 +1212,195 @@ def mk_power_curve_figure(
     y_top = min(1.0, max(0.5, p_max_finite * 1.05))
     need_txt = f"need ~{curve.n_needed} points." if curve.n_needed else "grid did not cross α."
     fig.update_layout(
-        title=(
-            f"{arm_label}-arm MK power curve  |  observed τ = {curve.tau_obs:+.3f}<br>"
-            f"<sub>fix τ, sweep n → p-value falls as √n. "
-            f"At n = {curve.n_obs} we cannot reject H₀; {need_txt}</sub>"
+        title=dict(
+            text=(
+                f"{arm_label}-arm MK power curve  |  observed τ = {curve.tau_obs:+.3f}<br>"
+                f"<sub>fix τ, sweep n → p-value falls as √n. "
+                f"At n = {curve.n_obs} we cannot reject H₀; {need_txt}</sub>"
+            ),
+            font=dict(size=13),
         ),
-        xaxis=dict(title="hypothetical sample size n (log scale)", type="log"),
+        xaxis=dict(title="hypothetical sample size n"),
         yaxis_title="MK two-sided p-value",
         yaxis=dict(range=[0, y_top]),
-        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h"),
+        font=dict(size=11),
+        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
+                    font=dict(size=10)),
     )
     return fig, curve
+
+
+@dataclass(frozen=True)
+class MKPowerOfTest:
+    """Return type of :func:`mk_power_of_test`.
+
+    Companion to :class:`MKPowerCurve`: fixes Kendall ``tau_obs`` and sweeps
+    ``n`` to give MK *power* (probability of rejecting H₀ at level
+    ``alpha``) instead of the p-value. Stores the observed ``power_now``
+    at ``n_obs`` plus the smallest ``n`` on the grid whose power reaches
+    ``target_power`` (``None`` when no grid point clears the target).
+    """
+
+    tau_obs: float
+    n_obs: int
+    power_now: float
+    n_grid: np.ndarray
+    power_grid: np.ndarray
+    alpha: float
+    target_power: float
+    n_needed_power: int | None
+
+
+def mk_asymptotic_power(tau: float, n: int, alpha: float = 0.05) -> float:
+    """Two-sided asymptotic MK power at fixed Kendall ``tau`` and ``n``.
+
+    Uses the closed-form Gaussian approximation to Mann-Kendall's ``Z``
+    under the alternative :math:`\\tau = \\tau`:
+
+    .. math::
+
+        \\mu_Z = \\tau \\cdot \\sqrt{\\tfrac{9\\,n(n-1)}{2(2n+5)}}, \\quad
+        \\text{power} =
+        \\Phi(\\mu_Z - z_{1-\\alpha/2}) +
+        \\Phi(-\\mu_Z - z_{1-\\alpha/2}).
+
+    Returns ``nan`` when ``n < 4`` or ``tau`` is non-finite (MK is
+    undefined under those conditions).
+    """
+    if n < 4 or not np.isfinite(tau):
+        return float("nan")
+    mu_z = float(tau) * np.sqrt(9.0 * n * (n - 1) / (2.0 * (2 * n + 5)))
+    z_crit = norm.ppf(1.0 - alpha / 2.0)
+    return float(norm.cdf(mu_z - z_crit) + norm.cdf(-mu_z - z_crit))
+
+
+def mk_power_of_test(
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+) -> MKPowerOfTest:
+    """MK power-of-test sweep — mirror of :func:`mk_power_curve` for power.
+
+    Takes an existing :class:`MKPowerCurve` (so ``tau_obs``, ``n_obs``,
+    ``alpha`` and ``n_grid`` are already fixed) and evaluates
+    :func:`mk_asymptotic_power` across the same grid. Answers the reader's
+    question "at ``tau = tau_obs``, how many observations would I need for
+    MK to reject H₀ at least ``target_power`` fraction of the time?" — the
+    crossing is stored on :attr:`MKPowerOfTest.n_needed_power`.
+
+    Args:
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`.
+        target_power: Power threshold used to compute ``n_needed_power``
+            (0.80 is the conventional target).
+    """
+    power_grid = np.array(
+        [mk_asymptotic_power(curve.tau_obs, int(n), alpha=curve.alpha)
+         for n in curve.n_grid]
+    )
+    power_now = mk_asymptotic_power(curve.tau_obs, curve.n_obs, alpha=curve.alpha)
+    hit = np.isfinite(power_grid) & (power_grid >= target_power)
+    n_needed_power = int(curve.n_grid[hit][0]) if hit.any() else None
+
+    return MKPowerOfTest(
+        tau_obs=curve.tau_obs,
+        n_obs=curve.n_obs,
+        power_now=power_now,
+        n_grid=curve.n_grid,
+        power_grid=power_grid,
+        alpha=curve.alpha,
+        target_power=float(target_power),
+        n_needed_power=n_needed_power,
+    )
+
+
+def mk_power_of_test_figure(
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+    arm_label: str = "post",
+):
+    """One-picture explanation of MK power vs sample size at fixed ``tau``.
+
+    Companion to :func:`mk_power_curve_figure`. Runs :func:`mk_power_of_test`
+    on ``curve``, then renders the closed-form ``power(n)`` curve with:
+
+    * a grey dotted line at ``power = alpha`` (chance-level rejection),
+    * a red dashed line at ``power = target_power``,
+    * a red ✕ at ``(n_obs, power_now)`` labelled "you are here",
+    * a green ★ at ``n_needed_power`` when the curve reaches
+      ``target_power``.
+
+    Useful for stakeholder-facing "we should have collected more data"
+    conversations: shows the sample size needed to detect the observed
+    trend at conventional power.
+
+    Args:
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`.
+        target_power: Power threshold; drawn as a dashed reference line.
+        arm_label: Short label used in the title (e.g. ``"pre"``, ``"post"``).
+
+    Returns:
+        Tuple of ``(plotly.graph_objects.Figure, MKPowerOfTest)``.
+    """
+    import plotly.graph_objects as go
+
+    power = mk_power_of_test(curve, target_power=target_power)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=power.n_grid, y=power.power_grid, mode="lines",
+        name=f"power(n) at fixed τ = {power.tau_obs:+.3f}",
+        line=dict(color="#1f77b4", width=2),
+    ))
+    fig.add_hline(
+        y=power.alpha, line=dict(color="grey", dash="dot"),
+        annotation_text=f"α = {power.alpha:g} (chance)",
+        annotation_position="bottom right", annotation_font_size=10,
+    )
+    fig.add_hline(
+        y=power.target_power, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"target = {power.target_power:.2f}",
+        annotation_position="top right", annotation_font_size=10,
+    )
+    fig.add_trace(go.Scatter(
+        x=[power.n_obs], y=[power.power_now], mode="markers+text",
+        marker=dict(color="#d62728", size=13, symbol="x"),
+        text=[f"n={power.n_obs}<br>power={power.power_now:.2f}"],
+        textposition="top right", textfont=dict(size=10, color="#d62728"),
+        name=f"you are here (n={power.n_obs}, power={power.power_now:.2f})",
+    ))
+    if power.n_needed_power is not None:
+        fig.add_trace(go.Scatter(
+            x=[power.n_needed_power], y=[power.target_power],
+            mode="markers+text",
+            marker=dict(color="#2ca02c", size=13, symbol="star"),
+            text=[f"n={power.n_needed_power}<br>power={power.target_power:.2f}"],
+            textposition="top left", textfont=dict(size=10, color="#2ca02c"),
+            name=f"n needed for power ≥ {power.target_power:.2f} "
+                 f"(n≈{power.n_needed_power})",
+        ))
+
+    need_txt = (
+        f"need ~{power.n_needed_power} points for power ≥ {power.target_power:.2f}."
+        if power.n_needed_power is not None
+        else f"grid did not reach power {power.target_power:.2f}."
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm power of test  |  observed τ = {power.tau_obs:+.3f}<br>"
+                f"<sub>fix τ, sweep n → power(n) = P(reject H₀ | τ = τ_obs). "
+                f"At n = {power.n_obs} power is {power.power_now:.2f}; {need_txt}</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        xaxis=dict(title="hypothetical sample size n"),
+        yaxis=dict(title="MK two-sided power", range=[0, 1.02]),
+        font=dict(size=11),
+        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
+                    font=dict(size=10)),
+    )
+    return fig, power
 
 
 def intervention_summary_row(
@@ -2761,8 +2945,11 @@ __all__ = [
     "tfpw_y",
     "classify_acf_regime",
     "mk_asymptotic_pvalue",
+    "mk_asymptotic_power",
     "mk_power_curve",
     "MKPowerCurve",
+    "mk_power_of_test",
+    "MKPowerOfTest",
     # seasonal / partial / correlated
     "seasonal_mk",
     "vbh_chi2_decomposition",
@@ -2778,6 +2965,7 @@ __all__ = [
     "seasonal_mk_figure",
     "mk_adaptive_sen_figure",
     "mk_power_curve_figure",
+    "mk_power_of_test_figure",
     "intervention_summary_row",
     # batch
     "aggregate_by_period",
