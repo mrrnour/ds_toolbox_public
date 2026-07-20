@@ -587,7 +587,7 @@ def pre_post_sen_figure(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     result: MbbDeltaResult,
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     confidence_level: float,
 ):
@@ -633,7 +633,7 @@ def pre_post_sen_figure(
         f"95% CI [{result.delta_ci[0]:+.4g}, {result.delta_ci[1]:+.4g}]  ·  "
         f"p-value = {result.delta_pvalue_text}  {_sig_sym} {sig_flag}"
     )
-    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
     fig.add_annotation(
         text=_footer,
         xref="paper", yref="paper",
@@ -697,7 +697,7 @@ def mk_figure(
     y_post: Sequence[float],
     mk_pre: "TrendResult | SeasonalTrendResult",
     mk_post: "TrendResult | SeasonalTrendResult",
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     alpha: float = 0.05,
     method_label: str | None = None,
@@ -716,7 +716,7 @@ def mk_figure(
         y_pre / y_post: Numeric series aligned with ``df_pre / df_post``.
         mk_pre / mk_post: MK result dataclasses per arm. Must both be the
             same variant so the label stays consistent.
-        event_date: Intervention timestamp; drawn as a dashed vertical line.
+        intervention_date: Intervention timestamp; drawn as a dashed vertical line.
         experiment: Title label.
         alpha: Significance threshold used for the ✓/✗ marker.
         method_label: Override for the method name shown in the title /
@@ -763,7 +763,7 @@ def mk_figure(
         mode="lines", name=f"{method_label} post",
         line=dict(color="#d62728", width=3),
     ))
-    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
     fig.add_annotation(
         text=(
             f"pre slope={mk_pre.slope:+.4g} {dir_pre} (p={mk_pre.p:.3g} {sig_pre})  ·  "
@@ -796,7 +796,7 @@ def seasonal_mk_figure(
     y_post: Sequence[float],
     smk_pre: SeasonalTrendResult,
     smk_post: SeasonalTrendResult,
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     alpha: float = 0.05,
 ):
@@ -815,7 +815,7 @@ def seasonal_mk_figure(
         y_post=y_post,
         mk_pre=smk_pre,
         mk_post=smk_post,
-        event_date=event_date,
+        intervention_date=intervention_date,
         experiment=experiment,
         alpha=alpha,
         method_label="Seasonal MK",
@@ -847,7 +847,7 @@ def mk_adaptive_sen_figure(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     result: "MKAdaptiveCoreResult | MbbDeltaResult",
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     *,
     period: int | None = None,
@@ -859,7 +859,7 @@ def mk_adaptive_sen_figure(
     ``result`` accepts either flavour and the figure adapts accordingly:
 
     * :class:`MKAdaptiveCoreResult` (Track 1, :func:`mk_adaptive_core`) —
-      point Sen fits per arm, subtitle quotes ``Δslope`` as a point
+      point Sen fits per arm, subtitle quotes ``Δ-slope`` as a point
       estimate, legend entries carry the per-arm MK variant picked by
       §4's AR ladder (``[hamed_rao]``, ``[3pw]``, …).
     * :class:`MbbDeltaResult` (Track 2, :func:`mk_adaptive_mbb`) — same
@@ -868,6 +868,11 @@ def mk_adaptive_sen_figure(
       ``slope_ci_post`` and a subtitle that quotes ``delta_ci`` /
       ``delta_pvalue``. MBB uses one MK variant for both arms so the
       legend labels are identical (parsed from ``mbb.method``).
+
+    Legend / subtitle wording leads with the word "slope" (e.g. ``pre Sen
+    slope: +0.079``, ``Δ-slope = +0.174``) so the numbers cannot be mistaken
+    for a per-day *level*. No '/day' suffix — slope already implies
+    per-step.
 
     APA-style significance stars (``***`` / ``**`` / ``*`` / ``ns``)
     decorate the per-arm p-values. When ``show_deseasoned`` is true and
@@ -884,7 +889,7 @@ def mk_adaptive_sen_figure(
             :class:`MbbDeltaResult` (§8 / Track 2 view). The figure picks
             its subtitle and whether to draw CI ribbons based on which
             type is passed.
-        event_date: Intervention timestamp; drawn as a dashed vertical line.
+        intervention_date: Intervention timestamp; drawn as a dashed vertical line.
         experiment: Title label.
         period: Seasonal cycle length used for :func:`deseason`. Required
             when ``show_deseasoned=True``; ignored otherwise.
@@ -898,10 +903,10 @@ def mk_adaptive_sen_figure(
         A ``plotly.graph_objects.Figure``.
 
     Notes:
-        Uses ``add_shape`` + ``add_annotation`` for the event line rather
+        Uses ``add_shape`` + ``add_annotation`` for the intervention line rather
         than ``add_vline(annotation_text=...)``. The latter trips a plotly
         bug that internally does ``sum([x0, x1])`` on the timestamp inputs,
-        which fails when ``event_date`` is a ``pandas.Timestamp``.
+        which fails when ``intervention_date`` is a ``pandas.Timestamp``.
     """
     import plotly.graph_objects as go
     import re as _re
@@ -984,10 +989,13 @@ def mk_adaptive_sen_figure(
 
     star_pre = _significance_stars(pval_pre_val)
     star_post = _significance_stars(pval_post_val)
+    # Legend/subtitle labels lead with the word "slope" (not just "Sen:").
+    # We do NOT append a '/day' unit — slope already implies per-step, and
+    # the redundant '/day' invites confusion with a per-day *level*.
     fig.add_trace(go.Scatter(
         x=df_pre[date_col], y=sen_fit_line(y_pre_arr, slope_pre_val), mode="lines",
         name=(
-            f"pre  Sen: {slope_pre_val:+.4g}/day  "
+            f"pre  Sen slope: {slope_pre_val:+.4g}  "
             f"p={pval_pre_val:.3g} {star_pre}  [{mk_label_pre}]"
         ),
         line=dict(color="#1f77b4", width=3),
@@ -995,22 +1003,22 @@ def mk_adaptive_sen_figure(
     fig.add_trace(go.Scatter(
         x=df_post[date_col], y=sen_fit_line(y_post_arr, slope_post_val), mode="lines",
         name=(
-            f"post Sen: {slope_post_val:+.4g}/day  "
+            f"post Sen slope: {slope_post_val:+.4g}  "
             f"p={pval_post_val:.3g} {star_post}  [{mk_label_post}]"
         ),
         line=dict(color="#d62728", width=3),
     ))
 
-    # Event line — see docstring: `add_vline(annotation_text=...)` breaks on
+    # Intervention line — see docstring: `add_vline(annotation_text=...)` breaks on
     # pandas Timestamp inputs, so use add_shape + add_annotation.
     fig.add_shape(
         type="line", xref="x", yref="paper",
-        x0=event_date, x1=event_date, y0=0, y1=1,
+        x0=intervention_date, x1=intervention_date, y0=0, y1=1,
         line=dict(color="black", dash="dash"),
     )
     fig.add_annotation(
-        x=event_date, y=1.0, xref="x", yref="paper",
-        text="event", showarrow=False, yanchor="bottom",
+        x=intervention_date, y=1.0, xref="x", yref="paper",
+        text="intervention", showarrow=False, yanchor="bottom",
     )
 
     if _mbb is not None:
@@ -1020,16 +1028,15 @@ def mk_adaptive_sen_figure(
             f"{_mbb.delta_pvalue:.3g}" if _mbb.delta_pvalue is not None else "n/a"
         )
         subtitle = (
-            f"Δslope = {delta_val:+.4g}/day  "
+            f"Δ-slope = {delta_val:+.4g}  "
             f"CI [{_mbb.delta_ci[0]:+.4g}, {_mbb.delta_ci[1]:+.4g}]  "
             f"p = {pv_txt}  ({_sig_flag} at {ci_level:.0%})"
         )
     else:
-        subtitle = f"Δslope = {delta_val:+.4g}/day — point estimate"
+        subtitle = f"Δ-slope = {delta_val:+.4g} — point estimate"
 
     fig.update_layout(
         title=f"{experiment} — Sen-slope trend<br><sub>{subtitle}</sub>",
-        xaxis_title="date",
         yaxis_title=value_col,
         legend=dict(yanchor="top", y=-0.15, xanchor="left", x=0, orientation="h"),
     )
@@ -1405,7 +1412,7 @@ def mk_power_of_test_figure(
 
 def intervention_summary_row(
     experiment: str,
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     result: MbbDeltaResult,
     *,
     regime: AcfRegime | None = None,
@@ -1423,7 +1430,7 @@ def intervention_summary_row(
 
     Args:
         experiment: Identifier used as the row's primary key.
-        event_date: Intervention date (formatted as ISO string).
+        intervention_date: Intervention date (formatted as ISO string).
         result: Main :class:`MbbDeltaResult` from :func:`mk_delta_mbb`.
         regime: Optional ACF diagnostic (adds ``heavy_acf``, ``rho_pre``,
             ``rho_post``).
@@ -1442,7 +1449,7 @@ def intervention_summary_row(
     """
     row: dict = {
         "experiment": experiment,
-        "event_date": pd.Timestamp(event_date).date().isoformat(),
+        "intervention_date": pd.Timestamp(intervention_date).date().isoformat(),
         "n_pre": int(result.n_pre),
         "n_post": int(result.n_post),
         "pipeline": result.method,

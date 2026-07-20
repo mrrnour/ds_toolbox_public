@@ -3,6 +3,133 @@
 from .paths import check_path
 
 
+def strip_sql_comments(text, *, drop_blank_lines=True):
+    """Return ``text`` with SQL comments removed.
+
+    Strips both ``--`` line comments (through end of line) and
+    ``/* ... */`` block comments. String literals in single or double
+    quotes are respected, so a ``--`` or ``/*`` inside a quoted string is
+    left untouched. Backslash escapes inside strings are honored the same
+    way :func:`_split_sql_expressions` handles them.
+
+    The function is intended for producing a clean copy of a query for
+    display or logging — it does not modify the query semantics, so the
+    original ``text`` should still be sent to the database.
+
+    Parameters
+    ----------
+    text : str
+        Raw SQL text, possibly with comments.
+    drop_blank_lines : bool, default True
+        If True, drop lines that are empty after comments are removed.
+        If False, keep them (useful when preserving the original line
+        numbers matters).
+
+    Returns
+    -------
+    str
+        SQL text with comments removed.
+
+    Examples
+    --------
+    >>> sql = '''
+    ... -- header comment
+    ... select 1 as a  -- trailing comment
+    ... /* block
+    ...    comment */
+    ... from dual;
+    ... '''
+    >>> print(strip_sql_comments(sql))
+    select 1 as a
+    from dual;
+    """
+    out = []
+    state = None  # None | '-' | '--' | '/' | '/*' | '/**' | '"' | "'" | '"\\' | "'\\"
+    for c in text:
+        if state is None:
+            if c in '"\'':
+                out.append(c)
+                state = c
+            elif c == '-':
+                # Might be the first '-' of '--'. Buffer decision until next char.
+                state = '-'
+            elif c == '/':
+                # Might be the first '/' of '/*'. Buffer decision until next char.
+                state = '/'
+            else:
+                out.append(c)
+        elif state == '-':
+            if c == '-':
+                # Confirmed '--' line comment; do not emit either dash.
+                state = '--'
+            else:
+                # Not a comment after all; emit the buffered dash then handle c.
+                out.append('-')
+                state = None
+                # Re-dispatch this char through the default branch.
+                if c in '"\'':
+                    out.append(c)
+                    state = c
+                elif c == '-':
+                    state = '-'
+                elif c == '/':
+                    state = '/'
+                else:
+                    out.append(c)
+        elif state == '--':
+            # Inside line comment: drop chars until newline (emit the newline).
+            if c == '\n':
+                out.append(c)
+                state = None
+        elif state == '/':
+            if c == '*':
+                # Confirmed '/*' block comment; do not emit the slash or star.
+                state = '/*'
+            else:
+                out.append('/')
+                state = None
+                if c in '"\'':
+                    out.append(c)
+                    state = c
+                elif c == '-':
+                    state = '-'
+                elif c == '/':
+                    state = '/'
+                else:
+                    out.append(c)
+        elif state == '/*':
+            if c == '*':
+                state = '/**'
+        elif state == '/**':
+            if c == '/':
+                state = None
+            elif c != '*':
+                state = '/*'
+        elif state[0] in '"\'':
+            # Inside a string literal — always emit, watch for terminator.
+            out.append(c)
+            if state.endswith('\\'):
+                # Previous char was a backslash; consume this char literally.
+                state = state[0]
+            elif c == '\\':
+                state = state[0] + '\\'
+            elif c == state[0]:
+                state = None
+        else:
+            raise ValueError(f"Illegal state {state!r} while stripping SQL comments")
+
+    # Flush any trailing buffered single char (unmatched leading '-' or '/').
+    if state == '-':
+        out.append('-')
+    elif state == '/':
+        out.append('/')
+
+    result = ''.join(out)
+    if drop_blank_lines:
+        result = '\n'.join(line for line in result.splitlines() if line.strip())
+    return result
+
+
 def _split_sql_expressions(text):
     """Split a multi-statement SQL blob on ``;`` while respecting quotes and comments.
 

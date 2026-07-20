@@ -197,7 +197,7 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
             if has_fold:
                 # Prefer the fold of val rows in this window when any exist,
                 # otherwise the mode across all rows. Windows are calendar-
-                # aligned to the pre-event grid so a single fold usually wins.
+                # aligned to the pre-intervention grid so a single fold usually wins.
                 if has_split:
                     val_folds = g.loc[g["split"] == prefer_split, "fold"]
                     src = val_folds if not val_folds.empty else g["fold"]

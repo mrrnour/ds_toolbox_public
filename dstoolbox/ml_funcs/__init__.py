@@ -111,6 +111,7 @@ from .forecasters import (
 from .ts_intervention import (
     InterventionResult,
     effect_from_preds,
+    effect_report,
     effect_summary,
     estimate_intervention_effect,
     sc_results_to_backtest_preds,
@@ -209,6 +210,7 @@ from .backtest_plots import (
 from .intervention_plots import (
     plot_cumulative_effect,
     plot_cumulative_effect_from_preds,
+    plot_cumulative_effect_plain,
     plot_forecast_faceted,
     plot_intervention,
     plot_residual_acf,

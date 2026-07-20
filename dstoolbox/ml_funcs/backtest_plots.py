@@ -533,7 +533,7 @@ class BacktestReport:
         Pools the ``split`` predictions of one or more models across all
         folds (deduping on ``ts`` per model) and slices the resulting
         timeline into fixed calendar periods — e.g. ``"7D"``, ``"14D"``,
-        ``"1M"``. Window count is set by the pre-event history length
+        ``"1M"``. Window count is set by the pre-intervention history length
         divided by ``window``.
 
         Returns one row per (model, window) with columns
@@ -825,7 +825,7 @@ def plot_backtest_splits(
     X: pd.DataFrame,
     *,
     ts_col: str = "ts",
-    event_date: pd.Timestamp | str | None = None,
+    intervention_date: pd.Timestamp | str | None = None,
     title: str = "Backtest folds — train (blue) → forecast (orange)",
     show_arrow: bool = False,
     annotate_fold: int | None = -1,
@@ -914,8 +914,8 @@ def plot_backtest_splits(
         fig.add_trace(go.Scatter(**forecast_trace))
         showed_legend["forecast"] = True
 
-    if event_date is not None:
-        fig.add_vline(x=pd.Timestamp(event_date), line_dash="dash", line_color="red")
+    if intervention_date is not None:
+        fig.add_vline(x=pd.Timestamp(intervention_date), line_dash="dash", line_color="red")
 
     if annotate_fold is not None and n > 0:
         k = annotate_fold if annotate_fold >= 0 else n + annotate_fold
