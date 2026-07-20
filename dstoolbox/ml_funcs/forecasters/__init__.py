@@ -94,8 +94,8 @@ def available_backends() -> dict[str, bool]:
 
 # ===== public-only extensions (preserved on vendor merge) =====
 
-from ._base import DropColumns, align_forecast  # noqa: E402,F401
-from .sklearn_lag import LagRegressor  # noqa: E402,F401
-from .factory import build_forecaster  # noqa: E402,F401
+from ._base import DropColumns, align_forecast  # noqa: F401
+from .sklearn_lag import LagRegressor  # noqa: F401
+from .factory import build_forecaster  # noqa: F401
 
 __all__ += ["DropColumns", "align_forecast", "LagRegressor", "build_forecaster"]

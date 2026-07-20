@@ -23,6 +23,7 @@ stl_resid         no*          STL needs a regular grid w/o NaN; pre-fill first
 ================  ===========  ============================================
 imputer           NaN-tolerant  notes
 ================  ===========  ============================================
+none              yes          identity mask: outliers set to NaN, no fill
 linear            yes          pandas.interpolate('linear'); ends ffill/bfill
 time              yes          requires DatetimeIndex; calendar-aware
 rolling_median    yes          local median over a centered window
@@ -45,7 +46,7 @@ import numpy as np
 import pandas as pd
 
 DetectMethod = Literal["zscore", "mad", "iqr", "rolling_zscore", "rolling_mad", "stl_resid"]
-ImputeMethod = Literal["linear", "time", "rolling_median", "seasonal_mean", "ffill_bfill", "stl_recon"]
+ImputeMethod = Literal["none", "linear", "time", "rolling_median", "seasonal_mean", "ffill_bfill", "stl_recon"]
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +144,11 @@ def _mask_to_nan(s: pd.Series, mask: pd.Series) -> pd.Series:
     return out
 
 
+def impute_none(s: pd.Series, mask: pd.Series) -> pd.Series:
+    """Identity mask: set outlier positions to NaN, leave the rest untouched. No fill."""
+    return _mask_to_nan(s, mask)
+
+
 def impute_linear(s: pd.Series, mask: pd.Series) -> pd.Series:
     """Linear interpolation between neighbours. Endpoints filled by bfill/ffill."""
     return _mask_to_nan(s, mask).interpolate("linear", limit_direction="both")
@@ -203,6 +209,7 @@ def impute_stl_recon(s: pd.Series, mask: pd.Series, season_length: int) -> pd.Se
 
 
 _IMPUTERS = {
+    "none": impute_none,
     "linear": impute_linear,
     "time": impute_time,
     "rolling_median": impute_rolling_median,

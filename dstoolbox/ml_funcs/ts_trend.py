@@ -22,7 +22,7 @@ exposes them:
    only the pooled regional trend, not the season / station / interaction
    breakdown.
 3. **Paired pre/post Sen-slope moving-block bootstrap with pluggable
-   MK p-value** (in :func:`mk_delta_MBB`) — the single unified
+   MK p-value** (in :func:`mk_delta_mbb`) — the single unified
    paired test. Slope always comes from ``theilslopes`` on raw ``y``;
    CI always from a moving-block percentile bootstrap; the MK variant
    feeding the p-value is chosen via ``mk_method``.
@@ -173,13 +173,18 @@ class VbhDecomposition:
 
 
 @dataclass(frozen=True)
-class DispatchArmResult:
-    """Per-arm §4 dispatch — headline building block.
+class MKAdaptiveCoreArmResult:
+    """Per-arm adaptive MK — headline building block.
 
-    Product of :func:`dispatch_arm`: one seasonality gate + §4.2 AR-ladder
+    Product of :func:`mk_adaptive_core_arm`: one seasonality gate + §4.2 AR-ladder
     call followed by the picked MK variant on one arm. Slope point always
     comes from ``theilslopes(y_arm).slope`` on raw ``y``; the closed-form
-    MK p-value comes from the dispatched variant.
+    MK p-value comes from the picked variant.
+
+    ``reason`` is a short human-readable explanation of *why* the ladder
+    picked this variant (ρ₁ vs cutoff, span vs 2-yr gate, forced override).
+    ``dts_span_years`` is the arm's calendar span, used by the 3PW gate;
+    ``None`` when ``dts`` was not supplied.
     """
 
     n: int
@@ -189,28 +194,42 @@ class DispatchArmResult:
     deseasoned: bool
     rho1: float
     period: int | None
+    reason: str = ""
+    dts_span_years: float | None = None
 
     def summary(self) -> str:
-        substrate = "deseasoned" if self.deseasoned else "raw"
-        return (
+        span_txt = "n/a" if self.dts_span_years is None else f"{self.dts_span_years:.2f}yr"
+        # Header keeps only the fields NOT re-explained by the season→/ladder→
+        # lines below. mk_method and substrate are redundant — they are the
+        # outputs the two decision lines narrate.
+        head = (
             f"slope={self.slope:+.4f}/step  p={self.pvalue:.4f}  "
-            f"(n={self.n}, mk={self.mk_method}, substrate={substrate}, "
-            f"ρ1={self.rho1:+.3f})"
+            f"(n={self.n}, ρ1={self.rho1:+.3f}, span={span_txt})"
         )
+        # Explicit narration of the two §4 decisions:
+        #   1. seasonality gate  → deseasoned vs raw substrate
+        #   2. §4.2 AR ladder    → MK variant picked (Plain / Hamed–Rao / 3PW)
+        if self.deseasoned:
+            head += f"\n         season→ period={self.period} given → deseasoned before ρ₁ + MK"
+        else:
+            head += "\n         season→ no period given → raw substrate (no deseasoning)"
+        if self.reason:
+            head += f"\n         ladder→ {self.reason}"
+        return head
 
 
 @dataclass(frozen=True)
-class DispatchBranchResult:
-    """Headline result — §4 dispatch per arm plus derived Δ point.
+class MKAdaptiveCoreResult:
+    """Headline result — adaptive MK per arm plus derived Δ point.
 
-    Product of :func:`run_dispatch_branch`. All fields are closed-form
+    Product of :func:`mk_adaptive_core`. All fields are closed-form
     (no bootstrap). ``delta_slope`` is the point difference
     ``slope_post − slope_pre``; there is no Δ CI or Δ p here — use
-    :func:`run_mbb_branch` (or :func:`mk_delta_MBB`) for those.
+    :func:`mk_adaptive_mbb` (or :func:`mk_delta_mbb`) for those.
     """
 
-    pre: DispatchArmResult
-    post: DispatchArmResult
+    pre: MKAdaptiveCoreArmResult
+    post: MKAdaptiveCoreArmResult
     slope_pre: float
     slope_post: float
     pval_pre: float
@@ -220,17 +239,65 @@ class DispatchBranchResult:
     n_pre: int
     n_post: int
 
-    def summary(self) -> str:
+    @property
+    def pct_unstable(self) -> bool:
+        """Ratio anchor is unreliable — ``|slope_pre|`` is small vs ``|slope_post|``.
+
+        No CI is available at this stage, so we use a simple magnitude check:
+        if the pre-arm slope is < 10 % of the post-arm slope in absolute
+        value (or is non-finite), the ratio blows up and the % rate change
+        should not be quoted. Use ``delta_slope`` instead, or run
+        :func:`mk_adaptive_mbb` for a CI-backed ratio.
+        """
         if self.pct_rate_change is None:
-            pct_line = "  rate change= n/a  (slope_pre = 0)"
+            return False
+        if not (np.isfinite(self.slope_pre) and np.isfinite(self.slope_post)):
+            return True
+        return abs(self.slope_pre) < 0.10 * abs(self.slope_post)
+
+    def summary(self) -> str:
+        # % rate change line — guard against flat-pre-slope ratio blow-up
+        if self.pct_rate_change is None:
+            pct_line = "  rate change   = n/a  (slope_pre = 0)"
+        elif self.pct_unstable:
+            pct_line = (
+                f"  rate change   = unstable "
+                f"(slope_pre={self.slope_pre:+.4f} ≪ slope_post={self.slope_post:+.4f} in magnitude; "
+                f"ratio anchor unreliable — use Δslope instead)"
+            )
         else:
-            pct_line = f"  rate change= {self.pct_rate_change * 100:+.0f}%"
+            pct_line = f"  rate change   = {self.pct_rate_change * 100:+.0f}%  (= slope_post / slope_pre − 1)"
+
+        # Per-arm significance verdict at α = 0.05 (matches MKAdaptiveCoreArmResult default)
+        def _verdict(p: float) -> str:
+            if not np.isfinite(p):
+                return "n/a"
+            return "reject H₀ (trend detected)" if p < 0.05 else "fail to reject H₀ (no evidence of trend)"
+
         return (
-            f"[HEADLINE — §4 dispatch per arm]\n"
-            f"  pre : {self.pre.summary()}\n"
-            f"  post: {self.post.summary()}\n"
-            f"  Δslope = {self.delta_slope:+.4f}/step  (point; no CI — see run_mbb_branch)\n"
-            f"{pct_line}"
+            f"[HEADLINE — adaptive MK per arm]\n"
+            f"  pre  : {self.pre.summary()}\n"
+            f"  post : {self.post.summary()}\n"
+            f"  Δslope        = {self.delta_slope:+.4f}/step  "
+            f"(point estimate only — no CI or p on Δ; run mk_adaptive_mbb for those)\n"
+            f"{pct_line}\n"
+            f"  [interpretation]\n"
+            f"    slope        — Sen (Theil–Sen) slope, units of y per time step (raw y, not deseasoned).\n"
+            f"    p_pre/p_post — H₀: no monotonic trend within that arm (Sen slope = 0).\n"
+            f"                   Small p ⇒ evidence of a trend; sign is given by slope.\n"
+            f"    ρ₁           — lag-1 autocorrelation of the *deseasoned* residual for that arm\n"
+            f"                   (measures short-memory serial dependence after removing the weekly cycle).\n"
+            f"                   |ρ₁| ≤ acf_cutoff → Plain MK;  |ρ₁| > cutoff → Hamed–Rao (or 3PW if ≥ 2 yrs).\n"
+            f"    n            — arm length (number of daily observations after cleaning).\n"
+            f"    span         — arm calendar span in years (used by the 2-yr gate for 3PW eligibility).\n"
+            f"    season→      — seasonality-gate decision: 'deseasoned' when a period was given, 'raw' otherwise.\n"
+            f"                   The Sen slope itself is always fit on raw y.\n"
+            f"    ladder→      — §4.2 AR-ladder decision: which MK variant was picked and why.\n"
+            f"  [verdicts at α=0.05]\n"
+            f"    pre  → p={self.pval_pre:.4f}: {_verdict(self.pval_pre)}\n"
+            f"    post → p={self.pval_post:.4f}: {_verdict(self.pval_post)}\n"
+            f"    Δslope is a *point comparison* of the two per-arm Sen slopes; whether\n"
+            f"    it is significantly different from 0 requires Track 2 (paired MBB)."
         )
 
 
@@ -238,7 +305,7 @@ class DispatchBranchResult:
 class VbhBranchResult:
     """Optional VBH homogeneity add-on — per-arm χ² diagnostic.
 
-    Product of :func:`run_vbh_branch`. Wraps two per-arm
+    Product of :func:`mk_vbh`. Wraps two per-arm
     :class:`SeasonalTrendResult` calls and exposes the pair of
     homogeneity p-values used to decide whether the pooled headline
     hides Simpson-style per-phase cancellation.
@@ -272,7 +339,7 @@ class VbhBranchResult:
 
 
 @dataclass(frozen=True)
-class MBBDeltaResult:
+class MbbDeltaResult:
     """Pre/post Sen-slope comparison."""
 
     slope_pre: float
@@ -290,7 +357,7 @@ class MBBDeltaResult:
     method: str
     homogeneity_p_pre: float | None = None
     homogeneity_p_post: float | None = None
-    # ── Δ interpretation (auto-computed by :func:`mk_delta_MBB`) ─────────
+    # ── Δ interpretation (auto-computed by :func:`mk_delta_mbb`) ─────────
     # For ``ci_method='mbb'``: ``delta_pvalue`` is the two-sided tail-area
     # of the paired-MBB ``{Δ_b}`` array at Δ = 0 (Efron 1979), read off
     # the same array as ``delta_ci``; ``delta_power`` uses the empirical
@@ -322,7 +389,7 @@ class MBBDeltaResult:
             pct_line = "rate change= n/a  (slope_pre = 0)"
         elif self.pct_unstable:
             pct_line = (
-                f"rate change= unstable (|slope_pre|={abs(self.slope_pre):.4f} too small "
+                f"rate change= unstable (slope_pre={self.slope_pre:+.4f} too small in magnitude "
                 f"to anchor a ratio — use Δslope instead)"
             )
         else:
@@ -439,7 +506,7 @@ def _compute_delta_interpretation(
     confidence_level: float,
     delta_boot: np.ndarray | None = None,
 ) -> dict:
-    """Δ p-value + power + display strings for :class:`MBBDeltaResult`.
+    """Δ p-value + power + display strings for :class:`MbbDeltaResult`.
 
     Two dispatch modes, aligned with the chart 6 workflow:
 
@@ -454,7 +521,7 @@ def _compute_delta_interpretation(
       half-width of ``delta_ci`` via Wald inversion under a normal
       approximation ``sd = half-width / z_{1-α/2}``. This is only used
       when there is no bootstrap array to read from (e.g. the closed-form
-      Gilbert CI branch inside :func:`mk_delta_MBB`).
+      Gilbert CI branch inside :func:`mk_delta_mbb`).
 
     Args:
         delta_slope: The point Δ (``slope_post − slope_pre``).
@@ -512,15 +579,15 @@ def _compute_delta_interpretation(
     )
 
 
-def build_pre_post_sen_figure(
+def pre_post_sen_figure(
     df_pre: pd.DataFrame,
     df_post: pd.DataFrame,
     date_col: str,
     value_col: str,
     y_pre: Sequence[float],
     y_post: Sequence[float],
-    result: MBBDeltaResult,
-    event_date: str | pd.Timestamp,
+    result: MbbDeltaResult,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     confidence_level: float,
 ):
@@ -529,7 +596,7 @@ def build_pre_post_sen_figure(
     This keeps notebook plotting logic thin and consistent across experiments.
     Reads interpretation fields (``delta_significant``, ``direction``,
     ``delta_pvalue_text``) directly off ``result``, which
-    :func:`mk_delta_MBB` populates automatically.
+    :func:`mk_delta_mbb` populates automatically.
     """
     import plotly.graph_objects as go
 
@@ -566,7 +633,7 @@ def build_pre_post_sen_figure(
         f"95% CI [{result.delta_ci[0]:+.4g}, {result.delta_ci[1]:+.4g}]  ·  "
         f"p-value = {result.delta_pvalue_text}  {_sig_sym} {sig_flag}"
     )
-    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
     fig.add_annotation(
         text=_footer,
         xref="paper", yref="paper",
@@ -589,7 +656,7 @@ def build_pre_post_sen_figure(
     return fig
 
 
-def format_mk_result_line(
+def mk_result_line(
     result: "TrendResult | SeasonalTrendResult",
     arm_label: str,
     alpha: float = 0.05,
@@ -621,7 +688,7 @@ def format_mk_result_line(
     return core
 
 
-def build_mk_figure(
+def mk_figure(
     df_pre: pd.DataFrame,
     df_post: pd.DataFrame,
     date_col: str,
@@ -630,7 +697,7 @@ def build_mk_figure(
     y_post: Sequence[float],
     mk_pre: "TrendResult | SeasonalTrendResult",
     mk_post: "TrendResult | SeasonalTrendResult",
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     alpha: float = 0.05,
     method_label: str | None = None,
@@ -649,7 +716,7 @@ def build_mk_figure(
         y_pre / y_post: Numeric series aligned with ``df_pre / df_post``.
         mk_pre / mk_post: MK result dataclasses per arm. Must both be the
             same variant so the label stays consistent.
-        event_date: Intervention timestamp; drawn as a dashed vertical line.
+        intervention_date: Intervention timestamp; drawn as a dashed vertical line.
         experiment: Title label.
         alpha: Significance threshold used for the ✓/✗ marker.
         method_label: Override for the method name shown in the title /
@@ -696,7 +763,7 @@ def build_mk_figure(
         mode="lines", name=f"{method_label} post",
         line=dict(color="#d62728", width=3),
     ))
-    fig.add_vline(x=pd.Timestamp(event_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
     fig.add_annotation(
         text=(
             f"pre slope={mk_pre.slope:+.4g} {dir_pre} (p={mk_pre.p:.3g} {sig_pre})  ·  "
@@ -720,7 +787,7 @@ def build_mk_figure(
     return fig
 
 
-def build_seasonal_mk_figure(
+def seasonal_mk_figure(
     df_pre: pd.DataFrame,
     df_post: pd.DataFrame,
     date_col: str,
@@ -729,17 +796,17 @@ def build_seasonal_mk_figure(
     y_post: Sequence[float],
     smk_pre: SeasonalTrendResult,
     smk_post: SeasonalTrendResult,
-    event_date: str | pd.Timestamp,
+    intervention_date: str | pd.Timestamp,
     experiment: str,
     alpha: float = 0.05,
 ):
-    """Backward-compat wrapper around :func:`build_mk_figure`.
+    """Backward-compat wrapper around :func:`mk_figure`.
 
-    Kept so existing notebooks that call ``build_seasonal_mk_figure(...)``
+    Kept so existing notebooks that call ``seasonal_mk_figure(...)``
     with ``smk_pre=`` / ``smk_post=`` keep working. New code should call
-    :func:`build_mk_figure` directly — it accepts any MK result type.
+    :func:`mk_figure` directly — it accepts any MK result type.
     """
-    return build_mk_figure(
+    return mk_figure(
         df_pre=df_pre,
         df_post=df_post,
         date_col=date_col,
@@ -748,20 +815,608 @@ def build_seasonal_mk_figure(
         y_post=y_post,
         mk_pre=smk_pre,
         mk_post=smk_post,
-        event_date=event_date,
+        intervention_date=intervention_date,
         experiment=experiment,
         alpha=alpha,
         method_label="Seasonal MK",
     )
 
 
+def _significance_stars(p: float) -> str:
+    """Return APA-style significance markers for a p-value.
+
+    ``***`` for p < 0.001, ``**`` for p < 0.01, ``*`` for p < 0.05,
+    ``ns`` otherwise. Returns ``"n/a"`` when ``p`` is not finite.
+    """
+    if not np.isfinite(p):
+        return "n/a"
+    if p < 0.001:
+        return "***"
+    if p < 0.01:
+        return "**"
+    if p < 0.05:
+        return "*"
+    return "ns"
+
+
+def mk_adaptive_sen_figure(
+    df_pre: pd.DataFrame,
+    df_post: pd.DataFrame,
+    date_col: str,
+    value_col: str,
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    result: "MKAdaptiveCoreResult | MbbDeltaResult",
+    intervention_date: str | pd.Timestamp,
+    experiment: str,
+    *,
+    period: int | None = None,
+    show_deseasoned: bool = True,
+    ci_level: float = 0.95,
+):
+    """Pre/post scatter + per-arm Sen fit — Track 1 (core) or Track 2 (MBB).
+
+    ``result`` accepts either flavour and the figure adapts accordingly:
+
+    * :class:`MKAdaptiveCoreResult` (Track 1, :func:`mk_adaptive_core`) —
+      point Sen fits per arm, subtitle quotes ``Δ-slope`` as a point
+      estimate, legend entries carry the per-arm MK variant picked by
+      §4's AR ladder (``[hamed_rao]``, ``[3pw]``, …).
+    * :class:`MbbDeltaResult` (Track 2, :func:`mk_adaptive_mbb`) — same
+      point Sen fits (identical by construction: both flavours take Sen
+      on raw ``y``) plus per-arm slope-CI ribbons from ``slope_ci_pre`` /
+      ``slope_ci_post`` and a subtitle that quotes ``delta_ci`` /
+      ``delta_pvalue``. MBB uses one MK variant for both arms so the
+      legend labels are identical (parsed from ``mbb.method``).
+
+    Legend / subtitle wording leads with the word "slope" (e.g. ``pre Sen
+    slope: +0.079``, ``Δ-slope = +0.174``) so the numbers cannot be mistaken
+    for a per-day *level*. No '/day' suffix — slope already implies
+    per-step.
+
+    APA-style significance stars (``***`` / ``**`` / ``*`` / ``ns``)
+    decorate the per-arm p-values. When ``show_deseasoned`` is true and
+    ``period`` is given, the deseasoned residuals are overlaid as ``x``
+    markers on the same axis (shifted back to the raw scale by adding the
+    arm mean) so the reader can eyeball the trend after weekly cycle
+    removal.
+
+    Args:
+        df_pre / df_post: DataFrames holding ``date_col``.
+        date_col / value_col: Column names.
+        y_pre / y_post: Numeric series aligned with ``df_pre / df_post``.
+        result: Either :class:`MKAdaptiveCoreResult` (§4 view) or
+            :class:`MbbDeltaResult` (§8 / Track 2 view). The figure picks
+            its subtitle and whether to draw CI ribbons based on which
+            type is passed.
+        intervention_date: Intervention timestamp; drawn as a dashed vertical line.
+        experiment: Title label.
+        period: Seasonal cycle length used for :func:`deseason`. Required
+            when ``show_deseasoned=True``; ignored otherwise.
+        show_deseasoned: Overlay per-arm deseasoned point clouds. Set
+            ``False`` to hide the ``x`` markers when the arms are non
+            seasonal or when the plot needs to stay uncluttered.
+        ci_level: Confidence level used in the subtitle text (label only;
+            ignored when ``result`` is a :class:`MKAdaptiveCoreResult`).
+
+    Returns:
+        A ``plotly.graph_objects.Figure``.
+
+    Notes:
+        Uses ``add_shape`` + ``add_annotation`` for the intervention line rather
+        than ``add_vline(annotation_text=...)``. The latter trips a plotly
+        bug that internally does ``sum([x0, x1])`` on the timestamp inputs,
+        which fails when ``intervention_date`` is a ``pandas.Timestamp``.
+    """
+    import plotly.graph_objects as go
+    import re as _re
+
+    # Route on the result flavour. Track 2 (MBB) view carries CIs and a Δ
+    # p-value; Track 1 (core) is point-only. Both flavours have identical
+    # slope_pre / slope_post by design (Sen on raw y).
+    if isinstance(result, MbbDeltaResult):
+        _mbb: MbbDeltaResult | None = result
+        slope_pre_val = result.slope_pre
+        slope_post_val = result.slope_post
+        pval_pre_val = result.pval_pre
+        pval_post_val = result.pval_post
+        delta_val = result.delta_slope
+        # MBB uses one variant for both arms; parse it out of
+        # e.g. "mbb(mk=hamed_rao, bl=7, n=2000)".
+        _m = _re.search(r"mk=([^,\)]+)", result.method)
+        mk_label_pre = mk_label_post = _m.group(1) if _m else result.method
+    else:
+        _mbb = None
+        slope_pre_val = result.slope_pre
+        slope_post_val = result.slope_post
+        pval_pre_val = result.pval_pre
+        pval_post_val = result.pval_post
+        delta_val = result.delta_slope
+        mk_label_pre = result.pre.mk_method
+        mk_label_post = result.post.mk_method
+
+    y_pre_arr = np.asarray(y_pre, dtype=float)
+    y_post_arr = np.asarray(y_post, dtype=float)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=y_pre_arr, mode="markers", name="pre (raw)",
+        marker=dict(color="#1f77b4", size=5, opacity=0.35),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=y_post_arr, mode="markers", name="post (raw)",
+        marker=dict(color="#d62728", size=5, opacity=0.35),
+    ))
+
+    if show_deseasoned:
+        if period is None:
+            raise ValueError("period is required when show_deseasoned=True")
+        # `deseason` centers the residual at 0; re-add the arm mean so the
+        # markers sit alongside the raw scatter rather than at y ≈ 0.
+        y_pre_ds = deseason(y_pre_arr, period=period) + float(np.nanmean(y_pre_arr))
+        y_post_ds = deseason(y_post_arr, period=period) + float(np.nanmean(y_post_arr))
+        fig.add_trace(go.Scatter(
+            x=df_pre[date_col], y=y_pre_ds, mode="markers", name="pre (deseasoned)",
+            marker=dict(color="#1f77b4", size=6, symbol="x", opacity=0.9),
+        ))
+        fig.add_trace(go.Scatter(
+            x=df_post[date_col], y=y_post_ds, mode="markers", name="post (deseasoned)",
+            marker=dict(color="#d62728", size=6, symbol="x", opacity=0.9),
+        ))
+
+    # Optional slope-CI ribbons (drawn under the Sen lines so the point
+    # fit stays visually on top). Uses fill='tonexty' between the low- and
+    # high-slope median-anchored lines from mbb.slope_ci_pre / _post.
+    if _mbb is not None:
+        for x_dates, y_arm, ci, colour in (
+            (df_pre[date_col], y_pre_arr, _mbb.slope_ci_pre, "31, 119, 180"),   # pre
+            (df_post[date_col], y_post_arr, _mbb.slope_ci_post, "214, 39, 40"),  # post
+        ):
+            lo_line = sen_fit_line(y_arm, float(ci[0]))
+            hi_line = sen_fit_line(y_arm, float(ci[1]))
+            fig.add_trace(go.Scatter(
+                x=x_dates, y=lo_line, mode="lines",
+                line=dict(color=f"rgba({colour},0)"),
+                hoverinfo="skip", showlegend=False,
+            ))
+            fig.add_trace(go.Scatter(
+                x=x_dates, y=hi_line, mode="lines", fill="tonexty",
+                line=dict(color=f"rgba({colour},0)"),
+                fillcolor=f"rgba({colour},0.18)",
+                name=f"slope CI [{ci[0]:+.3g}, {ci[1]:+.3g}]",
+                hoverinfo="skip",
+            ))
+
+    star_pre = _significance_stars(pval_pre_val)
+    star_post = _significance_stars(pval_post_val)
+    # Legend/subtitle labels lead with the word "slope" (not just "Sen:").
+    # We do NOT append a '/day' unit — slope already implies per-step, and
+    # the redundant '/day' invites confusion with a per-day *level*.
+    fig.add_trace(go.Scatter(
+        x=df_pre[date_col], y=sen_fit_line(y_pre_arr, slope_pre_val), mode="lines",
+        name=(
+            f"pre  Sen slope: {slope_pre_val:+.4g}  "
+            f"p={pval_pre_val:.3g} {star_pre}  [{mk_label_pre}]"
+        ),
+        line=dict(color="#1f77b4", width=3),
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_post[date_col], y=sen_fit_line(y_post_arr, slope_post_val), mode="lines",
+        name=(
+            f"post Sen slope: {slope_post_val:+.4g}  "
+            f"p={pval_post_val:.3g} {star_post}  [{mk_label_post}]"
+        ),
+        line=dict(color="#d62728", width=3),
+    ))
+
+    # Intervention line — see docstring: `add_vline(annotation_text=...)` breaks on
+    # pandas Timestamp inputs, so use add_shape + add_annotation.
+    fig.add_shape(
+        type="line", xref="x", yref="paper",
+        x0=intervention_date, x1=intervention_date, y0=0, y1=1,
+        line=dict(color="black", dash="dash"),
+    )
+    fig.add_annotation(
+        x=intervention_date, y=1.0, xref="x", yref="paper",
+        text="intervention", showarrow=False, yanchor="bottom",
+    )
+
+    if _mbb is not None:
+        _delta_sig = not (_mbb.delta_ci[0] <= 0 <= _mbb.delta_ci[1])
+        _sig_flag = "significant" if _delta_sig else "not significant"
+        pv_txt = _mbb.delta_pvalue_text or (
+            f"{_mbb.delta_pvalue:.3g}" if _mbb.delta_pvalue is not None else "n/a"
+        )
+        subtitle = (
+            f"Δ-slope = {delta_val:+.4g}  "
+            f"CI [{_mbb.delta_ci[0]:+.4g}, {_mbb.delta_ci[1]:+.4g}]  "
+            f"p = {pv_txt}  ({_sig_flag} at {ci_level:.0%})"
+        )
+    else:
+        subtitle = f"Δ-slope = {delta_val:+.4g} — point estimate"
+
+    fig.update_layout(
+        title=f"{experiment} — Sen-slope trend<br><sub>{subtitle}</sub>",
+        yaxis_title=value_col,
+        legend=dict(yanchor="top", y=-0.15, xanchor="left", x=0, orientation="h"),
+    )
+    return fig
+
+
+@dataclass(frozen=True)
+class MKPowerCurve:
+    """Return type of :func:`mk_power_curve`.
+
+    Holds the closed-form MK p-value swept over sample size ``n`` at a
+    fixed Kendall ``tau_obs``, plus the observed point ``(n_obs, p_obs)``
+    and the smallest ``n`` on the grid whose two-sided MK p-value falls at
+    or below ``alpha`` (``None`` when no grid point crosses ``alpha``).
+    """
+
+    tau_obs: float
+    n_obs: int
+    p_obs: float
+    n_grid: np.ndarray
+    p_grid: np.ndarray
+    alpha: float
+    n_needed: int | None
+
+
+def mk_asymptotic_pvalue(tau: float, n: int) -> float:
+    """Two-sided MK asymptotic p-value from Kendall ``tau`` and sample size ``n``.
+
+    Uses the standard normal approximation to Mann-Kendall's ``S`` statistic:
+
+    .. math::
+
+        S \\approx \\tau \\cdot n(n-1)/2, \\quad
+        \\mathrm{Var}(S) \\approx n(n-1)(2n+5)/18, \\quad
+        Z = S / \\sqrt{\\mathrm{Var}(S)}.
+
+    Returns ``nan`` when ``n < 4`` or ``tau`` is non-finite (MK is
+    undefined under those conditions).
+    """
+    if n < 4 or not np.isfinite(tau):
+        return float("nan")
+    S = float(tau) * n * (n - 1) / 2.0
+    var_S = n * (n - 1) * (2 * n + 5) / 18.0
+    z = S / np.sqrt(var_S)
+    return float(2.0 * (1.0 - norm.cdf(abs(z))))
+
+
+def mk_power_curve(
+    y: Sequence[float],
+    *,
+    alpha: float = 0.05,
+    n_range: tuple[int, int] = (5, 400),
+) -> MKPowerCurve:
+    """MK power curve — fix ``tau`` at the observed value, sweep ``n``.
+
+    Computes Kendall's ``tau`` on the finite entries of ``y`` (NaN-safe),
+    then evaluates :func:`mk_asymptotic_pvalue` across the integer grid
+    ``[n_range[0], n_range[1]]``. Answers the reader's question
+    "if the true monotone strength is this ``tau``, how many observations
+    would I need for MK to reject H₀ at level ``alpha``?" — the crossing
+    of the ``p(n)`` curve with ``alpha`` is stored on
+    :attr:`MKPowerCurve.n_needed`.
+
+    Args:
+        y: Numeric series (NaNs are dropped before Kendall's ``tau``).
+        alpha: Significance threshold used to compute ``n_needed``.
+        n_range: Inclusive ``(n_min, n_max)`` bounds for the sweep grid.
+    """
+    from scipy.stats import kendalltau
+
+    arr = np.asarray(y, dtype=float)
+    mask = np.isfinite(arr)
+    y_clean = arr[mask]
+    x_clean = np.arange(len(arr))[mask]
+    n_obs = int(mask.sum())
+    tau_obs, _ = kendalltau(x_clean, y_clean)
+    tau_obs = float(tau_obs) if np.isfinite(tau_obs) else float("nan")
+    p_obs = mk_asymptotic_pvalue(tau_obs, n_obs)
+
+    n_min, n_max = int(n_range[0]), int(n_range[1])
+    n_grid = np.arange(n_min, n_max + 1)
+    p_grid = np.array([mk_asymptotic_pvalue(tau_obs, int(n)) for n in n_grid])
+    crossing = np.isfinite(p_grid) & (p_grid <= alpha)
+    n_needed = int(n_grid[crossing][0]) if crossing.any() else None
+
+    return MKPowerCurve(
+        tau_obs=tau_obs,
+        n_obs=n_obs,
+        p_obs=p_obs,
+        n_grid=n_grid,
+        p_grid=p_grid,
+        alpha=float(alpha),
+        n_needed=n_needed,
+    )
+
+
+def mk_power_curve_figure(
+    y: Sequence[float],
+    *,
+    alpha: float = 0.05,
+    n_range: tuple[int, int] = (5, 400),
+    sample_ns: Sequence[int] = (50, 100, 200, 400),
+    arm_label: str = "post",
+):
+    """One-picture explanation of MK power vs sample size at fixed ``tau``.
+
+    Runs :func:`mk_power_curve` on ``y``, then renders the closed-form
+    MK ``p(n)`` curve with:
+
+    * bare dots at ``sample_ns`` (no text labels),
+    * a red dashed line at ``p = alpha``,
+    * a red ✕ at ``(n_obs, p_obs)`` labelled "you are here",
+    * a green ★ at ``n_needed`` labelled with ``(n, α)`` when the curve
+      crosses ``alpha``.
+
+    Only the two highlight points (``n_obs`` and ``n_needed``) carry
+    text annotations to keep the plot readable.
+
+    Useful for stakeholder-facing "why isn't this p-value < 0.05?"
+    conversations: the plot makes the ``p \\propto 1/\\sqrt{n}`` scaling
+    of the MK test visible at a glance.
+
+    Args:
+        y: Numeric series (NaNs are dropped before Kendall's ``tau``).
+        alpha: Significance threshold; drawn as a dashed reference line.
+        n_range: Sweep grid bounds ``(n_min, n_max)``.
+        sample_ns: Extra ``n`` values to annotate on the curve.
+        arm_label: Short label used in the title (e.g. ``"pre"``, ``"post"``).
+
+    Returns:
+        Tuple of ``(plotly.graph_objects.Figure, MKPowerCurve)``.
+    """
+    import plotly.graph_objects as go
+
+    curve = mk_power_curve(y, alpha=alpha, n_range=n_range)
+
+    # Reference markers on the curve (no text labels) — only n_obs and
+    # n_needed get annotated below, everything else is a bare dot.
+    n_min, n_max = int(n_range[0]), int(n_range[1])
+    highlight_ns = {int(curve.n_obs)}
+    if curve.n_needed is not None:
+        highlight_ns.add(int(curve.n_needed))
+    marker_ns = sorted({int(n) for n in sample_ns if n_min <= n <= n_max}
+                       - highlight_ns)
+    marker_ps = [mk_asymptotic_pvalue(curve.tau_obs, n) for n in marker_ns]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=curve.n_grid, y=curve.p_grid, mode="lines",
+        name=f"MK p(n) at fixed τ = {curve.tau_obs:+.3f}",
+        line=dict(color="#1f77b4", width=2),
+    ))
+    fig.add_trace(go.Scatter(
+        x=marker_ns, y=marker_ps, mode="markers",
+        marker=dict(color="#1f77b4", size=7, symbol="circle"),
+        name="sample n → p", showlegend=False,
+    ))
+    fig.add_hline(
+        y=alpha, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"α = {alpha:g}", annotation_position="top right",
+        annotation_font_size=10,
+    )
+    fig.add_trace(go.Scatter(
+        x=[curve.n_obs], y=[curve.p_obs], mode="markers+text",
+        marker=dict(color="#d62728", size=13, symbol="x"),
+        text=[f"n={curve.n_obs}<br>p={curve.p_obs:.3f}"],
+        textposition="top right", textfont=dict(size=10, color="#d62728"),
+        name=f"you are here (n={curve.n_obs}, p={curve.p_obs:.3f})",
+    ))
+    if curve.n_needed is not None:
+        fig.add_trace(go.Scatter(
+            x=[curve.n_needed], y=[alpha], mode="markers+text",
+            marker=dict(color="#2ca02c", size=13, symbol="star"),
+            text=[f"n={curve.n_needed}<br>p={alpha:g}"],
+            textposition="top right", textfont=dict(size=10, color="#2ca02c"),
+            name=f"n needed to reject α={alpha:g} (n≈{curve.n_needed})",
+        ))
+
+    p_max_finite = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
+    y_top = min(1.0, max(0.5, p_max_finite * 1.05))
+    need_txt = f"need ~{curve.n_needed} points." if curve.n_needed else "grid did not cross α."
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm MK power curve  |  observed τ = {curve.tau_obs:+.3f}<br>"
+                f"<sub>fix τ, sweep n → p-value falls as √n. "
+                f"At n = {curve.n_obs} we cannot reject H₀; {need_txt}</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        xaxis=dict(title="hypothetical sample size n"),
+        yaxis_title="MK two-sided p-value",
+        yaxis=dict(range=[0, y_top]),
+        font=dict(size=11),
+        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
+                    font=dict(size=10)),
+    )
+    return fig, curve
+
+
+@dataclass(frozen=True)
+class MKPowerOfTest:
+    """Return type of :func:`mk_power_of_test`.
+
+    Companion to :class:`MKPowerCurve`: fixes Kendall ``tau_obs`` and sweeps
+    ``n`` to give MK *power* (probability of rejecting H₀ at level
+    ``alpha``) instead of the p-value. Stores the observed ``power_now``
+    at ``n_obs`` plus the smallest ``n`` on the grid whose power reaches
+    ``target_power`` (``None`` when no grid point clears the target).
+    """
+
+    tau_obs: float
+    n_obs: int
+    power_now: float
+    n_grid: np.ndarray
+    power_grid: np.ndarray
+    alpha: float
+    target_power: float
+    n_needed_power: int | None
+
+
+def mk_asymptotic_power(tau: float, n: int, alpha: float = 0.05) -> float:
+    """Two-sided asymptotic MK power at fixed Kendall ``tau`` and ``n``.
+
+    Uses the closed-form Gaussian approximation to Mann-Kendall's ``Z``
+    under the alternative :math:`\\tau = \\tau`:
+
+    .. math::
+
+        \\mu_Z = \\tau \\cdot \\sqrt{\\tfrac{9\\,n(n-1)}{2(2n+5)}}, \\quad
+        \\text{power} =
+        \\Phi(\\mu_Z - z_{1-\\alpha/2}) +
+        \\Phi(-\\mu_Z - z_{1-\\alpha/2}).
+
+    Returns ``nan`` when ``n < 4`` or ``tau`` is non-finite (MK is
+    undefined under those conditions).
+    """
+    if n < 4 or not np.isfinite(tau):
+        return float("nan")
+    mu_z = float(tau) * np.sqrt(9.0 * n * (n - 1) / (2.0 * (2 * n + 5)))
+    z_crit = norm.ppf(1.0 - alpha / 2.0)
+    return float(norm.cdf(mu_z - z_crit) + norm.cdf(-mu_z - z_crit))
+
+
+def mk_power_of_test(
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+) -> MKPowerOfTest:
+    """MK power-of-test sweep — mirror of :func:`mk_power_curve` for power.
+
+    Takes an existing :class:`MKPowerCurve` (so ``tau_obs``, ``n_obs``,
+    ``alpha`` and ``n_grid`` are already fixed) and evaluates
+    :func:`mk_asymptotic_power` across the same grid. Answers the reader's
+    question "at ``tau = tau_obs``, how many observations would I need for
+    MK to reject H₀ at least ``target_power`` fraction of the time?" — the
+    crossing is stored on :attr:`MKPowerOfTest.n_needed_power`.
+
+    Args:
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`.
+        target_power: Power threshold used to compute ``n_needed_power``
+            (0.80 is the conventional target).
+    """
+    power_grid = np.array(
+        [mk_asymptotic_power(curve.tau_obs, int(n), alpha=curve.alpha)
+         for n in curve.n_grid]
+    )
+    power_now = mk_asymptotic_power(curve.tau_obs, curve.n_obs, alpha=curve.alpha)
+    hit = np.isfinite(power_grid) & (power_grid >= target_power)
+    n_needed_power = int(curve.n_grid[hit][0]) if hit.any() else None
+
+    return MKPowerOfTest(
+        tau_obs=curve.tau_obs,
+        n_obs=curve.n_obs,
+        power_now=power_now,
+        n_grid=curve.n_grid,
+        power_grid=power_grid,
+        alpha=curve.alpha,
+        target_power=float(target_power),
+        n_needed_power=n_needed_power,
+    )
+
+
+def mk_power_of_test_figure(
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+    arm_label: str = "post",
+):
+    """One-picture explanation of MK power vs sample size at fixed ``tau``.
+
+    Companion to :func:`mk_power_curve_figure`. Runs :func:`mk_power_of_test`
+    on ``curve``, then renders the closed-form ``power(n)`` curve with:
+
+    * a grey dotted line at ``power = alpha`` (chance-level rejection),
+    * a red dashed line at ``power = target_power``,
+    * a red ✕ at ``(n_obs, power_now)`` labelled "you are here",
+    * a green ★ at ``n_needed_power`` when the curve reaches
+      ``target_power``.
+
+    Useful for stakeholder-facing "we should have collected more data"
+    conversations: shows the sample size needed to detect the observed
+    trend at conventional power.
+
+    Args:
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`.
+        target_power: Power threshold; drawn as a dashed reference line.
+        arm_label: Short label used in the title (e.g. ``"pre"``, ``"post"``).
+
+    Returns:
+        Tuple of ``(plotly.graph_objects.Figure, MKPowerOfTest)``.
+    """
+    import plotly.graph_objects as go
+
+    power = mk_power_of_test(curve, target_power=target_power)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=power.n_grid, y=power.power_grid, mode="lines",
+        name=f"power(n) at fixed τ = {power.tau_obs:+.3f}",
+        line=dict(color="#1f77b4", width=2),
+    ))
+    fig.add_hline(
+        y=power.alpha, line=dict(color="grey", dash="dot"),
+        annotation_text=f"α = {power.alpha:g} (chance)",
+        annotation_position="bottom right", annotation_font_size=10,
+    )
+    fig.add_hline(
+        y=power.target_power, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"target = {power.target_power:.2f}",
+        annotation_position="top right", annotation_font_size=10,
+    )
+    fig.add_trace(go.Scatter(
+        x=[power.n_obs], y=[power.power_now], mode="markers+text",
+        marker=dict(color="#d62728", size=13, symbol="x"),
+        text=[f"n={power.n_obs}<br>power={power.power_now:.2f}"],
+        textposition="top right", textfont=dict(size=10, color="#d62728"),
+        name=f"you are here (n={power.n_obs}, power={power.power_now:.2f})",
+    ))
+    if power.n_needed_power is not None:
+        fig.add_trace(go.Scatter(
+            x=[power.n_needed_power], y=[power.target_power],
+            mode="markers+text",
+            marker=dict(color="#2ca02c", size=13, symbol="star"),
+            text=[f"n={power.n_needed_power}<br>power={power.target_power:.2f}"],
+            textposition="top left", textfont=dict(size=10, color="#2ca02c"),
+            name=f"n needed for power ≥ {power.target_power:.2f} "
+                 f"(n≈{power.n_needed_power})",
+        ))
+
+    need_txt = (
+        f"need ~{power.n_needed_power} points for power ≥ {power.target_power:.2f}."
+        if power.n_needed_power is not None
+        else f"grid did not reach power {power.target_power:.2f}."
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm power of test  |  observed τ = {power.tau_obs:+.3f}<br>"
+                f"<sub>fix τ, sweep n → power(n) = P(reject H₀ | τ = τ_obs). "
+                f"At n = {power.n_obs} power is {power.power_now:.2f}; {need_txt}</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        xaxis=dict(title="hypothetical sample size n"),
+        yaxis=dict(title="MK two-sided power", range=[0, 1.02]),
+        font=dict(size=11),
+        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
+                    font=dict(size=10)),
+    )
+    return fig, power
+
+
 def intervention_summary_row(
     experiment: str,
-    event_date: str | pd.Timestamp,
-    result: MBBDeltaResult,
+    intervention_date: str | pd.Timestamp,
+    result: MbbDeltaResult,
     *,
     regime: AcfRegime | None = None,
-    boot: MBBDeltaResult | None = None,
+    boot: MbbDeltaResult | None = None,
     homogeneity_p_pre: float | None = None,
     homogeneity_p_post: float | None = None,
     guard_fires: bool | None = None,
@@ -775,17 +1430,17 @@ def intervention_summary_row(
 
     Args:
         experiment: Identifier used as the row's primary key.
-        event_date: Intervention date (formatted as ISO string).
-        result: Main :class:`MBBDeltaResult` from :func:`mk_delta_MBB`.
+        intervention_date: Intervention date (formatted as ISO string).
+        result: Main :class:`MbbDeltaResult` from :func:`mk_delta_mbb`.
         regime: Optional ACF diagnostic (adds ``heavy_acf``, ``rho_pre``,
             ``rho_post``).
-        boot: Optional cross-check :class:`MBBDeltaResult` (adds
+        boot: Optional cross-check :class:`MbbDeltaResult` (adds
             ``boot_*`` fields). Reserved for future variant sweeps; the
-            unified :func:`mk_delta_MBB` already returns bootstrap CIs.
+            unified :func:`mk_delta_mbb` already returns bootstrap CIs.
         homogeneity_p_pre / homogeneity_p_post: Seasonal-MK VBH p-values.
         guard_fires: Boolean flag from the VBH guard.
         delta_pvalue: Optional Δ p-value (defaults to ``result.delta_pvalue``
-            which :func:`mk_delta_MBB` populates automatically).
+            which :func:`mk_delta_mbb` populates automatically).
         extra: Any additional key/value pairs to merge in last (wins on
             conflict).
 
@@ -794,7 +1449,7 @@ def intervention_summary_row(
     """
     row: dict = {
         "experiment": experiment,
-        "event_date": pd.Timestamp(event_date).date().isoformat(),
+        "intervention_date": pd.Timestamp(intervention_date).date().isoformat(),
         "n_pre": int(result.n_pre),
         "n_post": int(result.n_post),
         "pipeline": result.method,
@@ -964,7 +1619,7 @@ def mk_3pw(
             "mk_3pw requires timestamps that span at least two calendar years "
             "(mannkendall.s_test groups by year). Got a single year "
             f"({sorted(years)[0]}). For sub-year daily data call "
-            "mk_delta_MBB(mk_method='hamed_rao') instead."
+            "mk_delta_mbb(mk_method='hamed_rao') instead."
         )
 
     out = _mk.mk_temp_aggr([dts_native], [arr], resolution=float(resolution),
@@ -1129,9 +1784,9 @@ def classify_acf_regime(
     rho_post = lag1_acf(resid_post)
     heavy = max(abs(rho_pre), abs(rho_post)) > acf_cutoff
     label = (
-        "heavy-ACF → mk_delta_MBB(mk_method='3pw' or 'hamed_rao') + MBB CI"
+        "heavy-ACF → mk_delta_mbb(mk_method='3pw' or 'hamed_rao') + MBB CI"
         if heavy
-        else "light-ACF → mk_delta_MBB(mk_method='seasonal') + MBB CI"
+        else "light-ACF → mk_delta_mbb(mk_method='seasonal') + MBB CI"
     )
     return AcfRegime(
         rho_pre=float(rho_pre),
@@ -1469,7 +2124,7 @@ def _mk_pvalue(
 
 
 # ---------------------------------------------------------------------------
-# §6 workflow — per-arm dispatch + three branch wrappers
+# §6 workflow — per-arm adaptive MK + three branch wrappers
 # ---------------------------------------------------------------------------
 
 
@@ -1484,7 +2139,7 @@ def _dts_span_years(dts: Sequence) -> float:
     return span_s / (365.25 * 86400.0)
 
 
-def dispatch_arm(
+def mk_adaptive_core_arm(
     y: Sequence[float],
     *,
     period: int | None = None,
@@ -1493,14 +2148,14 @@ def dispatch_arm(
     force_variant: str | None = None,
     alpha: float = 0.05,
     mk_kwargs: dict | None = None,
-) -> DispatchArmResult:
-    """Per-arm §4 dispatch (chart 4.3 Path A): seasonality gate → §4.2 AR ladder → MK variant.
+) -> MKAdaptiveCoreArmResult:
+    """Per-arm adaptive MK (chart 4.3 Path A): seasonality gate → §4.2 AR ladder → MK variant.
 
-    Runs a single arm through the paper's dispatch pipeline and returns the
-    Sen slope point (from raw ``y``) and the closed-form MK p-value from
-    the variant §4 picked.
+    Runs a single arm through the paper's variant-selection pipeline and
+    returns the Sen slope point (from raw ``y``) and the closed-form MK
+    p-value from the variant §4 picked.
 
-    The dispatch rules match §4.3 Path A:
+    The selection rules match §4.3 Path A:
 
     * If ``period`` is given, deseason the arm (subtract per-phase mean)
       to obtain the residual substrate; otherwise the raw ``y`` is the
@@ -1537,13 +2192,30 @@ def dispatch_arm(
     # ── §4.2 AR ladder on substrate ────────────────────────────────────────
     rho = lag1_acf(substrate)
     rho_f = float(rho) if np.isfinite(rho) else 0.0
+    span_yr = _dts_span_years(dts) if dts is not None else None
     if force_variant is not None:
         variant = force_variant
+        reason = f"forced_variant={force_variant!r} (ladder bypassed)"
     elif abs(rho_f) <= acf_cutoff:
         variant = "original"
+        reason = (
+            f"ρ₁={rho_f:+.3f} → |ρ₁| ≤ acf_cutoff={acf_cutoff:.2f}, no AR(1) detected → Plain MK"
+        )
     else:
-        has_two_years = dts is not None and _dts_span_years(dts) >= 2.0
-        variant = "3pw" if has_two_years else "hamed_rao"
+        has_two_years = span_yr is not None and span_yr >= 2.0
+        if has_two_years:
+            variant = "3pw"
+            reason = (
+                f"AR(1) detected (ρ₁={rho_f:+.3f}, |ρ₁| > {acf_cutoff:.2f}) "
+                f"and span={span_yr:.2f}yr ≥ 2yr → 3PW"
+            )
+        else:
+            variant = "hamed_rao"
+            span_txt = f"span={span_yr:.2f}yr" if span_yr is not None else "span=n/a (no dts)"
+            reason = (
+                f"AR(1) detected (ρ₁={rho_f:+.3f}, |ρ₁| > {acf_cutoff:.2f}) "
+                f"but {span_txt} < 2yr → Hamed–Rao"
+            )
 
     # ── Feed the variant its expected substrate ────────────────────────────
     # 3PW deseasons internally, so it must receive raw y. Plain / HR /
@@ -1562,7 +2234,7 @@ def dispatch_arm(
             period=period_int,
             dts=dts_arr, mk_kwargs=dict(mk_kwargs or {}),
         )
-    return DispatchArmResult(
+    return MKAdaptiveCoreArmResult(
         n=n,
         slope=slope,
         pvalue=float(p),
@@ -1570,10 +2242,12 @@ def dispatch_arm(
         deseasoned=deseasoned,
         rho1=rho_f,
         period=period_int,
+        reason=reason,
+        dts_span_years=span_yr,
     )
 
 
-def run_dispatch_branch(
+def mk_adaptive_core(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     *,
@@ -1584,23 +2258,23 @@ def run_dispatch_branch(
     force_variant: str | None = None,
     alpha: float = 0.05,
     mk_kwargs: dict | None = None,
-) -> DispatchBranchResult:
-    """Headline branch (§6) — §4 dispatch on each arm + derived Δ point.
+) -> MKAdaptiveCoreResult:
+    """Headline branch (§6) — adaptive MK on each arm + derived Δ point.
 
-    Runs :func:`dispatch_arm` independently on ``y_pre`` and ``y_post``
+    Runs :func:`mk_adaptive_core_arm` independently on ``y_pre`` and ``y_post``
     (each arm may end up with a different MK variant if its AR regime
     differs) and returns the five required headline numbers:
     ``slope_pre``, ``slope_post``, ``pval_pre``, ``pval_post``, and
     ``delta_slope = slope_post − slope_pre``.
 
-    No bootstrap. For a CI or p-value on Δ, run :func:`run_mbb_branch`
-    (or :func:`mk_delta_MBB` directly) as the optional add-on.
+    No bootstrap. For a CI or p-value on Δ, run :func:`mk_adaptive_mbb`
+    (or :func:`mk_delta_mbb` directly) as the optional add-on.
     """
-    pre = dispatch_arm(
+    pre = mk_adaptive_core_arm(
         y_pre, period=period, dts=dts_pre, acf_cutoff=acf_cutoff,
         force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
     )
-    post = dispatch_arm(
+    post = mk_adaptive_core_arm(
         y_post, period=period, dts=dts_post, acf_cutoff=acf_cutoff,
         force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
     )
@@ -1609,7 +2283,7 @@ def run_dispatch_branch(
         pct: float | None = float(post.slope / pre.slope - 1.0)
     else:
         pct = None
-    return DispatchBranchResult(
+    return MKAdaptiveCoreResult(
         pre=pre,
         post=post,
         slope_pre=pre.slope,
@@ -1623,7 +2297,7 @@ def run_dispatch_branch(
     )
 
 
-def run_vbh_branch(
+def mk_vbh(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     *,
@@ -1650,7 +2324,7 @@ def run_vbh_branch(
     )
 
 
-def run_mbb_branch(
+def mk_adaptive_mbb(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     *,
@@ -1664,16 +2338,16 @@ def run_mbb_branch(
     seed: int | None = 0,
     mk_kwargs: dict | None = None,
     progress: bool = True,
-) -> "MBBDeltaResult":
+) -> "MbbDeltaResult":
     """Optional MBB branch (§6.1) — paired moving-block bootstrap for Δ inference.
 
-    Thin alias for :func:`mk_delta_MBB` with ``ci_method='mbb'``. Produces
+    Thin alias for :func:`mk_delta_mbb` with ``ci_method='mbb'``. Produces
     ``delta_ci`` and ``delta_pvalue`` (Δ inference) plus the byproduct
     per-arm slope CIs ``slope_ci_pre`` / ``slope_ci_post``. Use when a CI
     or p-value on Δ is required on top of the headline point comparison
-    from :func:`run_dispatch_branch`.
+    from :func:`mk_adaptive_core`.
     """
-    return mk_delta_MBB(
+    return mk_delta_mbb(
         y_pre, y_post,
         mk_method=mk_method,
         ci_method="mbb",
@@ -1689,7 +2363,7 @@ def run_mbb_branch(
     )
 
 
-def mk_delta_MBB(
+def mk_delta_mbb(
     y_pre: Sequence[float],
     y_post: Sequence[float],
     *,
@@ -1704,7 +2378,7 @@ def mk_delta_MBB(
     seed: int | None = 0,
     mk_kwargs: dict | None = None,
     progress: bool = True,
-) -> MBBDeltaResult:
+) -> MbbDeltaResult:
     """Pre/post Sen-slope comparison — pluggable CI and MK p-value.
 
     Design invariants:
@@ -1863,7 +2537,7 @@ def mk_delta_MBB(
             pct_change = None
             pct_ci = None
         interp = _compute_delta_interpretation(float(delta), delta_ci, confidence_level)
-        return MBBDeltaResult(
+        return MbbDeltaResult(
             slope_pre=slope_pre,
             slope_post=slope_post,
             slope_ci_pre=slope_ci_pre,
@@ -1936,7 +2610,7 @@ def mk_delta_MBB(
     interp = _compute_delta_interpretation(
         delta_point, delta_ci, confidence_level, delta_boot=delta_b,
     )
-    return MBBDeltaResult(
+    return MbbDeltaResult(
         slope_pre=slope_pre,
         slope_post=slope_post,
         slope_ci_pre=slope_ci_pre,
@@ -1967,7 +2641,7 @@ def per_day_delta_slopes(
     """Per-phase Δslope = slope_post − slope_pre with per-arm Sen CIs.
 
     Used as the fallback when the Van Belle-Hughes homogeneity guard fires
-    inside :func:`mk_delta_MBB` — the pooled Δ hides sign cancellation
+    inside :func:`mk_delta_mbb` — the pooled Δ hides sign cancellation
     across phases, so we quote one Δ per day-of-week. Uses
     :func:`sen_slope_ci` (theilslopes, iid) inside each phase; treat this
     as a diagnostic table, not an autocorrelation-aware estimate.
@@ -2261,7 +2935,7 @@ __all__ = [
     "TrendResult",
     "SeasonalTrendResult",
     "VbhDecomposition",
-    "MBBDeltaResult",
+    "MbbDeltaResult",
     "RegionalHomogeneityResult",
     "AcfRegime",
     # single-series wrappers
@@ -2277,19 +2951,28 @@ __all__ = [
     "lag1_acf",
     "tfpw_y",
     "classify_acf_regime",
+    "mk_asymptotic_pvalue",
+    "mk_asymptotic_power",
+    "mk_power_curve",
+    "MKPowerCurve",
+    "mk_power_of_test",
+    "MKPowerOfTest",
     # seasonal / partial / correlated
     "seasonal_mk",
     "vbh_chi2_decomposition",
     "correlated_seasonal_mk",
     "partial_mk",
     # paired
-    "mk_delta_MBB",
+    "mk_delta_mbb",
     "per_day_delta_slopes",
     "sen_fit_line",
-    "format_mk_result_line",
-    "build_pre_post_sen_figure",
-    "build_mk_figure",
-    "build_seasonal_mk_figure",
+    "mk_result_line",
+    "pre_post_sen_figure",
+    "mk_figure",
+    "seasonal_mk_figure",
+    "mk_adaptive_sen_figure",
+    "mk_power_curve_figure",
+    "mk_power_of_test_figure",
     "intervention_summary_row",
     # batch
     "aggregate_by_period",

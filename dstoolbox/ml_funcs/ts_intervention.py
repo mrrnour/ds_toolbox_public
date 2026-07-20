@@ -145,7 +145,7 @@ def effect_from_preds(
 
     Preds-frame counterpart to :func:`estimate_intervention_effect` +
     :func:`effect_summary`, for the ``ml_comparison`` + 1-fold ``HoldoutSplit``
-    workflow (train = pre-event, val = post-event). Avoids re-fitting each
+    workflow (train = pre-intervention, val = post-intervention). Avoids re-fitting each
     model just to compute the effect summary — the forecasts in ``preds``
     are reused directly.
 
@@ -173,6 +173,122 @@ def effect_from_preds(
         "n_outside_band":    grp["outside_band"].sum().astype(int),
     }).reset_index()
     return post, summary
+
+
+def effect_report(
+    post_preds: pd.DataFrame,
+    summary: pd.DataFrame,
+    *,
+    model: str,
+    model_col: str = "model",
+) -> pd.DataFrame:
+    """Long-form intervention-effect report for a single model.
+
+    Combines the per-day post frame and the per-model summary from
+    :func:`effect_from_preds` into an explanatory table suitable for
+    saving as the final analysis artefact (CSV / Markdown).
+
+    Returns a DataFrame with columns:
+
+    * ``metric`` — short key.
+    * ``value`` — raw numeric value (or ``NaN`` when not applicable).
+    * ``formatted`` — human-friendly string (%, thousands, dates).
+    * ``explanation`` — what the metric means and how it was computed.
+
+    Metrics include the post-window size, cumulative observed / forecast,
+    daily and cumulative lift, relative lift (%), and PI-based coverage
+    (outside-band count + coverage %).
+    """
+    g = post_preds[post_preds[model_col] == model].copy()
+    if g.empty:
+        raise ValueError(f"no post_preds rows for model={model!r}")
+    if summary.empty or (summary[model_col] == model).sum() == 0:
+        raise ValueError(f"no summary row for model={model!r}")
+    s = summary.loc[summary[model_col] == model].iloc[0]
+
+    n_post = int(len(g))
+    sum_obs = float(g["y_true"].sum())
+    sum_fcst = float(g["y_pred"].sum())
+    daily = float(s["daily_effect"])
+    cumulative = float(s["cumulative_effect"])
+    relative = float(s["relative_lift"])
+    n_outside = int(s["n_outside_band"]) if "n_outside_band" in s else int(g["outside_band"].sum())
+    coverage_pct = (n_post - n_outside) / n_post if n_post else float("nan")
+
+    ts_start = pd.to_datetime(g["ts"].min()).date() if "ts" in g else None
+    ts_end = pd.to_datetime(g["ts"].max()).date() if "ts" in g else None
+
+    rows = [
+        {
+            "metric": "model",
+            "value": model,
+            "formatted": model,
+            "explanation": "Model used to build the counterfactual forecast.",
+        },
+        {
+            "metric": "n_post_days",
+            "value": n_post,
+            "formatted": f"{n_post:d}",
+            "explanation": "Number of days in the post-intervention window.",
+        },
+        {
+            "metric": "post_window",
+            "value": float("nan"),
+            "formatted": f"{ts_start} → {ts_end}" if ts_start else "",
+            "explanation": "Date range of the post-intervention window (inclusive).",
+        },
+        {
+            "metric": "sum_observed",
+            "value": sum_obs,
+            "formatted": f"{sum_obs:,.4g}",
+            "explanation": "Σy — cumulative observed value over the post window.",
+        },
+        {
+            "metric": "sum_forecast",
+            "value": sum_fcst,
+            "formatted": f"{sum_fcst:,.4g}",
+            "explanation": "Σŷ — cumulative counterfactual forecast (what would have happened without the intervention).",
+        },
+        {
+            "metric": "cumulative_effect",
+            "value": cumulative,
+            "formatted": f"{cumulative:,.4g}",
+            "explanation": "Σ(y − ŷ) — total lift attributable to the intervention over the post window.",
+        },
+        {
+            "metric": "daily_effect",
+            "value": daily,
+            "formatted": f"{daily:,.4g}",
+            "explanation": "mean(y − ŷ) — average daily lift over the post window (units of y).",
+        },
+        {
+            "metric": "relative_lift",
+            "value": relative,
+            "formatted": f"{relative:.2%}",
+            "explanation": "Σ(y − ŷ) / Σŷ — cumulative lift as a percentage of expected volume.",
+        },
+        {
+            "metric": "n_outside_band",
+            "value": n_outside,
+            "formatted": f"{n_outside:d}",
+            "explanation": (
+                "Σ 1[y < y_lo OR y > y_hi] over the post window — count of "
+                "days where y fell outside the model's prediction interval "
+                "[y_lo, y_hi]. Interpret only after verifying PI calibration."
+            ),
+        },
+        {
+            "metric": "pi_coverage_pct",
+            "value": coverage_pct,
+            "formatted": f"{coverage_pct:.2%}" if n_post else "n/a",
+            "explanation": (
+                "(n_post − n_outside_band) / n_post — fraction of post-window "
+                "days where y_lo ≤ y ≤ y_hi. Should track the nominal PI level "
+                "(e.g. ~95%) if the model is well calibrated."
+            ),
+        },
+    ]
+    return pd.DataFrame(rows, columns=["metric", "value", "formatted", "explanation"])
 
 
 def sc_results_to_backtest_preds(

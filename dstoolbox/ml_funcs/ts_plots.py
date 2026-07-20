@@ -43,13 +43,13 @@ def _fit_control_limits(
     raise ValueError(f"unknown control-limit method: {method!r}")
 
 
-def _as_event_list(event_date) -> list[pd.Timestamp]:
-    """Normalize ``event_date`` (scalar / list / None) to a list of Timestamps."""
-    if event_date is None:
+def _as_intervention_list(intervention_date) -> list[pd.Timestamp]:
+    """Normalize ``intervention_date`` (scalar / list / None) to a list of Timestamps."""
+    if intervention_date is None:
         return []
-    if isinstance(event_date, (list, tuple)):
-        return [pd.Timestamp(e) for e in event_date]
-    return [pd.Timestamp(event_date)]
+    if isinstance(intervention_date, (list, tuple)):
+        return [pd.Timestamp(e) for e in intervention_date]
+    return [pd.Timestamp(intervention_date)]
 
 
 def _as_anomaly_groups(anomalies) -> list[list]:
@@ -72,16 +72,16 @@ def _baseline_series(
     date_col: str,
     value_col: str,
     baseline,
-    event_date: pd.Timestamp | str | None,
+    intervention_date: pd.Timestamp | str | None,
 ) -> pd.Series:
     """Slice the value column to the requested baseline window for limit-fitting."""
     if baseline is None:
         return df[value_col]
     if baseline == "pre":
-        events = _as_event_list(event_date)
-        if not events:
-            raise ValueError('baseline="pre" requires event_date')
-        cut = min(events)
+        interventions = _as_intervention_list(intervention_date)
+        if not interventions:
+            raise ValueError('baseline="pre" requires intervention_date')
+        cut = min(interventions)
         return df.loc[df[date_col] < cut, value_col]
     start, end = baseline
     mask = (df[date_col] >= pd.Timestamp(start)) & (df[date_col] <= pd.Timestamp(end))
@@ -92,16 +92,16 @@ def plot_series(
     df_ts: pd.DataFrame,
     date_col: str,
     value_col: str,
-    event_date: pd.Timestamp | str | list | None = None,
+    intervention_date: pd.Timestamp | str | list | None = None,
     anomalies: list = (),
     title: str = "",
     moving_average: int | list[int] | None = None,
     control_limits: dict | None = None,
 ) -> go.Figure:
-    """Raw time series with optional event-date markers, anomaly windows, moving-average overlay,
+    """Raw time series with optional intervention-date markers, anomaly windows, moving-average overlay,
     and SPC-style control limits.
 
-    ``event_date`` is a single timestamp or a list of timestamps; each is drawn
+    ``intervention_date`` is a single timestamp or a list of timestamps; each is drawn
     as a dashed black vertical line. ``moving_average`` is an int window (rows,
     not days) or a list of windows to overlay.
 
@@ -116,12 +116,12 @@ def plot_series(
       coef·rolling-σ, drawn as a shaded band that tracks the level).
     - ``coef``: float, default 3.0. Used by ``sigma`` and ``rolling_sigma``.
     - ``window``: int, default 28. Used by ``rolling_sigma``.
-    - ``baseline``: ``"pre"`` (fit on rows before the earliest ``event_date``)
+    - ``baseline``: ``"pre"`` (fit on rows before the earliest ``intervention_date``)
       or ``(start, end)`` timestamps to fit limits on a specific window only.
       For ``rolling_sigma`` this is ignored (limits are local by construction).
 
     For synthetic-control work, ``baseline="pre"`` is recommended — it keeps
-    the event itself out of the limit fit so post-event excursions stand out.
+    the intervention itself out of the limit fit so post-intervention excursions stand out.
     """
     fig = go.Figure()
     fig.add_trace(
@@ -165,7 +165,7 @@ def plot_series(
                 )
             )
         else:
-            base = _baseline_series(df_ts, date_col, value_col, baseline, event_date)
+            base = _baseline_series(df_ts, date_col, value_col, baseline, intervention_date)
             lcl, mu, ucl = _fit_control_limits(base, method=method, coef=coef)
             label = "I-MR" if method == "imr" else f"{coef}σ"
             base_tag = " (baseline=pre)" if baseline == "pre" else (
@@ -180,12 +180,12 @@ def plot_series(
                     y=y, line_dash="dash", line_color=color,
                     annotation_text=name, annotation_position="top right",
                 )
-    if event_date is not None:
-        event_colors = ("blue", "red", "black", "green", "purple", "darkorange")
-        for i, ev in enumerate(_as_event_list(event_date)):
+    if intervention_date is not None:
+        intervention_colors = ("blue", "red", "black", "green", "purple", "darkorange")
+        for i, ev in enumerate(_as_intervention_list(intervention_date)):
             fig.add_vline(
                 x=ev, line_dash="dash",
-                line_color=event_colors[i % len(event_colors)],
+                line_color=intervention_colors[i % len(intervention_colors)],
             )
     anomaly_colors = ("orange", "purple", "teal", "brown", "magenta", "olive")
     for group_idx, group in enumerate(_as_anomaly_groups(anomalies)):
@@ -348,21 +348,24 @@ def plot_per_day_delta_bar(
     per_day_df: pd.DataFrame,
     x_col: str = "label",
     y_col: str = "delta",
-    title: str = "Per-day-of-week Δ",
-    y_label: str = "Δ slope (per step)",
+    title: str = "Per-day-of-week Δ-slope",
+    y_label: str = "Δ-slope",
     x_label: str = "day of week",
 ) -> go.Figure:
-    """Bar chart of per-day Δ slopes with a zero reference line.
+    """Bar chart of per-day Δ-slopes with a zero reference line.
 
     Designed for the DataFrame returned by
-    :func:`ts_trend.per_day_delta_slopes`.
+    :func:`ts_trend.per_day_delta_slopes`. Labels use "Δ-slope" (not bare
+    "Δ") so the bar height cannot be confused with a level difference —
+    the ``delta`` column is a difference of Sen slopes. No unit suffix
+    is applied; slope already implies per-step.
     """
     fig = px.bar(
         per_day_df, x=x_col, y=y_col,
         title=title,
         labels={x_col: x_label, y_col: y_label},
     )
-    fig.update_traces(hovertemplate="%{x}<br>Δ=%{y:.4g}<extra></extra>")
+    fig.update_traces(hovertemplate="%{x}<br>Δ-slope=%{y:.4g}<extra></extra>")
     fig.add_hline(y=0, line_dash="dot", line_color="grey")
     return fig
 

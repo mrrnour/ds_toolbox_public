@@ -45,6 +45,7 @@ from .logging_utils import (
 
 from .sql import (
     parse_sql_file,
+    strip_sql_comments,
 )
 
 from .encoding import (

@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("hyperopt", reason="ml_funcs.tuning requires hyperopt")
 
-from dstoolbox.ml_funcs.tuning import _apply_trial_suggest  # noqa: E402
+from dstoolbox.ml_funcs.tuning import _apply_trial_suggest  
 
 
 class _FakeTrial:
