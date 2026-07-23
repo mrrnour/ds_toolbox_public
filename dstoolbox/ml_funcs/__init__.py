@@ -205,6 +205,7 @@ from .ts_plots import (
 from .backtest_plots import (
     BacktestReport,
     plot_backtest_splits,
+    plot_metrics_and_residuals,
 )
 
 from .intervention_plots import (
