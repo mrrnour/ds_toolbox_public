@@ -1,0 +1,202 @@
+2026-07-27 14:07:03,472 INFO clamping max_workers 4 -> 1 for stealthy backend
+2026-07-27 14:07:03,473 INFO source=file /tmp/tt_urls.txt count=19 fetcher=stealthy
+2026-07-27 14:07:09,109 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_the-misconception-about-ranked-tests-comparing-share-7456856084343889920-Bacy/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:11,332 WARNING failed: https://www.linkedin.com/feed/update/urn:li:activity:7405545650924363777/ — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:13,554 WARNING failed: https://www.linkedin.com/posts/what-is-network-interference-in-ab-test-share-7459996943780491264-Ewhd/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:15,776 WARNING failed: https://www.linkedin.com/posts/what-is-ab-testing-in-data-science-interviews-share-7461083307406069760-xOhs/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:18,012 WARNING failed: https://www.linkedin.com/posts/ishaan-jain-ij284_ab-testing-the-parts-most-teams-skip-share-7460766754131173378-n1UK/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:20,217 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_i-read-yeaterday-thats-why-you-should-share-7461451556740218881-B3cR/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:22,414 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_please-dont-follow-this-panel-for-interpreting-share-7459858177883271168-5Ed4/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:24,626 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-normality-share-7294020157369192448-G3ON/?utm_source=share&utm_medium=member_android — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:26,871 WARNING failed: https://www.linkedin.com/posts/what-is-the-multiple-comparisons-problem-share-7463619959332528128-AmFo/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:29,063 WARNING failed: https://www.linkedin.com/posts/abdullahzahid77_machinelearning-datascience-mlops-share-7465007954086354944-Ikcm/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:31,264 WARNING failed: https://discord.com/blog/measure-less-to-learn-more-using-fewer-higher-quality-metrics-to-capture-what-matters — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:33,479 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_dear-aspiring-data-scientists-when-you-perform-share-7466889446831980545-lQMb/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:35,705 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_sequentual-multiple-testing-ugcPost-7419052966957121537-QmzX/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:37,955 WARNING failed: https://www.linkedin.com/feed/ — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:40,186 WARNING failed: https://www.linkedin.com/posts/what-is-the-mann-whitney-u-test-in-data-share-7468693252179820545-1see/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:42,410 WARNING failed: https://www.linkedin.com/posts/shivani-galande_biostatistics-clinicaltrials-pharmaresearch-share-7468587710719455233-pu1c/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:44,635 WARNING failed: https://www.linkedin.com/posts/adrianolszewski_statistical-significance-is-not-the-same-share-7470130186991128577-MF7_/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:46,865 WARNING failed: https://www.linkedin.com/posts/sgirish_experimentation-abtesting-cuped-share-7463737292508106752-N8II/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:49,100 WARNING failed: https://www.linkedin.com/posts/what-is-the-kolmogorov-smirnov-test-in-share-7470142858088513537-TfxE/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8 — fetch_exception: BrowserType.launch_persistent_context: Executable doesn't exist at /Users/mohammadreza.nourzadeh/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     patchright install                                     ║
+║                                                            ║
+║ <3 Patchright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-07-27 14:07:49,101 INFO Wrote 19 records to /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/crawling_summary.jsonl
+2026-07-27 14:08:14,529 INFO clamping max_workers 4 -> 1 for stealthy backend
+2026-07-27 14:08:14,529 INFO source=file /tmp/tt_urls.txt count=19 fetcher=stealthy
+2026-07-27 14:08:23,329 INFO ok: https://www.linkedin.com/posts/adrianolszewski_the-misconception-about-ranked-tests-comparing-share-7456856084343889920-Bacy/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:09:27,770 INFO ok: https://www.linkedin.com/feed/update/urn:li:activity:7405545650924363777/
+2026-07-27 14:09:33,898 INFO ok: https://www.linkedin.com/posts/what-is-network-interference-in-ab-test-share-7459996943780491264-Ewhd/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:09:39,580 INFO ok: https://www.linkedin.com/posts/what-is-ab-testing-in-data-science-interviews-share-7461083307406069760-xOhs/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:09:45,434 INFO ok: https://www.linkedin.com/posts/ishaan-jain-ij284_ab-testing-the-parts-most-teams-skip-share-7460766754131173378-n1UK/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:13,611 INFO ok: https://www.linkedin.com/posts/adrianolszewski_i-read-yeaterday-thats-why-you-should-share-7461451556740218881-B3cR/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:19,982 INFO ok: https://www.linkedin.com/posts/adrianolszewski_please-dont-follow-this-panel-for-interpreting-share-7459858177883271168-5Ed4/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:25,909 INFO ok: https://www.linkedin.com/posts/adrianolszewski_statistics-datascience-normality-share-7294020157369192448-G3ON/?utm_source=share&utm_medium=member_android
+2026-07-27 14:10:31,622 INFO ok: https://www.linkedin.com/posts/what-is-the-multiple-comparisons-problem-share-7463619959332528128-AmFo/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:37,586 INFO ok: https://www.linkedin.com/posts/abdullahzahid77_machinelearning-datascience-mlops-share-7465007954086354944-Ikcm/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:43,512 INFO ok: https://discord.com/blog/measure-less-to-learn-more-using-fewer-higher-quality-metrics-to-capture-what-matters
+2026-07-27 14:10:49,611 INFO ok: https://www.linkedin.com/posts/adrianolszewski_dear-aspiring-data-scientists-when-you-perform-share-7466889446831980545-lQMb/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:10:55,746 INFO ok: https://www.linkedin.com/posts/adrianolszewski_sequentual-multiple-testing-ugcPost-7419052966957121537-QmzX/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:12:01,051 INFO ok: https://www.linkedin.com/feed/
+2026-07-27 14:12:07,266 INFO ok: https://www.linkedin.com/posts/what-is-the-mann-whitney-u-test-in-data-share-7468693252179820545-1see/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:12:13,194 INFO ok: https://www.linkedin.com/posts/shivani-galande_biostatistics-clinicaltrials-pharmaresearch-share-7468587710719455233-pu1c/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:12:19,081 INFO ok: https://www.linkedin.com/posts/adrianolszewski_statistical-significance-is-not-the-same-share-7470130186991128577-MF7_/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:12:47,418 INFO ok: https://www.linkedin.com/posts/sgirish_experimentation-abtesting-cuped-share-7463737292508106752-N8II/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:13:16,345 INFO ok: https://www.linkedin.com/posts/what-is-the-kolmogorov-smirnov-test-in-share-7470142858088513537-TfxE/?utm_source=share&utm_medium=member_android&rcm=ACoAACmphIUBo2D4cUQR_ZXSmdR7KMycDh8BUk8
+2026-07-27 14:13:16,346 INFO Wrote 19 records to /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/crawling_summary.jsonl
+2026-07-27 14:13:29,949 INFO Loaded 19 records from /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/crawling_summary.jsonl
+2026-07-27 14:13:31,525 INFO Wrote 19 records to /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/conversion_summary.jsonl
+2026-07-27 14:13:31,525 INFO Report: /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/report.txt
+2026-07-27 14:13:31,525 INFO Loaded 19 records from /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/crawling_summary.jsonl
+2026-07-27 14:13:31,526 INFO Wrote 19 records to /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/conversion_summary.jsonl
+2026-07-27 14:13:31,526 INFO Report: /Users/mohammadreza.nourzadeh/Codes/dstoolbox/dstoolbox/web_reader/output/report.txt
