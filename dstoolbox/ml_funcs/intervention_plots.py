@@ -536,7 +536,7 @@ def _plain_footer_text(
         "<b>How to read this</b> — everything is on one y-axis "
         "(cumulative percentage points of conversion rate, added up daily).<br>"
         "Green line = what really happened, added up day by day.<br>"
-        "Orange dashed line = what the pre-launch trend said we should have seen.<br>"
+        "Orange dashed line = what the SC model predicted would have happened without the launch (the counterfactual forecast).<br>"
         "Shaded band = daily difference between the two — "
         f"<span style='color:{_PLAIN_GREEN}'><b>green</b></span> when the launch helped "
         "(observed above expected), "
@@ -576,7 +576,7 @@ def _plain_footer_text(
     else:
         stats_block = (
             "<br><b>What the headline numbers mean</b> "
-            "<i>(y = observed, \u0177 = pre-launch expected, n = number of post-launch days)</i><br>"
+            "<i>(y = observed, \u0177 = SC counterfactual forecast, n = number of post-launch days)</i><br>"
             f"<b>{rel_lift:+.1%}</b> = <i>relative lift</i>: total extra gain \u00f7 what "
             "we expected without the launch (i.e. the green band as a fraction of the "
             f"orange dashed total). &nbsp;<i>Formula:</i> \u03a3(y \u2212 \u0177) / \u03a3\u0177 "
@@ -620,7 +620,7 @@ def _plain_layout_kwargs(
         direction = "above" if rel_lift >= 0 else "below"
         subtitle = (
             f"Over {n_days} days since launch, conversion is "
-            f"{rel_lift:+.1%} {direction} the pre-launch baseline "
+            f"{rel_lift:+.1%} {direction} the SC counterfactual forecast "
             f"(≈ {daily_lift:+.3f} percentage points per day on average)."
         )
     return {

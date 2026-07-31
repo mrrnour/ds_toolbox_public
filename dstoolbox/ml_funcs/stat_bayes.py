@@ -551,6 +551,68 @@ def prior_sensitivity(
     return results, pd.DataFrame(rows)
 
 
+def beta_binomial_prior_sensitivity(
+    successes_pre,
+    trials_pre,
+    successes_post,
+    trials_post,
+    *,
+    priors: tuple[str, ...] = ("uniform", "jeffreys"),
+    hdi_prob: float = 0.95,
+    **sample_kwargs,
+) -> tuple[dict[str, BetaBinomialResult], pd.DataFrame]:
+    """Fit Beta-Binomial under multiple prior specs; return per-fit results + shift table.
+
+    The Beta-Binomial counterpart of :func:`prior_sensitivity`.  Feeds the
+    same four count inputs to :func:`beta_binomial_two_sample` under each
+    prior, then returns a shift table whose ``shift_from_primary`` column
+    measures how far each alternative posterior mean moves relative to the
+    *first* prior in ``priors``.
+
+    Parameters
+    ----------
+    successes_pre, trials_pre, successes_post, trials_post
+        Total converting searches / total searches per window — the same
+        inputs as :func:`beta_binomial_two_sample`.
+    priors
+        Ordered sequence of prior names accepted by
+        :func:`beta_binomial_two_sample` (``"uniform"``, ``"jeffreys"``).
+        The first element is the primary spec; all others are compared to it.
+    hdi_prob
+        HDI coverage forwarded to every fit.
+    **sample_kwargs
+        Forwarded to :func:`pymc.sample` (``draws``, ``tune``, ``chains``,
+        ``target_accept``, ``random_seed``, ``progressbar``).
+
+    Returns
+    -------
+    results : dict[str, BetaBinomialResult]
+        One fitted result per prior name.
+    shift_table : pd.DataFrame
+        Columns: ``prior``, ``mean_delta``, ``hdi_low``, ``hdi_high``,
+        ``shift_from_primary``.  Row order matches ``priors``.
+    """
+    if not priors:
+        raise ValueError("`priors` must contain at least one prior spec.")
+    results: dict[str, BetaBinomialResult] = {}
+    for name in priors:
+        results[name] = beta_binomial_two_sample(
+            successes_pre, trials_pre, successes_post, trials_post,
+            prior=name, hdi_prob=hdi_prob, **sample_kwargs,
+        )
+    primary_mean = results[priors[0]].posterior_mean_delta
+    rows = []
+    for name, res in results.items():
+        rows.append({
+            "prior": name,
+            "mean_delta": res.posterior_mean_delta,
+            "hdi_low": res.hdi[0],
+            "hdi_high": res.hdi[1],
+            "shift_from_primary": res.posterior_mean_delta - primary_mean,
+        })
+    return results, pd.DataFrame(rows)
+
+
 # ---------------------------------------------------------------------------
 # Plots
 # ---------------------------------------------------------------------------
@@ -638,7 +700,7 @@ def plot_rope_decision(
 
 
 def plot_prior_sensitivity(
-    results: dict[str, BestResult],
+    results: dict[str, BestResult | BetaBinomialResult],
     *,
     out_path: Path | str | None = None,
 ) -> Figure:

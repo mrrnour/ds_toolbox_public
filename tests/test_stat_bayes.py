@@ -20,6 +20,7 @@ from dstoolbox.ml_funcs.stat_bayes import (  # noqa: E402
     RopeDecision,
     _classify,
     best_two_sample,
+    beta_binomial_prior_sensitivity,
     beta_binomial_two_sample,
     prior_sensitivity,
     rope_comparison_table,
@@ -210,3 +211,22 @@ def test_beta_binomial_uniform_vs_jeffreys_close():
     uni = beta_binomial_two_sample(prior="uniform", **kw)
     jef = beta_binomial_two_sample(prior="jeffreys", **kw)
     assert abs(uni.posterior_mean_delta - jef.posterior_mean_delta) < 0.005
+
+
+@pytest.mark.slow
+def test_beta_binomial_prior_sensitivity_shift_table():
+    """beta_binomial_prior_sensitivity returns matching results + well-formed shift table."""
+    results, shift = beta_binomial_prior_sensitivity(
+        successes_pre=50,   trials_pre=1000,
+        successes_post=70,  trials_post=1000,
+        priors=("uniform", "jeffreys"),
+        draws=500, tune=500, chains=2,
+        random_seed=3, progressbar=False,
+    )
+    assert set(results) == {"uniform", "jeffreys"}
+    assert all(isinstance(r, BetaBinomialResult) for r in results.values())
+    assert list(shift.columns) == [
+        "prior", "mean_delta", "hdi_low", "hdi_high", "shift_from_primary",
+    ]
+    assert len(shift) == 2
+    assert shift.iloc[0]["shift_from_primary"] == 0.0
