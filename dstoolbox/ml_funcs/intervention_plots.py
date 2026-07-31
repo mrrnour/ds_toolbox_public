@@ -139,8 +139,7 @@ def plot_cumulative_effect_from_preds(
                 text=(
                     f"cumulative lift = Σ(y − ŷ) over post window "
                     f"= {r['cumulative_effect']:.4g}<br>"
-                    f"relative lift = Σ(y − ŷ) / Σŷ "
-                    f"= {r['relative_lift']:.2%}"
+                    f"avg daily lift = {r['daily_effect']:.4g} pct pts/day"
                 ),
                 showarrow=False,
                 xanchor="left", yanchor="top", align="left",
@@ -151,7 +150,6 @@ def plot_cumulative_effect_from_preds(
             layout_updates["title"] = (
                 f"{prefix}{focus_model} — cumulative Σy vs Σŷ vs Σ(y − ŷ)"
                 f"<br><sup>"
-                f"relative lift={r['relative_lift']:.2%} | "
                 f"n_post={n_days} days | "
                 f"cumulative lift={r['cumulative_effect']:.4g}"
                 f"</sup>"
@@ -455,25 +453,65 @@ def _plain_add_intervention_marker(
     )
 
 
+def _gap_stats(gap_test: dict) -> dict:
+    """Derive CI, MDE₈₀ and observed power from a gap_test dict."""
+    import math
+    from scipy.stats import norm as _norm, t as _t_dist
+    gm    = float(gap_test["gap_mean"])
+    gs    = gap_test.get("gap_std")
+    n     = gap_test.get("n_post", 0)
+    perm_p = float(gap_test["perm_pvalue"])
+    pval_str = f"{perm_p:.4f}" if perm_p >= 0.001 else "<0.001"
+    ci_lo = ci_hi = mde = obs_pow = None
+    if gs is not None and n >= 2:
+        se     = float(gs) / math.sqrt(int(n))
+        t_crit = float(_t_dist.ppf(0.975, df=int(n) - 1))
+        ci_lo  = gm - t_crit * se
+        ci_hi  = gm + t_crit * se
+        z_a, z_b = 1.96, 0.842
+        mde    = (z_a + z_b) * se
+        lam    = abs(gm) / se if se > 0 else 0.0
+        obs_pow = float(_norm.cdf(lam - z_a) + _norm.cdf(-lam - z_a))
+    return {
+        "gap_mean": gm, "perm_pvalue": perm_p, "pval_str": pval_str,
+        "ci_lo": ci_lo, "ci_hi": ci_hi, "mde": mde, "obs_pow": obs_pow,
+    }
+
+
 def _plain_add_endpoint_annotation(
     fig: go.Figure,
     x_last: pd.Timestamp,
     final_gain: float,
     n_days: int,
     rel_lift: float,
+    *,
+    gap_test: dict | None = None,
 ) -> None:
-    """Add the endpoint call-out with total gain + relative lift. Border
-    tints red when the endpoint is negative so a loss doesn't sit inside a
-    purple (gain-colored) box.
+    """Add the endpoint call-out. When gap_test is supplied shows
+    gap_mean + perm p + CI; otherwise falls back to relative lift.
+    Border tints red when endpoint is negative.
     """
     border = _PLAIN_PURPLE if final_gain >= 0 else _PLAIN_NEG
-    fig.add_annotation(
-        x=x_last, y=final_gain,
-        text=(
+    if gap_test is not None:
+        gs = _gap_stats(gap_test)
+        ci_str = (
+            f"95% CI=[{gs['ci_lo']:+.2f}, {gs['ci_hi']:+.2f}]"
+            if gs["ci_lo"] is not None else "95% CI=n/a"
+        )
+        label = (
+            f"<b>gap_mean = {gs['gap_mean']:+.2f} pct pts</b><br>"
+            f"perm p = {gs['pval_str']}<br>"
+            f"{ci_str}"
+        )
+    else:
+        label = (
             f"total extra gain over {n_days} days = {final_gain:+.3f} pct pts"
             f"<br><b>relative lift = {rel_lift:+.1%}</b>"
-        ),
-        showarrow=True, arrowhead=2, ax=-60, ay=-30,
+        )
+    fig.add_annotation(
+        x=x_last, y=final_gain,
+        text=label,
+        showarrow=True, arrowhead=2, ax=-80, ay=-40,
         bgcolor="rgba(255,255,255,0.85)",
         bordercolor=border, borderwidth=1,
     )
@@ -486,12 +524,15 @@ def _plain_footer_text(
     n_days: int,
     cum_expected: float,
     cum_observed: float,
+    *,
+    gap_test: dict | None = None,
 ) -> str:
-    """Return the plain-English footer text: how to read the plot + formula
-    breakdown for each headline number (relative lift, total, avg daily).
+    """Return the plain-English footer text: how to read the plot + statistical
+    summary. When gap_test is supplied the stats block shows gap_mean / perm p /
+    CI / MDE₈₀ / observed power instead of relative lift.
     Kept as a helper so the main function stays under the 40-line cap.
     """
-    return (
+    base = (
         "<b>How to read this</b> — everything is on one y-axis "
         "(cumulative percentage points of conversion rate, added up daily).<br>"
         "Green line = what really happened, added up day by day.<br>"
@@ -509,21 +550,46 @@ def _plain_footer_text(
         "day (gain = 0) to the endpoint, so its slope is the average daily lift "
         "in percentage points per day. Purple above the black line means gains "
         "are accelerating; purple below means they are decelerating.<br>"
-        "<br>"
-        "<b>What the headline numbers mean</b> "
-        "<i>(y = observed, ŷ = pre-launch expected, n = number of post-launch days)</i><br>"
-        f"<b>{rel_lift:+.1%}</b> = <i>relative lift</i>: total extra gain ÷ what "
-        "we expected without the launch (i.e. the green band as a fraction of the "
-        f"orange dashed total). &nbsp;<i>Formula:</i> Σ(y − ŷ) / Σŷ "
-        f"= ({final_gain:+.3f}) / ({cum_expected:.3f}).<br>"
-        f"<b>{final_gain:+.3f} pct pts</b> = <i>total extra gain</i>: sum of the "
-        f"daily gaps over {n_days} days, in percentage points of conversion rate. "
-        f"&nbsp;<i>Formula:</i> Σ(y − ŷ) = Σy − Σŷ "
-        f"= ({cum_observed:.3f}) − ({cum_expected:.3f}).<br>"
-        f"<b>{daily_lift:+.3f} pct pts/day</b> = <i>average daily lift</i>: the "
-        f"same total ÷ {n_days} days. &nbsp;<i>Formula:</i> Σ(y − ŷ) / n "
-        f"= ({final_gain:+.3f}) / {n_days}."
     )
+    if gap_test is not None:
+        gs = _gap_stats(gap_test)
+        ci_str = (
+            f"95% CI=[{gs['ci_lo']:+.2f}, {gs['ci_hi']:+.2f}] pct pts"
+            if gs["ci_lo"] is not None else "95% CI=n/a"
+        )
+        mde_str = (
+            f"MDE\u2088\u2080=\u00b1{gs['mde']:.2f} pct pts"
+            if gs["mde"] is not None else "MDE\u2088\u2080=n/a"
+        )
+        pow_str = (
+            f"observed power={gs['obs_pow'] * 100:.0f}%"
+            if gs["obs_pow"] is not None else "observed power=n/a"
+        )
+        stats_block = (
+            "<br><b>Statistical summary (SC gap test)</b><br>"
+            f"<b>gap_mean = {gs['gap_mean']:+.2f} pct pts</b> — mean daily "
+            "(observed \u2212 counterfactual) over the post window.<br>"
+            f"perm p = {gs['pval_str']} — sign-flip permutation test "
+            "(H\u2080: mean gap = 0; Abadie et al. 2010).<br>"
+            f"{ci_str} &nbsp;\u00b7&nbsp; {mde_str} &nbsp;\u00b7&nbsp; {pow_str}"
+        )
+    else:
+        stats_block = (
+            "<br><b>What the headline numbers mean</b> "
+            "<i>(y = observed, \u0177 = pre-launch expected, n = number of post-launch days)</i><br>"
+            f"<b>{rel_lift:+.1%}</b> = <i>relative lift</i>: total extra gain \u00f7 what "
+            "we expected without the launch (i.e. the green band as a fraction of the "
+            f"orange dashed total). &nbsp;<i>Formula:</i> \u03a3(y \u2212 \u0177) / \u03a3\u0177 "
+            f"= ({final_gain:+.3f}) / ({cum_expected:.3f}).<br>"
+            f"<b>{final_gain:+.3f} pct pts</b> = <i>total extra gain</i>: sum of the "
+            f"daily gaps over {n_days} days, in percentage points of conversion rate. "
+            f"&nbsp;<i>Formula:</i> \u03a3(y \u2212 \u0177) = \u03a3y \u2212 \u03a3\u0177 "
+            f"= ({cum_observed:.3f}) \u2212 ({cum_expected:.3f}).<br>"
+            f"<b>{daily_lift:+.3f} pct pts/day</b> = <i>average daily lift</i>: the "
+            f"same total \u00f7 {n_days} days. &nbsp;<i>Formula:</i> \u03a3(y \u2212 \u0177) / n "
+            f"= ({final_gain:+.3f}) / {n_days}."
+        )
+    return base + stats_block
 
 
 def _plain_layout_kwargs(
@@ -532,17 +598,36 @@ def _plain_layout_kwargs(
     n_days: int,
     rel_lift: float,
     daily_lift: float,
+    *,
+    gap_test: dict | None = None,
 ) -> dict:
-    """Build the update_layout kwargs (title, axes, legend, margin, height)."""
+    """Build the update_layout kwargs (title, axes, legend, margin, height).
+    When gap_test is supplied the subtitle shows gap_mean / perm p / MDE₈₀.
+    """
     prefix = f"[{experiment}] " if experiment else ""
-    direction = "above" if rel_lift >= 0 else "below"
+    if gap_test is not None:
+        gs = _gap_stats(gap_test)
+        direction = "gain" if gs["gap_mean"] >= 0 else "loss"
+        mde_str = (
+            f"MDE\u2088\u2080=\u00b1{gs['mde']:.2f}"
+            if gs["mde"] is not None else "MDE\u2088\u2080=n/a"
+        )
+        subtitle = (
+            f"gap_mean={gs['gap_mean']:+.2f} pct pts ({direction}) · "
+            f"perm p={gs['pval_str']} · {mde_str} · {n_days} post-window days"
+        )
+    else:
+        direction = "above" if rel_lift >= 0 else "below"
+        subtitle = (
+            f"Over {n_days} days since launch, conversion is "
+            f"{rel_lift:+.1%} {direction} the pre-launch baseline "
+            f"(≈ {daily_lift:+.3f} percentage points per day on average)."
+        )
     return {
         "title": {
             "text": (
                 f"{prefix}Did the launch on {intervention_date.date()} actually help?"
-                f"<br><sup>Over {n_days} days since launch, conversion is "
-                f"{rel_lift:+.1%} {direction} the pre-launch baseline "
-                f"(≈ {daily_lift:+.3f} percentage points per day on average).</sup>"
+                f"<br><sup>{subtitle}</sup>"
             ),
             "y": 0.97, "yanchor": "top",
         },
@@ -577,6 +662,7 @@ def plot_cumulative_effect_plain(
     effect_col: str = "effect",
     y_true_col: str = "y_true",
     y_pred_col: str = "y_pred",
+    gap_test: dict | None = None,
 ) -> go.Figure:
     """Audience-friendly cumulative-effect plot for a single focus model.
 
@@ -659,18 +745,21 @@ def plot_cumulative_effect_plain(
     _plain_add_intervention_marker(fig, iv)
     _plain_add_endpoint_annotation(
         fig, focus[date_col].iloc[-1], final_gain, n_days, rel_lift,
+        gap_test=gap_test,
     )
     fig.add_annotation(
         x=0, y=-0.18, xref="paper", yref="paper",
         text=_plain_footer_text(
             rel_lift, final_gain, daily_lift, n_days,
             cum_expected, cum_observed,
+            gap_test=gap_test,
         ),
         showarrow=False, xanchor="left", yanchor="top", align="left",
         font={"size": 10, "color": "gray"},
     )
     fig.update_layout(**_plain_layout_kwargs(
         experiment, iv, n_days, rel_lift, daily_lift,
+        gap_test=gap_test,
     ))
     return fig
 

@@ -43,6 +43,8 @@ _HINTS = {
     "darts.timeseries": "pip install darts",
     "darts.models": "pip install 'darts[torch]'",
     "darts.utils.utils": "pip install darts",
+    "pymc": "pip install 'dstoolbox[bayes]'",
+    "arviz": "pip install 'dstoolbox[bayes]'",
 }
 
 

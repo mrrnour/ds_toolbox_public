@@ -216,3 +216,18 @@ from .intervention_plots import (
     plot_intervention,
     plot_residual_acf,
 )
+
+from .stat_bayes import (
+    BestResult,
+    BetaBinomialResult,
+    RopeDecision,
+    best_two_sample,
+    beta_binomial_two_sample,
+    plot_beta_binomial_report,
+    plot_kruschke_report,
+    plot_prior_sensitivity,
+    plot_rope_decision,
+    prior_sensitivity,
+    rope_comparison_table,
+    rope_decision,
+)
