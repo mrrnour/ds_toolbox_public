@@ -333,6 +333,116 @@ def _build_beta_binomial_model(
     return model
 
 
+def _build_beta_bernoulli_model(
+    y_pre: np.ndarray,
+    y_post: np.ndarray,
+    prior: str,
+):
+    """Return a ``pymc.Model`` implementing the flat Beta-Bernoulli model on raw obs.
+
+    Each element of ``y_pre`` / ``y_post`` is a single binary (0/1) observation.
+    Mathematically equivalent to :func:`_build_beta_binomial_model` on the same
+    data, but takes raw row-level arrays instead of aggregated counts.
+    """
+    try:
+        alpha, beta = _BB_PRIOR_ALPHA_BETA[prior]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown prior spec: {prior!r}. Use 'uniform' or 'jeffreys'."
+        ) from exc
+
+    with _pm.Model() as model:  # type: ignore[union-attr]
+        p_pre  = _pm.Beta("p_pre",  alpha=alpha, beta=beta)
+        p_post = _pm.Beta("p_post", alpha=alpha, beta=beta)
+        _pm.Bernoulli("obs_pre",  p=p_pre,  observed=y_pre)
+        _pm.Bernoulli("obs_post", p=p_post, observed=y_post)
+        _pm.Deterministic("delta",    p_post - p_pre)
+        _pm.Deterministic("rel_lift", (p_post - p_pre) / p_pre)
+
+    return model
+
+
+def beta_bernoulli_two_sample(
+    y_pre,
+    y_post,
+    *,
+    prior: str = "jeffreys",
+    hdi_prob: float = 0.95,
+    draws: int = 2000,
+    tune: int = 1000,
+    chains: int = 4,
+    target_accept: float = 0.9,
+    random_seed: int | None = None,
+    progressbar: bool = False,
+) -> BetaBinomialResult:
+    """Fit the flat Beta-Bernoulli model on raw binary observations.
+
+    Each element of ``y_pre`` / ``y_post`` is a single 0/1 event (e.g. one
+    search row).  No user-level aggregation is performed.  Produces the same
+    posterior as :func:`beta_binomial_two_sample` on the same data because
+    ``Binomial(n, p)`` is the sufficient statistic of ``n`` i.i.d.
+    ``Bernoulli(p)`` draws — useful as a baseline that skips the aggregation
+    step and avoids any Design Effect / deduplication choices.
+
+    Parameters
+    ----------
+    y_pre, y_post
+        1-D integer arrays of 0/1 binary values (one element per row).
+    prior
+        ``"jeffreys"`` (Beta(0.5, 0.5), default) or ``"uniform"``
+        (Beta(1, 1)).
+    hdi_prob
+        Coverage of the returned HDI on ``delta = p_post - p_pre``.
+    draws, tune, chains, target_accept, random_seed, progressbar
+        Forwarded to :func:`pymc.sample`.
+
+    Returns
+    -------
+    BetaBinomialResult
+        Same result container as :func:`beta_binomial_two_sample`.
+    """
+    y_pre  = np.asarray(y_pre,  dtype=int)
+    y_post = np.asarray(y_post, dtype=int)
+    for name, arr in (("pre", y_pre), ("post", y_post)):
+        if arr.ndim != 1:
+            raise ValueError(f"y_{name} must be 1-D; got shape {arr.shape}.")
+        if len(arr) == 0:
+            raise ValueError(f"y_{name} is empty.")
+        if not np.isin(arr, [0, 1]).all():
+            raise ValueError(f"y_{name} must contain only 0/1 values.")
+
+    model = _build_beta_bernoulli_model(y_pre, y_post, prior)
+    with model:
+        trace = _pm.sample(  # type: ignore[union-attr]
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            random_seed=random_seed,
+            progressbar=progressbar,
+            return_inferencedata=True,
+        )
+
+    delta_samples  = np.asarray(trace.posterior["delta"]).ravel()    # type: ignore[attr-defined]
+    p_pre_samples  = np.asarray(trace.posterior["p_pre"]).ravel()    # type: ignore[attr-defined]
+    p_post_samples = np.asarray(trace.posterior["p_post"]).ravel()   # type: ignore[attr-defined]
+    hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)              # type: ignore[union-attr]
+    hdi_arr = np.asarray(hdi_arr).ravel()
+    return BetaBinomialResult(
+        trace=trace,
+        posterior_p_pre=p_pre_samples,
+        posterior_p_post=p_post_samples,
+        posterior_delta=delta_samples,
+        posterior_mean_delta=float(delta_samples.mean()),
+        hdi=(float(hdi_arr[0]), float(hdi_arr[1])),
+        successes_pre=int(y_pre.sum()),
+        trials_pre=len(y_pre),
+        successes_post=int(y_post.sum()),
+        trials_post=len(y_post),
+        prior_spec=prior,
+    )
+
+
 def beta_binomial_two_sample(
     successes_pre,
     trials_pre,
@@ -631,6 +741,63 @@ def _save_fig(fig: Figure, out_path: Path | str | None) -> None:
     fig.savefig(p, bbox_inches="tight", dpi=150)
 
 
+def _posterior_mode(samples: np.ndarray) -> float:
+    """KDE-based mode estimate — robust across all scipy versions."""
+    from scipy.stats import gaussian_kde
+    arr = np.asarray(samples, dtype=float).ravel()
+    kde = gaussian_kde(arr)
+    xs = np.linspace(arr.min(), arr.max(), 1000)
+    return float(xs[np.argmax(kde(xs))])
+
+
+def _plot_posterior_predictive(
+    ax,
+    y: np.ndarray,
+    mu_samples: np.ndarray,
+    sigma_samples: np.ndarray,
+    nu_samples: np.ndarray,
+    *,
+    n_label: str,
+    n_curves: int = 30,
+) -> None:
+    """Draw data histogram + posterior-predictive Student-t curves (BEST website style).
+
+    Histogram bars use ``bar_color`` (group colour); predictive curves are
+    drawn in light blue, matching the canonical BEST website layout.
+    """
+    from scipy import stats as _stats
+
+    curve_color = "#7bafd4"   # light blue — same as BEST website for all groups
+    hist_color  = "#c44e52"   # red — BEST website uses same red for both groups
+
+    n_bins = max(5, min(len(y), 20))
+    x_lo = y.mean() - 4 * y.std()
+    x_hi = y.mean() + 4 * y.std()
+    xs = np.linspace(x_lo, x_hi, 300)
+    rng = np.random.default_rng(42)
+    idx = rng.choice(len(mu_samples), size=min(n_curves, len(mu_samples)), replace=False)
+    for i in idx:
+        pdf = _stats.t.pdf(xs, df=nu_samples[i], loc=mu_samples[i], scale=sigma_samples[i])
+        ax.plot(xs, pdf, color=curve_color, alpha=0.15, linewidth=0.8, zorder=1)
+    pdf_mean = _stats.t.pdf(
+        xs,
+        df=float(nu_samples.mean()),
+        loc=float(mu_samples.mean()),
+        scale=float(sigma_samples.mean()),
+    )
+    ax.plot(xs, pdf_mean, color=curve_color, linewidth=2.0, zorder=2)
+    # Draw histogram on top so bars are always visible
+    ax.hist(
+        y, bins=n_bins, density=True,
+        alpha=0.85, color=hist_color, edgecolor="white", linewidth=0.4,
+        zorder=3,
+    )
+    ax.annotate(n_label, xy=(0.97, 0.97), xycoords="axes fraction",
+                ha="right", va="top", fontsize=9)
+    ax.set_xlabel("Observation")
+    ax.set_ylabel("Probability")
+
+
 def plot_kruschke_report(
     result: BestResult,
     *,
@@ -638,34 +805,79 @@ def plot_kruschke_report(
     y_post,
     out_path: Path | str | None = None,
 ) -> Figure:
-    """Render the canonical Kruschke 9-panel report for a BEST fit.
+    """Render the canonical Kruschke 10-panel report for a BEST fit.
 
-    Panels: posteriors of ``mu_pre, mu_post, sigma_pre, sigma_post, nu,
-    delta, delta_sigma, effect_size`` plus a data + posterior-mean overlay.
+    Layout (5 rows × 2 cols) mirrors the `best` package website:
+
+    ┌─────────────────────┬──────────────────────────────────────┐
+    │ μ_post posterior    │ post data + posterior predictive     │
+    │ μ_pre  posterior    │ pre  data + posterior predictive     │
+    │ σ_post posterior    │ Difference of means                  │
+    │ σ_pre  posterior    │ Difference of std devs               │
+    │ ν (normality)       │ Effect size                          │
+    └─────────────────────┴──────────────────────────────────────┘
     """
     trace = result.trace
-    var_names = [
-        "mu_pre", "mu_post", "sigma_pre", "sigma_post",
-        "nu", "delta", "delta_sigma", "effect_size",
-    ]
-    fig, axes = plt.subplots(3, 3, figsize=(14, 12))
-    axes_flat = axes.ravel()
-    for ax, var in zip(axes_flat[:8], var_names):
-        _az.plot_posterior(trace, var_names=[var], ax=ax)  # type: ignore[union-attr]
-        ax.set_title(var)
+    post = trace.posterior  # type: ignore[attr-defined]
 
-    # Overlay: raw data histograms + posterior-mean μ per group
-    ax_data = axes_flat[8]
-    y_pre_arr = np.asarray(y_pre, dtype=float).ravel()
+    def _flat(var: str) -> np.ndarray:
+        return np.asarray(post[var]).ravel()
+
+    mu_post_s    = _flat("mu_post")
+    mu_pre_s     = _flat("mu_pre")
+    sigma_post_s = _flat("sigma_post")
+    sigma_pre_s  = _flat("sigma_pre")
+    nu_s         = _flat("nu")
+
+    y_pre_arr  = np.asarray(y_pre,  dtype=float).ravel()
     y_post_arr = np.asarray(y_post, dtype=float).ravel()
-    ax_data.hist(y_pre_arr, bins=20, alpha=0.5, label=f"pre (n={result.n_pre})", color="#4c72b0")
-    ax_data.hist(y_post_arr, bins=20, alpha=0.5, label=f"post (n={result.n_post})", color="#dd8452")
-    mu_pre_mean = float(np.asarray(trace.posterior["mu_pre"]).mean())  # type: ignore[attr-defined]
-    mu_post_mean = float(np.asarray(trace.posterior["mu_post"]).mean())  # type: ignore[attr-defined]
-    ax_data.axvline(mu_pre_mean, color="#4c72b0", linestyle="--", label=f"μ_pre ≈ {mu_pre_mean:.2f}")
-    ax_data.axvline(mu_post_mean, color="#dd8452", linestyle="--", label=f"μ_post ≈ {mu_post_mean:.2f}")
-    ax_data.set_title("Data + posterior means")
-    ax_data.legend(loc="best", fontsize=8)
+
+    fig, axes = plt.subplots(5, 2, figsize=(12, 18))
+
+    # Row 0 — μ_post | post data + posterior predictive
+    _az.plot_posterior(trace, var_names=["mu_post"], ax=axes[0, 0],  # type: ignore[union-attr]
+                       point_estimate="mean")
+    axes[0, 0].set_title("Study group mean", pad=8)
+    _plot_posterior_predictive(
+        axes[0, 1], y_post_arr, mu_post_s, sigma_post_s, nu_s,
+        n_label=f"N = {result.n_post}",
+    )
+    axes[0, 1].set_title("Study group data with post. pred.", pad=8)
+
+    # Row 1 — μ_pre | pre data + posterior predictive
+    _az.plot_posterior(trace, var_names=["mu_pre"], ax=axes[1, 0],  # type: ignore[union-attr]
+                       point_estimate="mean")
+    axes[1, 0].set_title("Control group mean", pad=8)
+    _plot_posterior_predictive(
+        axes[1, 1], y_pre_arr, mu_pre_s, sigma_pre_s, nu_s,
+        n_label=f"N = {result.n_pre}",
+    )
+    axes[1, 1].set_title("Control group data with post. pred.", pad=8)
+
+    # Row 2 — σ_post | Difference of means
+    _az.plot_posterior(trace, var_names=["sigma_post"], ax=axes[2, 0],  # type: ignore[union-attr]
+                       point_estimate="mode")
+    axes[2, 0].set_title("Study group std. dev.", pad=8)
+    _az.plot_posterior(trace, var_names=["delta"], ax=axes[2, 1],  # type: ignore[union-attr]
+                       point_estimate="mean", ref_val=0)
+    axes[2, 1].set_title("Difference of means", pad=8)
+
+    # Row 3 — σ_pre | Difference of std devs
+    _az.plot_posterior(trace, var_names=["sigma_pre"], ax=axes[3, 0],  # type: ignore[union-attr]
+                       point_estimate="mode")
+    axes[3, 0].set_title("Control group std. dev.", pad=8)
+    _az.plot_posterior(trace, var_names=["delta_sigma"], ax=axes[3, 1],  # type: ignore[union-attr]
+                       point_estimate="mode", ref_val=0)
+    axes[3, 1].set_title("Difference of std. dev.s", pad=8)
+
+    # Row 4 — ν (normality) | Effect size
+    _az.plot_posterior(trace, var_names=["nu"], ax=axes[4, 0],  # type: ignore[union-attr]
+                       point_estimate="mode")
+    axes[4, 0].set_title("Normality", pad=8)
+    _az.plot_posterior(trace, var_names=["effect_size"], ax=axes[4, 1],  # type: ignore[union-attr]
+                       point_estimate="mode", ref_val=0)
+    axes[4, 1].set_title("Effect size", pad=8)
+    axes[4, 1].set_xlabel(r"$(\mu_1 - \mu_2)\,/\,\sqrt{(\sigma_1^2 + \sigma_2^2)\,/\,2}$")
 
     fig.suptitle(
         f"BEST — {result.prior_spec} priors  |  n_pre={result.n_pre}, n_post={result.n_post}",
