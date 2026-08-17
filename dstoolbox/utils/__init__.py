@@ -94,6 +94,7 @@ from .stats import (
     control_limit,
     control_limit_grpby,
     i_mr_ctrl_limits,
+    sc_post_gap_test,
 )
 
 from .plots import (

@@ -1410,6 +1410,635 @@ def mk_power_of_test_figure(
     return fig, power
 
 
+# ---------------------------------------------------------------------------
+# MK dual-axis p+power view and A/B t-test vs MK overlays
+# ---------------------------------------------------------------------------
+
+# Palette convention within a family: distinct shades per ROLE (line /
+# observed marker / n-needed marker) so a shared legend disambiguates
+# axis AND role even when several traces sit on the same axis.
+_MK_P_PALETTE = {"line": "#1f77b4", "obs": "#0d3d66", "n_needed": "#17becf"}      # blues
+_MK_POWER_PALETTE = {"line": "#ff7f0e", "obs": "#8c3d00", "n_needed": "#ffbb78"}  # oranges
+
+
+def _add_pvalue_traces(
+    fig, curve: MKPowerCurve, *, secondary_y: bool | None = None,
+) -> None:
+    """Add MK p(n) line + observed X + optional n-needed star (blue family).
+
+    ``secondary_y`` is forwarded to ``fig.add_trace`` only when set, so the
+    helper works both on a :func:`plotly.subplots.make_subplots` figure with
+    a secondary y-axis and on a plain :class:`plotly.graph_objects.Figure`.
+    """
+    import plotly.graph_objects as go
+    pal = _MK_P_PALETTE
+    kw = {} if secondary_y is None else {"secondary_y": secondary_y}
+    fig.add_trace(go.Scatter(
+        x=curve.n_grid, y=curve.p_grid, mode="lines",
+        name=f"[p] MK p(n) at τ = {curve.tau_obs:+.3f}",
+        line=dict(color=pal["line"], width=2), legendgroup="mk_p",
+    ), **kw)
+    fig.add_trace(go.Scatter(
+        x=[curve.n_obs], y=[curve.p_obs], mode="markers+text",
+        marker=dict(color=pal["obs"], size=13, symbol="x"),
+        text=[f"obs<br>n={curve.n_obs}, p={curve.p_obs:.3f}"],
+        textposition="top right", textfont=dict(size=10, color=pal["obs"]),
+        name=f"[p] observed (n={curve.n_obs}, p={curve.p_obs:.3f})",
+        legendgroup="mk_p",
+    ), **kw)
+    if curve.n_needed is not None:
+        fig.add_trace(go.Scatter(
+            x=[curve.n_needed], y=[curve.alpha], mode="markers+text",
+            marker=dict(color=pal["n_needed"], size=13, symbol="star"),
+            text=[f"n≈{curve.n_needed}"],
+            textposition="top left", textfont=dict(size=10, color=pal["n_needed"]),
+            name=f"[p] n needed for α ≤ {curve.alpha:g} (n≈{curve.n_needed})",
+            legendgroup="mk_p",
+        ), **kw)
+
+
+def _add_power_traces(
+    fig, power: MKPowerOfTest, *, secondary_y: bool | None = None,
+) -> None:
+    """Add MK power(n) line + observed X + optional n-needed star (orange family).
+
+    ``secondary_y`` is forwarded to ``fig.add_trace`` only when set, so the
+    helper works both on a :func:`plotly.subplots.make_subplots` figure with
+    a secondary y-axis and on a plain :class:`plotly.graph_objects.Figure`.
+    """
+    import plotly.graph_objects as go
+    pal = _MK_POWER_PALETTE
+    kw = {} if secondary_y is None else {"secondary_y": secondary_y}
+    fig.add_trace(go.Scatter(
+        x=power.n_grid, y=power.power_grid, mode="lines",
+        name=f"[power] MK power(n) at τ = {power.tau_obs:+.3f}",
+        line=dict(color=pal["line"], width=2), legendgroup="mk_power",
+    ), **kw)
+    fig.add_trace(go.Scatter(
+        x=[power.n_obs], y=[power.power_now], mode="markers+text",
+        marker=dict(color=pal["obs"], size=13, symbol="x"),
+        text=[f"obs<br>n={power.n_obs}, power={power.power_now:.2f}"],
+        textposition="bottom right", textfont=dict(size=10, color=pal["obs"]),
+        name=f"[power] observed (n={power.n_obs}, power={power.power_now:.2f})",
+        legendgroup="mk_power",
+    ), **kw)
+    if power.n_needed_power is not None:
+        fig.add_trace(go.Scatter(
+            x=[power.n_needed_power], y=[power.target_power], mode="markers+text",
+            marker=dict(color=pal["n_needed"], size=13, symbol="star"),
+            text=[f"n≈{power.n_needed_power}"],
+            textposition="top left", textfont=dict(size=10, color=pal["n_needed"]),
+            name=(f"[power] n needed for power ≥ {power.target_power:.2f} "
+                  f"(n≈{power.n_needed_power})"),
+            legendgroup="mk_power",
+        ), **kw)
+
+
+def _apply_dual_axis_layout(
+    fig, curve: MKPowerCurve, power: MKPowerOfTest, arm_label: str,
+) -> None:
+    """Axis titles/ranges/colours + top-level layout for the dual-axis figure."""
+    p_max = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
+    y_top = min(1.0, max(0.5, p_max * 1.05))
+    fig.add_hline(
+        y=curve.alpha, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"α = {curve.alpha:g} (p)",
+        annotation_position="top left", annotation_font_size=10,
+        secondary_y=False,
+    )
+    fig.add_hline(
+        y=power.target_power, line=dict(color="#2ca02c", dash="dash"),
+        annotation_text=f"target power = {power.target_power:.2f}",
+        annotation_position="top right", annotation_font_size=10,
+        secondary_y=True,
+    )
+    fig.update_xaxes(title_text="hypothetical sample size n")
+    fig.update_yaxes(
+        title_text="MK two-sided p-value", range=[0, y_top],
+        color=_MK_P_PALETTE["line"], secondary_y=False,
+    )
+    fig.update_yaxes(
+        title_text="MK two-sided power", range=[0, 1.02],
+        color=_MK_POWER_PALETTE["line"], secondary_y=True,
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm MK — p-value (left, blue) &amp; "
+                f"power (right, orange) vs n  |  "
+                f"observed τ = {curve.tau_obs:+.3f}, n = {curve.n_obs}<br>"
+                f"<sub>fix τ, sweep n → p-value ↓ as √n; power ↑ toward 1.</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        font=dict(size=11), height=560,
+        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
+                    orientation="h", font=dict(size=10)),
+    )
+
+
+def _apply_pvalue_only_layout(
+    fig, curve: MKPowerCurve, arm_label: str,
+) -> None:
+    """Single-axis layout for the p-value-only variant of the dual figure."""
+    p_max = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
+    y_top = min(1.0, max(0.5, p_max * 1.05))
+    fig.add_hline(
+        y=curve.alpha, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"α = {curve.alpha:g}",
+        annotation_position="top left", annotation_font_size=10,
+    )
+    fig.update_xaxes(title_text="hypothetical sample size n")
+    fig.update_yaxes(
+        title_text="MK two-sided p-value", range=[0, y_top],
+        color=_MK_P_PALETTE["line"],
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm MK — p-value vs n  |  "
+                f"observed τ = {curve.tau_obs:+.3f}, n = {curve.n_obs}<br>"
+                f"<sub>fix τ, sweep n → p-value ↓ as √n.</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        font=dict(size=11), height=560,
+        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
+                    orientation="h", font=dict(size=10)),
+    )
+
+
+def _apply_power_only_layout(
+    fig, curve: MKPowerCurve, power: MKPowerOfTest, arm_label: str,
+) -> None:
+    """Single-axis layout for the power-only variant of the dual figure."""
+    fig.add_hline(
+        y=curve.alpha, line=dict(color="grey", dash="dot"),
+        annotation_text=f"α = {curve.alpha:g} (chance)",
+        annotation_position="bottom right", annotation_font_size=10,
+    )
+    fig.add_hline(
+        y=power.target_power, line=dict(color="#2ca02c", dash="dash"),
+        annotation_text=f"target power = {power.target_power:.2f}",
+        annotation_position="top right", annotation_font_size=10,
+    )
+    fig.update_xaxes(title_text="hypothetical sample size n")
+    fig.update_yaxes(
+        title_text="MK two-sided power", range=[0, 1.02],
+        color=_MK_POWER_PALETTE["line"],
+    )
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"{arm_label}-arm MK — power vs n  |  "
+                f"observed τ = {power.tau_obs:+.3f}, n = {power.n_obs}<br>"
+                f"<sub>fix τ, sweep n → power ↑ toward 1.</sub>"
+            ),
+            font=dict(size=13),
+        ),
+        font=dict(size=11), height=560,
+        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
+                    orientation="h", font=dict(size=10)),
+    )
+
+
+def mk_pvalue_power_dual_axis_figure(
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+    arm_label: str = "post",
+    show: str = "both",
+):
+    """MK p-value and MK power vs hypothetical sample size.
+
+    Consolidates :func:`mk_power_curve_figure` and
+    :func:`mk_power_of_test_figure` into a single entry point. ``show``
+    picks the layout:
+
+    * ``"both"`` (default) — dual-y-axis panel: p-value on the left
+      (blue family), power on the right (orange family), sharing the
+      ``n`` axis. Reference lines: α on the left (red dashed),
+      ``target_power`` on the right (green dashed).
+    * ``"pvalue"`` — single-axis figure with only the p-value family
+      (blue traces + α reference line).
+    * ``"power"`` — single-axis figure with only the power family
+      (orange traces + α/target reference lines). Equivalent to the
+      standalone :func:`mk_power_of_test_figure`.
+
+    Args:
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`.
+        target_power: Threshold used for the power "n needed for
+            power ≥ target" marker.
+        arm_label: Short label used in the title (e.g. ``"pre"``, ``"post"``).
+        show: One of ``"both"`` / ``"pvalue"`` / ``"power"``. Default
+            ``"both"`` preserves the historical dual-axis behaviour.
+
+    Returns:
+        Tuple of ``(plotly.graph_objects.Figure, MKPowerOfTest)``. The
+        second element is the :class:`MKPowerOfTest` that was computed
+        internally, so callers do not need to re-run
+        :func:`mk_power_of_test` (even when ``show="pvalue"``).
+    """
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+    if show not in ("both", "pvalue", "power"):
+        raise ValueError(
+            f"show must be one of 'both', 'pvalue', 'power'; got {show!r}"
+        )
+
+    power = mk_power_of_test(curve, target_power=target_power)
+    if show == "both":
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        _add_pvalue_traces(fig, curve, secondary_y=False)
+        _add_power_traces(fig, power, secondary_y=True)
+        _apply_dual_axis_layout(fig, curve, power, arm_label)
+    elif show == "pvalue":
+        fig = go.Figure()
+        _add_pvalue_traces(fig, curve)
+        _apply_pvalue_only_layout(fig, curve, arm_label)
+    else:  # show == "power"
+        fig = go.Figure()
+        _add_power_traces(fig, power)
+        _apply_power_only_layout(fig, curve, power, arm_label)
+    return fig, power
+
+
+@dataclass(frozen=True)
+class AbTTestSweep:
+    """Two-sample t-test companion to :class:`MKPowerCurve` / :class:`MKPowerOfTest`.
+
+    Fixes the observed Cohen's ``d`` (mean_post − mean_pre over pooled
+    SD) and sweeps balanced sample size ``n`` per arm over the MK power
+    curve's ``n_grid``, so A/B and MK p-values (and powers) can be
+    plotted on shared axes. The observed p-value comes from Welch's
+    two-sample t (unequal variances allowed); the analytical sweep uses
+    pooled-t via :class:`statsmodels.stats.power.TTestIndPower`. ``n_obs``
+    is the smaller of the two arms (the balanced-t effective n).
+    """
+
+    d_obs: float
+    n_obs: int
+    p_obs: float
+    power_now: float
+    n_grid: np.ndarray
+    p_grid: np.ndarray
+    power_grid: np.ndarray
+    alpha: float
+    target_power: float
+    n_needed_alpha: int | None
+    n_needed_power: int | None
+    n_pre: int
+    n_post: int
+
+
+@dataclass(frozen=True)
+class MkVsTTestFigures:
+    """Return type of :func:`mk_vs_ttest_figures`.
+
+    Bundles the two shared-axis overlays (A/B t-test vs Mann-Kendall) and
+    the :class:`AbTTestSweep` summary numbers, so the caller can render
+    the figures AND print a headline table without a second call.
+    """
+
+    fig_pvalue: object   # plotly.graph_objects.Figure
+    fig_power: object    # plotly.graph_objects.Figure
+    ab: AbTTestSweep
+
+
+def _pooled_sd(a: np.ndarray, b: np.ndarray, n_a: int, n_b: int) -> float:
+    """Pooled SD for the two-sample equal-variance t-test (NaN-safe)."""
+    va = float(np.nanvar(a, ddof=1))
+    vb = float(np.nanvar(b, ddof=1))
+    return float(np.sqrt(((n_a - 1) * va + (n_b - 1) * vb) / (n_a + n_b - 2)))
+
+
+def _cohens_d(pre: np.ndarray, post: np.ndarray, pooled_sd: float) -> float:
+    """Cohen's d = (mean_post − mean_pre) / pooled_sd; NaN when SD is 0."""
+    if pooled_sd <= 0:
+        return float("nan")
+    return float(np.nanmean(post) - np.nanmean(pre)) / pooled_sd
+
+
+def _ttest_pvalue_sweep(abs_d: float, n_grid: np.ndarray) -> np.ndarray:
+    """Two-sided balanced-t p-values across ``n``: t = d·√(n/2), df = 2n−2."""
+    from scipy.stats import t as student_t
+    if not np.isfinite(abs_d) or abs_d <= 0:
+        return np.full(n_grid.shape, float("nan"))
+    t_vals = abs_d * np.sqrt(n_grid / 2.0)
+    df_vals = 2 * n_grid - 2
+    return np.array([
+        float(2.0 * (1.0 - student_t.cdf(t, df=df)))
+        for t, df in zip(t_vals, df_vals)
+    ])
+
+
+def _ttest_power_at(abs_d: float, n: int, *, alpha: float) -> float:
+    """Two-sided balanced-t power at a single ``n`` via TTestIndPower."""
+    from statsmodels.stats.power import TTestIndPower
+    if not np.isfinite(abs_d) or abs_d <= 0 or n < 2:
+        return float("nan")
+    return float(TTestIndPower().solve_power(
+        effect_size=abs_d, nobs1=int(n), alpha=alpha, ratio=1.0,
+        alternative="two-sided",
+    ))
+
+
+def _ttest_power_sweep(
+    abs_d: float, n_grid: np.ndarray, *, alpha: float,
+) -> np.ndarray:
+    """Analytic two-sided balanced-t power across ``n`` via TTestIndPower."""
+    if not np.isfinite(abs_d) or abs_d <= 0:
+        return np.full(n_grid.shape, float("nan"))
+    return np.array([_ttest_power_at(abs_d, int(n), alpha=alpha) for n in n_grid])
+
+
+def _first_crossing(
+    grid: np.ndarray, values: np.ndarray, threshold: float, *, mode: str,
+) -> int | None:
+    """Smallest grid point where ``values`` cross ``threshold``.
+
+    ``mode='le'`` searches for ``values <= threshold`` (used for p ≤ α);
+    ``mode='ge'`` searches for ``values >= threshold`` (used for power ≥
+    target). Returns ``None`` when no grid point satisfies the condition.
+    """
+    if mode == "le":
+        hit = np.isfinite(values) & (values <= threshold)
+    elif mode == "ge":
+        hit = np.isfinite(values) & (values >= threshold)
+    else:
+        raise ValueError(f"mode must be 'le' or 'ge', got {mode!r}")
+    return int(grid[hit][0]) if hit.any() else None
+
+
+def ab_ttest_sweep(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    n_grid: np.ndarray,
+    *,
+    alpha: float = 0.05,
+    target_power: float = 0.80,
+) -> AbTTestSweep:
+    """Welch t-test on the daily metric + fixed-d balanced-n sweep.
+
+    Computes Cohen's ``d`` on pre vs post (pooled SD), the observed
+    Welch p-value, and the analytic p-value + power curves at that fixed
+    ``d`` across the supplied ``n_grid`` (typically
+    :attr:`MKPowerCurve.n_grid` so the A/B and MK curves share an x-axis).
+
+    Args:
+        y_pre: Daily metric on the pre-intervention arm.
+        y_post: Daily metric on the post-intervention arm.
+        n_grid: Integer sample-size grid to sweep (per arm, balanced design).
+        alpha: Significance threshold for the p-value sweep (drives
+            ``n_needed_alpha``).
+        target_power: Power threshold (drives ``n_needed_power``).
+
+    Returns:
+        :class:`AbTTestSweep` with observed d / p / power and the swept
+        curves.
+
+    Raises:
+        ValueError: If either arm has fewer than 2 finite observations.
+    """
+    from scipy.stats import ttest_ind
+
+    pre_arr = np.asarray(y_pre, dtype=float)
+    post_arr = np.asarray(y_post, dtype=float)
+    n_pre = int(np.isfinite(pre_arr).sum())
+    n_post = int(np.isfinite(post_arr).sum())
+    if n_pre < 2 or n_post < 2:
+        raise ValueError(
+            f"ab_ttest_sweep needs ≥2 finite points per arm; "
+            f"got n_pre={n_pre}, n_post={n_post}."
+        )
+    pooled_sd = _pooled_sd(pre_arr, post_arr, n_pre, n_post)
+    d_obs = _cohens_d(pre_arr, post_arr, pooled_sd)
+    _, p_obs = ttest_ind(post_arr, pre_arr, equal_var=False, nan_policy="omit")
+    n_obs = min(n_pre, n_post)
+
+    abs_d = abs(d_obs) if np.isfinite(d_obs) else float("nan")
+    grid = np.asarray(n_grid, dtype=int)
+    p_grid = _ttest_pvalue_sweep(abs_d, grid)
+    power_grid = _ttest_power_sweep(abs_d, grid, alpha=alpha)
+    power_now = _ttest_power_at(abs_d, n_obs, alpha=alpha)
+
+    return AbTTestSweep(
+        d_obs=d_obs, n_obs=n_obs, p_obs=float(p_obs), power_now=power_now,
+        n_grid=grid, p_grid=p_grid, power_grid=power_grid,
+        alpha=float(alpha), target_power=float(target_power),
+        n_needed_alpha=_first_crossing(grid, p_grid, alpha, mode="le"),
+        n_needed_power=_first_crossing(grid, power_grid, target_power, mode="ge"),
+        n_pre=n_pre, n_post=n_post,
+    )
+
+
+def _add_observed_marker(
+    fig, x: float, y: float, *,
+    color: str, label: str, position: str = "top right",
+) -> None:
+    """Add an X marker with text at (x, y) — 'you are here' style."""
+    import plotly.graph_objects as go
+    fig.add_trace(go.Scatter(
+        x=[x], y=[y], mode="markers+text",
+        marker=dict(color=color, size=13, symbol="x"),
+        text=[label], textposition=position,
+        textfont=dict(size=10, color=color),
+        showlegend=False,
+    ))
+
+
+def _add_n_needed_marker(
+    fig, x: float, y: float, *,
+    color: str, label: str, position: str = "top left",
+) -> None:
+    """Add a star marker with text at the (n_needed, threshold) crossing."""
+    import plotly.graph_objects as go
+    fig.add_trace(go.Scatter(
+        x=[x], y=[y], mode="markers+text",
+        marker=dict(color=color, size=12, symbol="star"),
+        text=[label], textposition=position,
+        textfont=dict(size=10, color=color),
+        showlegend=False,
+    ))
+
+
+def _apply_overlay_layout(fig, *, title: str, y_title: str, y_range) -> None:
+    """Common layout for shared-axis A/B vs MK overlays."""
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=13)),
+        xaxis=dict(title="hypothetical sample size n"),
+        yaxis=dict(title=y_title, range=list(y_range)),
+        font=dict(size=11),
+        legend=dict(yanchor="top", y=-0.15, xanchor="left", x=0,
+                    orientation="h", font=dict(size=10)),
+    )
+
+
+def _ab_vs_mk_pvalue_figure(
+    ab: AbTTestSweep, curve: MKPowerCurve, *, experiment: str,
+):
+    """Shared-axis p-value overlay (A/B blue, MK orange)."""
+    import plotly.graph_objects as go
+    ab_pal = _MK_P_PALETTE
+    mk_pal = _MK_POWER_PALETTE
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=ab.n_grid, y=ab.p_grid, mode="lines",
+        name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
+        line=dict(color=ab_pal["line"], width=2),
+    ))
+    fig.add_trace(go.Scatter(
+        x=curve.n_grid, y=curve.p_grid, mode="lines",
+        name=f"Mann–Kendall  (τ = {curve.tau_obs:+.3f})",
+        line=dict(color=mk_pal["line"], width=2),
+    ))
+    fig.add_hline(
+        y=ab.alpha, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"α = {ab.alpha:g}",
+        annotation_position="top right", annotation_font_size=10,
+    )
+    _add_observed_marker(
+        fig, ab.n_obs, ab.p_obs, color=ab_pal["obs"],
+        label=f"A/B obs<br>n={ab.n_obs}, p={ab.p_obs:.3f}",
+    )
+    _add_observed_marker(
+        fig, curve.n_obs, curve.p_obs, color=mk_pal["obs"],
+        label=f"MK obs<br>n={curve.n_obs}, p={curve.p_obs:.3f}",
+        position="bottom right",
+    )
+    if ab.n_needed_alpha is not None:
+        _add_n_needed_marker(
+            fig, ab.n_needed_alpha, ab.alpha, color=ab_pal["n_needed"],
+            label=f"A/B n≈{ab.n_needed_alpha}",
+        )
+    if curve.n_needed is not None:
+        _add_n_needed_marker(
+            fig, curve.n_needed, ab.alpha, color=mk_pal["n_needed"],
+            label=f"MK n≈{curve.n_needed}", position="top right",
+        )
+    p_max = float(np.nanmax(np.concatenate([ab.p_grid, curve.p_grid])))
+    y_top = min(1.0, max(0.5, p_max * 1.05))
+    _apply_overlay_layout(
+        fig,
+        title=(
+            f"{experiment} — p-value vs n:  A/B t-test vs Mann–Kendall<br>"
+            f"<sub>fix observed effect size (d = {ab.d_obs:+.3f}, "
+            f"τ = {curve.tau_obs:+.3f}), sweep n → shared axes, two curves.</sub>"
+        ),
+        y_title="two-sided p-value", y_range=(0, y_top),
+    )
+    return fig
+
+
+def _ab_vs_mk_power_figure(
+    ab: AbTTestSweep, power: MKPowerOfTest, *, experiment: str,
+):
+    """Shared-axis power overlay (A/B blue, MK orange)."""
+    import plotly.graph_objects as go
+    ab_pal = _MK_P_PALETTE
+    mk_pal = _MK_POWER_PALETTE
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=ab.n_grid, y=ab.power_grid, mode="lines",
+        name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
+        line=dict(color=ab_pal["line"], width=2),
+    ))
+    fig.add_trace(go.Scatter(
+        x=power.n_grid, y=power.power_grid, mode="lines",
+        name=f"Mann–Kendall  (τ = {power.tau_obs:+.3f})",
+        line=dict(color=mk_pal["line"], width=2),
+    ))
+    fig.add_hline(
+        y=ab.alpha, line=dict(color="grey", dash="dot"),
+        annotation_text=f"α = {ab.alpha:g} (chance)",
+        annotation_position="bottom right", annotation_font_size=10,
+    )
+    fig.add_hline(
+        y=ab.target_power, line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"target = {ab.target_power:.2f}",
+        annotation_position="top right", annotation_font_size=10,
+    )
+    _add_observed_marker(
+        fig, ab.n_obs, ab.power_now, color=ab_pal["obs"],
+        label=f"A/B obs<br>n={ab.n_obs}, power={ab.power_now:.2f}",
+    )
+    _add_observed_marker(
+        fig, power.n_obs, power.power_now, color=mk_pal["obs"],
+        label=f"MK obs<br>n={power.n_obs}, power={power.power_now:.2f}",
+        position="bottom right",
+    )
+    if ab.n_needed_power is not None:
+        _add_n_needed_marker(
+            fig, ab.n_needed_power, ab.target_power, color=ab_pal["n_needed"],
+            label=f"A/B n≈{ab.n_needed_power}",
+        )
+    if power.n_needed_power is not None:
+        _add_n_needed_marker(
+            fig, power.n_needed_power, ab.target_power, color=mk_pal["n_needed"],
+            label=f"MK n≈{power.n_needed_power}", position="top right",
+        )
+    _apply_overlay_layout(
+        fig,
+        title=(
+            f"{experiment} — power vs n:  A/B t-test vs Mann–Kendall<br>"
+            f"<sub>fix observed effect size (d = {ab.d_obs:+.3f}, "
+            f"τ = {power.tau_obs:+.3f}), sweep n → shared axes, two curves.</sub>"
+        ),
+        y_title="two-sided power", y_range=(0, 1.02),
+    )
+    return fig
+
+
+def mk_vs_ttest_figures(
+    y_pre: Sequence[float],
+    y_post: Sequence[float],
+    curve: MKPowerCurve,
+    *,
+    target_power: float = 0.80,
+    experiment: str = "",
+) -> MkVsTTestFigures:
+    """A/B t-test vs Mann-Kendall — p-value + power overlays on shared axes.
+
+    Two figures on the same hypothetical-n axis:
+
+    1. **p-value overlay** — Welch t-test p-value curve (blue) and MK
+       p-value curve (orange), α reference line, "you are here" markers
+       and n-needed-for-α stars for each track.
+    2. **power overlay** — analytic t-test power (blue) and MK power
+       (orange), α + ``target_power`` reference lines, observed markers
+       and n-needed-for-target stars.
+
+    Both curves fix the observed effect size (Cohen's ``d`` for A/B,
+    Kendall's ``τ`` for MK) and sweep the balanced-design sample size
+    over ``curve.n_grid``, so the x-axes are directly comparable. The
+    A/B "you are here" marker uses the smaller arm's n (balanced-t's
+    effective n).
+
+    Args:
+        y_pre: Daily metric on the pre-intervention arm.
+        y_post: Daily metric on the post-intervention arm.
+        curve: :class:`MKPowerCurve` produced by :func:`mk_power_curve`
+            (its ``alpha`` is reused for the A/B sweep so both share the
+            same α reference line).
+        target_power: Power threshold used by the right axis of the
+            power overlay.
+        experiment: Short label injected into both figure titles.
+
+    Returns:
+        :class:`MkVsTTestFigures` bundling both figures and the
+        :class:`AbTTestSweep` numbers.
+    """
+    power = mk_power_of_test(curve, target_power=target_power)
+    ab = ab_ttest_sweep(
+        y_pre, y_post, curve.n_grid,
+        alpha=curve.alpha, target_power=target_power,
+    )
+    fig_pvalue = _ab_vs_mk_pvalue_figure(ab, curve, experiment=experiment)
+    fig_power = _ab_vs_mk_power_figure(ab, power, experiment=experiment)
+    return MkVsTTestFigures(fig_pvalue=fig_pvalue, fig_power=fig_power, ab=ab)
+
+
 def intervention_summary_row(
     experiment: str,
     intervention_date: str | pd.Timestamp,

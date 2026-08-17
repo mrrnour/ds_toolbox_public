@@ -42,6 +42,10 @@ azure = [
     "azure-identity>=1.13",
     "azure-keyvault-secrets>=4.7",
 ]
+bayes = [
+    "pymc>=5.10,<6",
+    "arviz>=0.17,<1",
+]
 mssql = [
     "pyodbc>=4.0.39",
     "sqlalchemy>=2.0",
@@ -114,7 +118,7 @@ docs = [
     "dstoolbox[all]",
 ]
 all = [
-    "dstoolbox[azure,mssql,spark,rag,webreader,nlp,pi,ml]",
+    "dstoolbox[azure,bayes,mssql,spark,rag,webreader,nlp,pi,ml]",
 ]
 
 
@@ -201,6 +205,9 @@ disallow_untyped_defs = false
 minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+markers = [
+    "slow: tests that require heavy optional dependencies (e.g. PyMC MCMC sampling)",
+]
 filterwarnings = [
     "ignore::DeprecationWarning:dstoolbox.utils.logging_utils",
 ]
