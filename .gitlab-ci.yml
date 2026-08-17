@@ -20,6 +20,10 @@ cache:
 
 lint:
   stage: lint
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git
+    - python -m pip install --upgrade pip
+    - pip install -e ".[dev,test]"
   script:
     - pip install pre-commit
     - pre-commit run --all-files --show-diff-on-failure
@@ -52,4 +56,3 @@ pages:
       - public
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-
