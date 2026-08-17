@@ -964,3 +964,123 @@ def i_mr_ctrl_limits(
     """
     per_col = [control_limit_grpby(df, col=c, grpby_col=grpby_col, coef=coef) for c in cols]
     return pd.concat(per_col, axis=1).reset_index()
+
+
+def sc_post_gap_test(
+    post_preds,
+    *,
+    model=None,
+    pre_residuals=None,
+    n_permutations=10_000,
+    random_state=42,
+    alpha=0.05,
+):
+    """Test whether counterfactual (y_pred) and real (y_true) conversion-rate
+    lines diverge significantly in the SC post-intervention window.
+
+    Replaces a raw lift number with three complementary statistical tests:
+
+    1. Sign-flip permutation test (primary) - SC gold-standard (Abadie 2010).
+       Randomly flips signs of each daily effect; checks if observed mean is
+       extreme under the null. Valid even with autocorrelation.
+    2. Wilcoxon signed-rank (secondary) - non-parametric, no normality assumed;
+       tests whether median effect = 0.
+    3. KS test: post effects vs. pre residuals (diagnostic, optional) - tests
+       whether post deviations follow the same distribution as pre-period model
+       noise. Only runs when pre_residuals is supplied.
+
+    Parameters
+    ----------
+    post_preds : pandas.DataFrame
+        Output of effect_from_preds; needs columns y_true, y_pred, model.
+    model : str, optional
+        Filter to one model. If None all rows are used.
+    pre_residuals : array-like, optional
+        Pre-period (y_true - y_pred) array for the KS diagnostic.
+    n_permutations : int
+        Number of sign-flip draws (default 10 000).
+    random_state : int
+        RNG seed (default 42).
+    alpha : float
+        Significance threshold (default 0.05).
+
+    Returns
+    -------
+    dict
+        n_post, gap_mean, gap_std,
+        perm_pvalue, perm_significant,
+        wilcoxon_pvalue, wilcoxon_significant,
+        ks_stat, ks_pvalue, ks_significant (None if no pre_residuals),
+        significant (True when both perm + wilcoxon reject at alpha),
+        direction ('positive'/'negative'/'none'), alpha.
+
+    Examples
+    --------
+    >>> result = sc_post_gap_test(post_preds, model="auto_arima")
+    >>> result["gap_mean"], result["perm_pvalue"]
+
+    With KS diagnostic:
+    >>> pre_resid = (pre["y_true"] - pre["y_pred"]).to_numpy()
+    >>> result = sc_post_gap_test(post_preds, model="auto_arima",
+    ...                           pre_residuals=pre_resid)
+    """
+    from scipy.stats import ks_2samp, wilcoxon as _wilcoxon
+
+    rows = post_preds if model is None else post_preds[post_preds["model"] == model]
+    if rows.empty:
+        raise ValueError(
+            f"No rows for model={model!r}. "
+            f"Available: {post_preds['model'].unique().tolist()}"
+        )
+
+    effects = (rows["y_true"] - rows["y_pred"]).to_numpy(dtype=float)
+    n = len(effects)
+    if n < 5:
+        raise ValueError(f"Only {n} post-period observations - too few for a meaningful test.")
+
+    gap_mean = float(np.mean(effects))
+    gap_std  = float(np.std(effects, ddof=1))
+
+    # 1. Sign-flip permutation test
+    rng = np.random.default_rng(random_state)
+    perm_means = np.array([
+        np.mean(effects * rng.choice([-1.0, 1.0], size=n))
+        for _ in range(n_permutations)
+    ])
+    perm_pvalue = float(np.mean(np.abs(perm_means) >= abs(gap_mean)))
+
+    # 2. Wilcoxon signed-rank
+    try:
+        _, wilcoxon_pvalue = _wilcoxon(effects, alternative="two-sided")
+        wilcoxon_pvalue = float(wilcoxon_pvalue)
+    except ValueError:
+        wilcoxon_pvalue = 1.0  # all effects identical - no divergence
+
+    # 3. KS diagnostic (post effects vs. pre residuals)
+    if pre_residuals is not None:
+        pre_arr = np.asarray(pre_residuals, dtype=float)
+        pre_arr = pre_arr[np.isfinite(pre_arr)]
+        ks_stat, ks_pvalue = ks_2samp(pre_arr, effects)
+        ks_stat, ks_pvalue = float(ks_stat), float(ks_pvalue)
+        ks_significant = ks_pvalue < alpha
+    else:
+        ks_stat = ks_pvalue = ks_significant = None
+
+    both_sig  = (perm_pvalue < alpha) and (wilcoxon_pvalue < alpha)
+    direction = ("positive" if gap_mean > 0 else "negative") if both_sig else "none"
+
+    return {
+        "n_post":               n,
+        "gap_mean":             gap_mean,
+        "gap_std":              gap_std,
+        "perm_pvalue":          perm_pvalue,
+        "perm_significant":     perm_pvalue < alpha,
+        "wilcoxon_pvalue":      wilcoxon_pvalue,
+        "wilcoxon_significant": wilcoxon_pvalue < alpha,
+        "ks_stat":              ks_stat,
+        "ks_pvalue":            ks_pvalue,
+        "ks_significant":       ks_significant,
+        "significant":          both_sig,
+        "direction":            direction,
+        "alpha":                alpha,
+    }

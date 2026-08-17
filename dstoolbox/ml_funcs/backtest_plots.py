@@ -11,14 +11,25 @@ has been fit, so it doesn't share state with ``BacktestReport``.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+logger = logging.getLogger(__name__)
+
+_TRAIN_COLOR = "#2CA02C"  # green
+_VAL_COLOR = "#D62728"    # red
+_METRIC_COLOR = "#1f77b4"  # blue — metric-box fill on the metric rows
+_METRIC_YAXIS_PAD_FRAC = 0.18
+_MIN_METRIC_SPAN = 0.2
 
 _PI_FILL = "rgba(111,67,214,0.20)"
 _PI_LINE = "rgba(111,67,214,0.0)"
@@ -978,3 +989,358 @@ def _annotate_split_geometry(fig, folds, ts, k: int, n: int) -> None:
         bracket(t_end, v_start, +0.35, f"gap = {gap}", "grey")
     if step is not None:
         bracket(prev_v_start, v_start, -0.45, f"step = {step}", "#555")
+
+
+# ============================================================================
+# plot_metrics_and_residuals — residual boxes + per-fold metric boxes
+# ============================================================================
+#
+# One free function that pairs a per-observation residual boxplot (top row,
+# TRAIN=last fold vs VAL=pooled across folds) with any number of per-fold
+# metric boxplots below it (one row per metric, one box per model). Metric
+# values are read from a precomputed per-fold DataFrame — typically the
+# per-origin subset of ``ml_comparison``'s metrics output — so this plot
+# works for arbitrary metrics (MASE, MAE, R², SMAPE, custom scores) as
+# long as they appear as columns on that frame.
+
+
+def _metric_yrange(values: pd.Series, pad_frac: float = _METRIC_YAXIS_PAD_FRAC) -> tuple[float, float] | None:
+    """Padded ``(ymin, ymax)`` so 'outside' point labels don't clip; None if empty."""
+    vals = pd.to_numeric(values, errors="coerce").dropna()
+    if vals.empty:
+        return None
+    ymin = float(min(vals.min(), 0.0))
+    ymax = float(max(vals.max(), 0.0))
+    span = max(ymax - ymin, _MIN_METRIC_SPAN)
+    pad = pad_frac * span
+    return ymin - pad, ymax + pad
+
+
+def _order_models_by_metric(
+    metrics: pd.DataFrame,
+    metric_col: str,
+    higher_is_better: bool,
+) -> list[str]:
+    """Rank models by the median of ``metric_col`` across folds (best → worst)."""
+    ranked = (
+        metrics[["model", metric_col]]
+        .assign(**{metric_col: pd.to_numeric(metrics[metric_col], errors="coerce")})
+        .dropna(subset=[metric_col])
+        .groupby("model", sort=False)[metric_col]
+        .median()
+        .sort_values(ascending=not higher_is_better, na_position="last")
+    )
+    ordered = ranked.index.tolist()
+    for m in metrics["model"].unique():
+        if m not in ordered:
+            ordered.append(m)
+    return ordered
+
+
+def _add_residual_row(
+    fig: go.Figure,
+    train_last: pd.DataFrame,
+    val_all: pd.DataFrame,
+    *,
+    model_order: list[str],
+    split_colors: dict[str, str],
+    boxpoints: tuple[str, str],
+    row: int,
+) -> None:
+    """Grouped residual boxes per (model, split) on ``row``."""
+    for split_name, sub_df, pts in (
+        ("train", train_last, boxpoints[0]),
+        ("val", val_all, boxpoints[1]),
+    ):
+        if sub_df.empty:
+            continue
+        y_true = pd.to_numeric(sub_df["y_true"], errors="coerce")
+        y_pred = pd.to_numeric(sub_df["y_pred"], errors="coerce")
+        residual = y_true - y_pred
+        mask = residual.notna()
+        if not mask.any():
+            continue
+        fig.add_trace(
+            go.Box(
+                y=residual[mask],
+                x=sub_df.loc[mask, "model"],
+                name=split_name,
+                marker={"color": split_colors[split_name], "size": 5, "opacity": 0.7},
+                line={"color": split_colors[split_name]},
+                boxpoints=pts,
+                jitter=0.3,
+                pointpos=0,
+                showlegend=True,
+                legendgroup=split_name,
+            ),
+            row=row,
+            col=1,
+        )
+    fig.update_xaxes(
+        categoryorder="array", categoryarray=model_order,
+        title_text="model", showticklabels=True, row=row, col=1,
+    )
+
+
+def _add_metric_row(
+    fig: go.Figure,
+    metrics: pd.DataFrame,
+    metric_col: str,
+    *,
+    model_order: list[str],
+    metric_color: str,
+    metric_boxpoints: str,
+    row: int,
+) -> None:
+    """Per-fold metric box per model on ``row``. One point per fold."""
+    sub = (
+        metrics[["model", metric_col]]
+        .assign(**{metric_col: pd.to_numeric(metrics[metric_col], errors="coerce")})
+        .dropna(subset=[metric_col])
+    )
+    if sub.empty:
+        return
+    fig.add_trace(
+        go.Box(
+            y=sub[metric_col],
+            x=sub["model"],
+            name=metric_col,
+            marker={"color": metric_color, "size": 5, "opacity": 0.8},
+            line={"color": metric_color},
+            boxmean=True,
+            boxpoints=metric_boxpoints,
+            jitter=0.3,
+            pointpos=0,
+            showlegend=False,
+        ),
+        row=row,
+        col=1,
+    )
+    yrange = _metric_yrange(sub[metric_col])
+    y_kwargs: dict[str, Any] = {"title_text": metric_col}
+    if yrange is not None:
+        y_kwargs["range"] = list(yrange)
+    fig.update_yaxes(row=row, col=1, **y_kwargs)
+    fig.update_xaxes(
+        categoryorder="array", categoryarray=model_order,
+        title_text="model", showticklabels=True, row=row, col=1,
+    )
+    fig.add_hline(y=0, line_dash="dot", line_color="grey", row=row, col=1)
+
+
+def _train_overlap_by_fold(preds: pd.DataFrame, last_fold: int) -> dict | None:
+    """Per-fold training-index overlap with ``last_fold`` (expanding-window CV)."""
+    train_preds = preds[preds["split"] == "train"]
+    if train_preds.empty:
+        return None
+    one_model = train_preds["model"].iloc[0]
+    tp = train_preds[train_preds["model"] == one_model]
+    idx_by_fold = {int(f): set(g.index.tolist()) for f, g in tp.groupby("CV_Iteration")}
+    last_n = len(idx_by_fold.get(last_fold, set()))
+    rows = []
+    for f in sorted(idx_by_fold):
+        shared = len(idx_by_fold[f] & idx_by_fold[last_fold])
+        rows.append({
+            "fold": f,
+            "n_train": len(idx_by_fold[f]),
+            "shared_with_last": shared,
+            "pct_of_last": shared / last_n if last_n else 0.0,
+        })
+    return {"reference_fold": last_fold, "last_train_n": last_n, "rows": rows}
+
+
+def plot_metrics_and_residuals(
+    preds: pd.DataFrame,
+    metrics: pd.DataFrame,
+    metric_cols: Sequence[str],
+    *,
+    higher_is_better: Sequence[str] | None = None,
+    experiment: str = "",
+    value_col: str = "value",
+    colors: Mapping[str, str] | None = None,
+    metric_color: str = _METRIC_COLOR,
+    boxpoints: tuple[str, str] = ("outliers", "outliers"),
+    metric_boxpoints: str = "all",
+    diagnostics: bool = False,
+    log_summary: bool = True,
+) -> tuple[go.Figure | None, dict]:
+    """Residual boxes + per-fold metric boxes for a backtest predictions frame.
+
+    Layout (top → bottom):
+
+    1. **Residual row** — per-observation ``y_true − y_pred`` boxes per
+       (model, split). ``train`` uses the *last* fold only (under
+       expanding-window CV, every earlier training window is a strict
+       subset of the last one, so pooling would double-count the shared
+       backbone). ``val`` pools every fold's val window (val windows
+       don't overlap under expanding- or rolling-window CV).
+    2. **Metric rows** — one row per name in ``metric_cols``. Each row is
+       a boxplot of that metric's per-fold values, one box per model.
+       Values are read directly from ``metrics``, so any column on that
+       frame is fair game — MASE, MAE, R², SMAPE, or a custom score.
+
+    Models are ordered on every x-axis by the median of the first
+    ``metric_cols`` entry (best → worst, respecting ``higher_is_better``).
+
+    Args:
+        preds: Long-format predictions frame with columns
+            ``model, CV_Iteration, y_true, y_pred`` and optional ``split``
+            (``"train"``/``"val"``). Missing ``split`` → every row treated
+            as val (only residual val boxes render).
+        metrics: Per-fold metrics frame — one row per (model, fold) with a
+            ``model`` column and one column per metric. Typically the
+            per-origin subset of ``ml_comparison``'s output (aggregate
+            rows like ``CV_scores_Mean`` / ``scores_all`` already
+            dropped). No ``CV`` column is required.
+        metric_cols: Ordered names of metric columns to render as rows.
+            The first entry drives model ordering on the x-axis.
+        higher_is_better: Names in ``metric_cols`` where higher values
+            are better (used only for ordering). Names not listed are
+            treated as lower-is-better.
+        experiment: Optional label used in the figure title.
+        value_col: Name shown on the residual y-axis (informational).
+        colors: Overrides for the residual-row split colors — keys
+            ``"train"`` and ``"val"``. Defaults to green / red.
+        metric_color: Fill color for the metric-row boxes.
+        boxpoints: ``(train_boxpoints, val_boxpoints)`` forwarded to
+            ``plotly.graph_objects.Box`` for the residual row.
+            ``"outliers"`` (default) is fast; ``"all"`` renders every
+            residual observation.
+        metric_boxpoints: ``boxpoints`` for the metric rows. Defaults to
+            ``"all"`` so per-fold values are visible.
+        diagnostics: When True, also compute per-fold ``train_overlap``
+            (informational — expanding-window CV shares an early
+            backbone across folds).
+        log_summary: Whether to emit an info-level summary via
+            ``logging.getLogger("dstoolbox.ml_funcs.backtest_plots")``.
+
+    Returns:
+        ``(fig, diag)``. ``fig`` is ``None`` when ``preds`` has no val
+        rows or ``metrics`` is empty; otherwise a Plotly figure with
+        ``1 + len(metric_cols)`` stacked rows. ``diag`` carries
+        ``last_fold``, ``n_folds``, ``model_order``, ``metric_cols``, and
+        (with ``diagnostics=True``) ``train_overlap``.
+
+    Example:
+        >>> from dstoolbox.ml_funcs import ml_comparison, plot_metrics_and_residuals
+        >>> metrics_all, preds = ml_comparison(models, X, y, ...,
+        ...     return_predictions=True, include_train_predictions=True)
+        >>> per_fold = metrics_all[
+        ...     ~metrics_all["CV"].isin(["CV_scores_Mean", "CV_scores_STD", "scores_all"])
+        ... ]
+        >>> fig, diag = plot_metrics_and_residuals(
+        ...     preds, per_fold,
+        ...     metric_cols=["mase", "R2", "mae"],
+        ...     higher_is_better=["R2"],
+        ...     experiment="my_ab_test",
+        ... )
+        >>> fig.show()
+    """
+    if not metric_cols:
+        raise ValueError("`metric_cols` must be a non-empty sequence.")
+    missing = [c for c in metric_cols if c not in metrics.columns]
+    if missing:
+        raise KeyError(
+            f"metric_cols not found on `metrics` frame: {missing}. "
+            f"Available: {[c for c in metrics.columns if c != 'model']}"
+        )
+
+    all_preds = preds if "split" in preds.columns else preds.assign(split="val")
+    val_all = all_preds[all_preds["split"] == "val"]
+    if val_all.empty:
+        logger.info("plot_metrics_and_residuals: no VAL predictions; skipping.")
+        return None, {}
+    if metrics.empty:
+        logger.info("plot_metrics_and_residuals: empty metrics frame; skipping.")
+        return None, {}
+
+    last_fold = int(val_all["CV_Iteration"].max())
+    n_folds = int(val_all["CV_Iteration"].nunique())
+    train_last = all_preds[
+        (all_preds["split"] == "train") & (all_preds["CV_Iteration"] == last_fold)
+    ]
+
+    higher_set = set(higher_is_better or ())
+    first_metric = metric_cols[0]
+    model_order = _order_models_by_metric(
+        metrics, first_metric, higher_is_better=first_metric in higher_set,
+    )
+
+    split_colors = {"train": _TRAIN_COLOR, "val": _VAL_COLOR}
+    if colors:
+        split_colors.update({k: v for k, v in colors.items() if k in split_colors})
+
+    n_metric_rows = len(metric_cols)
+    n_rows = n_metric_rows + 1
+    residual_frac = 0.42
+    per_metric = (1.0 - residual_frac) / n_metric_rows
+    row_heights = [residual_frac] + [per_metric] * n_metric_rows
+
+    n_train_max = int(train_last.groupby("model").size().max()) if not train_last.empty else 0
+    n_val_max = int(val_all.groupby("model").size().max())
+    subplot_titles: list[str] = [
+        (
+            f"per-obs residuals (y − ŷ) — train (fold {last_fold}, n≈{n_train_max}) "
+            f"vs val (pooled, {n_folds} folds, n≈{n_val_max})"
+        )
+    ]
+    for col in metric_cols:
+        subplot_titles.append(f"{col} — per-fold values across {n_folds} folds")
+
+    fig = make_subplots(
+        rows=n_rows,
+        cols=1,
+        shared_xaxes=False,
+        vertical_spacing=0.14,
+        row_heights=row_heights,
+        subplot_titles=tuple(subplot_titles),
+    )
+
+    _add_residual_row(
+        fig, train_last, val_all,
+        model_order=model_order,
+        split_colors=split_colors,
+        boxpoints=boxpoints,
+        row=1,
+    )
+    fig.add_hline(y=0, line_dash="dot", line_color="grey", row=1, col=1)
+    fig.update_yaxes(title_text=f"{value_col} residual", row=1, col=1)
+
+    for i, col in enumerate(metric_cols, start=2):
+        _add_metric_row(
+            fig, metrics, col,
+            model_order=model_order,
+            metric_color=metric_color,
+            metric_boxpoints=metric_boxpoints,
+            row=i,
+        )
+
+    fig.update_layout(
+        title=(
+            f"[{experiment}] residuals + per-fold metrics — "
+            f"TRAIN (fold {last_fold}) vs VAL (all {n_folds} folds pooled)"
+        ),
+        height=max(360, 260 * n_metric_rows + 340),
+        boxmode="group",
+        legend={"orientation": "h", "y": 1.06, "x": 1, "xanchor": "right"},
+    )
+
+    diag: dict = {
+        "last_fold": last_fold,
+        "n_folds": n_folds,
+        "model_order": model_order,
+        "metric_cols": list(metric_cols),
+    }
+    if diagnostics:
+        overlap = _train_overlap_by_fold(all_preds, last_fold)
+        if overlap is not None:
+            diag["train_overlap"] = overlap
+
+    if log_summary:
+        logger.info(
+            "plot_metrics_and_residuals: last fold=%s; folds pooled for val=%s; "
+            "metric_cols=%s; models (best %s median → worst)=%s",
+            last_fold, n_folds, list(metric_cols), first_metric, model_order,
+        )
+
+    return fig, diag
