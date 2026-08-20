@@ -26,6 +26,7 @@ References
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -119,8 +120,9 @@ class BetaBinomialResult:
     successes_pre, trials_pre, successes_post, trials_post
         The four numbers fed to the fit.
     prior_spec
-        Which prior set was used (``"uniform"`` = Beta(1,1) or
-        ``"jeffreys"`` = Beta(0.5, 0.5)).
+        Name of the prior used: ``"uniform"`` = Beta(1,1),
+        ``"jeffreys"`` = Beta(0.5, 0.5), or the ``name`` of a custom
+        :class:`BetaPrior`.
     """
 
     trace: object  # arviz.InferenceData
@@ -307,20 +309,116 @@ _BB_PRIOR_ALPHA_BETA: dict[str, tuple[float, float]] = {
 }
 
 
+@dataclass(frozen=True)
+class BetaPrior:
+    """A named ``Beta(alpha, beta)`` prior on a rate parameter.
+
+    Carries the label alongside the two shape parameters so plots and
+    result tables can report *which* prior produced a posterior rather
+    than echoing raw numbers.
+
+    Attributes
+    ----------
+    name
+        Label surfaced in ``BetaBinomialResult.prior_spec``, plot titles
+        and shift tables (e.g. ``"informative"``).
+    alpha, beta
+        Shape parameters. Both must be strictly positive.
+    """
+
+    name: str
+    alpha: float
+    beta: float
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("BetaPrior.name must be a non-empty string.")
+        if self.alpha <= 0:
+            raise ValueError(f"BetaPrior.alpha must be > 0; got {self.alpha}.")
+        if self.beta <= 0:
+            raise ValueError(f"BetaPrior.beta must be > 0; got {self.beta}.")
+
+    @property
+    def weight(self) -> float:
+        """Total pseudo-observations the prior contributes (``alpha + beta``)."""
+        return self.alpha + self.beta
+
+    @property
+    def mean(self) -> float:
+        """Prior mean rate ``alpha / (alpha + beta)``."""
+        return self.alpha / (self.alpha + self.beta)
+
+
+def beta_prior_from_baseline(
+    baseline_rate: float,
+    weight: float,
+    *,
+    name: str,
+) -> BetaPrior:
+    """Build a Beta prior centred on a historical rate with a chosen weight.
+
+    Splits ``weight`` pseudo-observations across successes and failures so
+    the prior mean equals ``baseline_rate``. Raising ``weight`` makes the
+    prior harder for new data to move — the standard way to encode a
+    skeptical "nothing changed" belief in an A/B or pre/post analysis.
+
+    Parameters
+    ----------
+    baseline_rate
+        Historical conversion rate, strictly between 0 and 1.
+    weight
+        Pseudo-observations the prior is worth. ``100`` reads as "my
+        history is worth 100 extra visitors"; ``500`` is five times as
+        stubborn.
+    name
+        Label carried into results and plots.
+
+    Returns
+    -------
+    BetaPrior
+
+    Example
+    -------
+    >>> beta_prior_from_baseline(0.05, 100, name="weakly_informative")
+    BetaPrior(name='weakly_informative', alpha=5.0, beta=95.0)
+    """
+    if not 0.0 < baseline_rate < 1.0:
+        raise ValueError(
+            f"baseline_rate must be in (0, 1); got {baseline_rate}."
+        )
+    if weight <= 0:
+        raise ValueError(f"weight must be > 0; got {weight}.")
+    return BetaPrior(
+        name=name,
+        alpha=float(baseline_rate) * float(weight),
+        beta=(1.0 - float(baseline_rate)) * float(weight),
+    )
+
+
+def _resolve_beta_prior(prior: str | BetaPrior) -> BetaPrior:
+    """Normalise a prior spec to a :class:`BetaPrior`."""
+    if isinstance(prior, BetaPrior):
+        return prior
+    try:
+        alpha, beta = _BB_PRIOR_ALPHA_BETA[prior]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(
+            f"Unknown prior spec: {prior!r}. Use one of "
+            f"{sorted(_BB_PRIOR_ALPHA_BETA)} or a BetaPrior instance."
+        ) from exc
+    return BetaPrior(name=prior, alpha=alpha, beta=beta)
+
+
 def _build_beta_binomial_model(
     successes_pre: int,
     trials_pre: int,
     successes_post: int,
     trials_post: int,
-    prior: str,
+    prior: str | BetaPrior,
 ):
     """Return a ``pymc.Model`` implementing the two-proportion Beta-Binomial."""
-    try:
-        alpha, beta = _BB_PRIOR_ALPHA_BETA[prior]
-    except KeyError as exc:
-        raise ValueError(
-            f"Unknown prior spec: {prior!r}. Use 'uniform' or 'jeffreys'."
-        ) from exc
+    spec = _resolve_beta_prior(prior)
+    alpha, beta = spec.alpha, spec.beta
 
     with _pm.Model() as model:  # type: ignore[union-attr]
         p_pre = _pm.Beta("p_pre", alpha=alpha, beta=beta)
@@ -336,7 +434,7 @@ def _build_beta_binomial_model(
 def _build_beta_bernoulli_model(
     y_pre: np.ndarray,
     y_post: np.ndarray,
-    prior: str,
+    prior: str | BetaPrior,
 ):
     """Return a ``pymc.Model`` implementing the flat Beta-Bernoulli model on raw obs.
 
@@ -344,12 +442,8 @@ def _build_beta_bernoulli_model(
     Mathematically equivalent to :func:`_build_beta_binomial_model` on the same
     data, but takes raw row-level arrays instead of aggregated counts.
     """
-    try:
-        alpha, beta = _BB_PRIOR_ALPHA_BETA[prior]
-    except KeyError as exc:
-        raise ValueError(
-            f"Unknown prior spec: {prior!r}. Use 'uniform' or 'jeffreys'."
-        ) from exc
+    spec = _resolve_beta_prior(prior)
+    alpha, beta = spec.alpha, spec.beta
 
     with _pm.Model() as model:  # type: ignore[union-attr]
         p_pre  = _pm.Beta("p_pre",  alpha=alpha, beta=beta)
@@ -362,11 +456,12 @@ def _build_beta_bernoulli_model(
     return model
 
 
+
 def beta_bernoulli_two_sample(
     y_pre,
     y_post,
     *,
-    prior: str = "jeffreys",
+    prior: str | BetaPrior = "jeffreys",
     hdi_prob: float = 0.95,
     draws: int = 2000,
     tune: int = 1000,
@@ -389,8 +484,9 @@ def beta_bernoulli_two_sample(
     y_pre, y_post
         1-D integer arrays of 0/1 binary values (one element per row).
     prior
-        ``"jeffreys"`` (Beta(0.5, 0.5), default) or ``"uniform"``
-        (Beta(1, 1)).
+        ``"jeffreys"`` (Beta(0.5, 0.5), default), ``"uniform"``
+        (Beta(1, 1)), or a :class:`BetaPrior` — see
+        :func:`beta_prior_from_baseline`.
     hdi_prob
         Coverage of the returned HDI on ``delta = p_post - p_pre``.
     draws, tune, chains, target_accept, random_seed, progressbar
@@ -439,7 +535,7 @@ def beta_bernoulli_two_sample(
         trials_pre=len(y_pre),
         successes_post=int(y_post.sum()),
         trials_post=len(y_post),
-        prior_spec=prior,
+        prior_spec=_resolve_beta_prior(prior).name,
     )
 
 
@@ -449,7 +545,7 @@ def beta_binomial_two_sample(
     successes_post,
     trials_post,
     *,
-    prior: str = "uniform",
+    prior: str | BetaPrior = "uniform",
     hdi_prob: float = 0.95,
     draws: int = 2000,
     tune: int = 1000,
@@ -467,8 +563,10 @@ def beta_binomial_two_sample(
     successes_post, trials_post
         Same for the post-window.
     prior
-        ``"uniform"`` (Beta(1, 1), Bayes-Laplace) or ``"jeffreys"``
-        (Beta(0.5, 0.5), reference prior).
+        ``"uniform"`` (Beta(1, 1), Bayes-Laplace), ``"jeffreys"``
+        (Beta(0.5, 0.5), reference prior), or a :class:`BetaPrior` built
+        by :func:`beta_prior_from_baseline`. A custom prior applies to
+        ``p_pre`` and ``p_post`` alike.
     hdi_prob
         Coverage of the returned HDI on ``delta = p_post - p_pre``.
     draws, tune, chains, target_accept, random_seed, progressbar
@@ -519,7 +617,7 @@ def beta_binomial_two_sample(
         trials_pre=n_pre,
         successes_post=s_post,
         trials_post=n_post,
-        prior_spec=prior,
+        prior_spec=_resolve_beta_prior(prior).name,
     )
 
 
@@ -667,7 +765,7 @@ def beta_binomial_prior_sensitivity(
     successes_post,
     trials_post,
     *,
-    priors: tuple[str, ...] = ("uniform", "jeffreys"),
+    priors: Sequence[str | BetaPrior] = ("uniform", "jeffreys"),
     hdi_prob: float = 0.95,
     **sample_kwargs,
 ) -> tuple[dict[str, BetaBinomialResult], pd.DataFrame]:
@@ -685,9 +783,10 @@ def beta_binomial_prior_sensitivity(
         Total converting searches / total searches per window — the same
         inputs as :func:`beta_binomial_two_sample`.
     priors
-        Ordered sequence of prior names accepted by
-        :func:`beta_binomial_two_sample` (``"uniform"``, ``"jeffreys"``).
-        The first element is the primary spec; all others are compared to it.
+        Ordered sequence of prior specs: the names accepted by
+        :func:`beta_binomial_two_sample` (``"uniform"``, ``"jeffreys"``)
+        and/or :class:`BetaPrior` instances. The first element is the
+        primary spec; all others are compared to it. Names must be unique.
     hdi_prob
         HDI coverage forwarded to every fit.
     **sample_kwargs
@@ -697,20 +796,25 @@ def beta_binomial_prior_sensitivity(
     Returns
     -------
     results : dict[str, BetaBinomialResult]
-        One fitted result per prior name.
+        One fitted result per prior name, in the order given.
     shift_table : pd.DataFrame
         Columns: ``prior``, ``mean_delta``, ``hdi_low``, ``hdi_high``,
         ``shift_from_primary``.  Row order matches ``priors``.
     """
     if not priors:
         raise ValueError("`priors` must contain at least one prior spec.")
+    specs = [_resolve_beta_prior(p) for p in priors]
+    names = [s.name for s in specs]
+    if len(set(names)) != len(names):
+        raise ValueError(f"Prior names must be unique; got {names}.")
+
     results: dict[str, BetaBinomialResult] = {}
-    for name in priors:
-        results[name] = beta_binomial_two_sample(
+    for spec in specs:
+        results[spec.name] = beta_binomial_two_sample(
             successes_pre, trials_pre, successes_post, trials_post,
-            prior=name, hdi_prob=hdi_prob, **sample_kwargs,
+            prior=spec, hdi_prob=hdi_prob, **sample_kwargs,
         )
-    primary_mean = results[priors[0]].posterior_mean_delta
+    primary_mean = results[names[0]].posterior_mean_delta
     rows = []
     for name, res in results.items():
         rows.append({
@@ -721,6 +825,226 @@ def beta_binomial_prior_sensitivity(
             "shift_from_primary": res.posterior_mean_delta - primary_mean,
         })
     return results, pd.DataFrame(rows)
+
+
+#: Least interval agreement with the reference that still reads as "the prior
+#: did not move the answer". Below it the verdict degrades to PRIOR_SENSITIVE.
+DEFAULT_MIN_OVERLAP = 0.60
+
+#: Largest move of the posterior mean, in reference-HDI widths, that still
+#: reads as "the prior did not move the answer".
+DEFAULT_MAX_SHIFT_FRAC = 0.25
+
+_VERDICT_RANK = {"PRIOR_ROBUST": 0, "PRIOR_SENSITIVE": 1, "PRIOR_DRIVEN": 2}
+
+#: Columns :func:`prior_overlap_table` produces. Dropped from the input first,
+#: so re-grading a table that was already graded stays idempotent.
+_OVERLAP_COLUMNS = (
+    "is_primary", "hdi_overlap", "shift_hdi_frac", "direction",
+    "direction_flip", "row_verdict",
+)
+
+
+def _direction(
+    prob_gt_zero: float | None,
+    hdi_low: float,
+    hdi_high: float,
+    *,
+    prob_threshold: float,
+) -> str:
+    """Label the conclusion a single fit supports: positive, negative or unclear.
+
+    Uses ``P(delta > 0)`` when the sweep carried it, and falls back to whether
+    the HDI clears zero.
+    """
+    if prob_gt_zero is not None and not np.isnan(prob_gt_zero):
+        if prob_gt_zero >= prob_threshold:
+            return "positive"
+        if prob_gt_zero <= 1.0 - prob_threshold:
+            return "negative"
+        return "unclear"
+    if hdi_low > 0:
+        return "positive"
+    if hdi_high < 0:
+        return "negative"
+    return "unclear"
+
+
+def prior_overlap_table(
+    shift_table: pd.DataFrame,
+    *,
+    primary: str | None = None,
+    prob_threshold: float = 0.95,
+    min_overlap: float = DEFAULT_MIN_OVERLAP,
+    max_shift_frac: float = DEFAULT_MAX_SHIFT_FRAC,
+) -> pd.DataFrame:
+    """Score every prior against the reference prior, one row at a time.
+
+    Three questions, each from the small-sample workflow this implements:
+    how much of the interval survives the change of prior (Larson et al.
+    2023, overlapping PPIs), how far the posterior mean travelled relative
+    to the width of the reference interval, and whether the conclusion the
+    fit supports changed at all.
+
+    Parameters
+    ----------
+    shift_table
+        Output of :func:`beta_binomial_prior_sensitivity` or
+        :func:`prior_sensitivity` — needs ``prior``, ``hdi_low``,
+        ``hdi_high``. ``mean_delta`` and ``prob_delta_gt_0`` are used when
+        present.
+    primary
+        Prior every other row is compared against. Defaults to the first row.
+    prob_threshold
+        Posterior mass on one side of zero needed before a fit counts as
+        supporting a direction.
+    min_overlap, max_shift_frac
+        Cuts applied to ``hdi_overlap`` and ``shift_hdi_frac`` when grading
+        each row.
+
+    Returns
+    -------
+    pd.DataFrame
+        ``shift_table`` plus ``is_primary``, ``hdi_overlap``,
+        ``shift_hdi_frac``, ``direction``, ``direction_flip`` and
+        ``row_verdict``.
+
+        ``hdi_overlap`` divides the shared length by the *narrower* of the
+        two intervals, so an interval that sits wholly inside the reference
+        scores 1.0 however much tighter it is. A prior that only sharpens
+        the estimate is not a prior that changed the answer.
+    """
+    required = {"prior", "hdi_low", "hdi_high"}
+    missing = required - set(shift_table.columns)
+    if missing:
+        raise ValueError(f"shift_table is missing columns: {sorted(missing)}.")
+    if shift_table.empty:
+        raise ValueError("shift_table is empty.")
+
+    names = [str(p) for p in shift_table["prior"]]
+    primary_name = primary if primary is not None else names[0]
+    if primary_name not in names:
+        raise ValueError(
+            f"primary prior {primary_name!r} is not in shift_table; have {names}."
+        )
+
+    ref = shift_table.iloc[names.index(primary_name)]
+    ref_low, ref_high = float(ref["hdi_low"]), float(ref["hdi_high"])
+    ref_width = ref_high - ref_low
+    ref_mean = float(ref["mean_delta"]) if "mean_delta" in shift_table else float("nan")
+    ref_direction = _direction(
+        float(ref["prob_delta_gt_0"]) if "prob_delta_gt_0" in shift_table else None,
+        ref_low, ref_high, prob_threshold=prob_threshold,
+    )
+
+    rows = []
+    for name, (_, row) in zip(names, shift_table.iterrows()):
+        low, high = float(row["hdi_low"]), float(row["hdi_high"])
+        shared = min(ref_high, high) - max(ref_low, low)
+        narrower = min(ref_width, high - low)
+        overlap = 1.0 if narrower <= 0 else max(0.0, shared) / narrower
+
+        shift_frac = float("nan")
+        if "mean_delta" in shift_table and ref_width > 0:
+            shift_frac = abs(float(row["mean_delta"]) - ref_mean) / ref_width
+
+        direction = _direction(
+            float(row["prob_delta_gt_0"]) if "prob_delta_gt_0" in shift_table else None,
+            low, high, prob_threshold=prob_threshold,
+        )
+        flip = direction != ref_direction
+
+        if shared < 0:
+            verdict = "PRIOR_DRIVEN"
+        elif overlap < min_overlap or flip or (
+            not np.isnan(shift_frac) and shift_frac > max_shift_frac
+        ):
+            verdict = "PRIOR_SENSITIVE"
+        else:
+            verdict = "PRIOR_ROBUST"
+
+        rows.append({
+            "is_primary": name == primary_name,
+            "hdi_overlap": overlap,
+            "shift_hdi_frac": shift_frac,
+            "direction": direction,
+            "direction_flip": flip,
+            "row_verdict": "PRIOR_ROBUST" if name == primary_name else verdict,
+        })
+
+    return pd.concat(
+        [
+            shift_table.reset_index(drop=True).drop(
+                columns=list(_OVERLAP_COLUMNS), errors="ignore",
+            ),
+            pd.DataFrame(rows),
+        ],
+        axis=1,
+    )
+
+
+def prior_sensitivity_verdict(
+    shift_table: pd.DataFrame,
+    *,
+    primary: str | None = None,
+    prob_threshold: float = 0.95,
+    min_overlap: float = DEFAULT_MIN_OVERLAP,
+    max_shift_frac: float = DEFAULT_MAX_SHIFT_FRAC,
+) -> str:
+    """Judge how much the choice of prior moved the answer.
+
+    Larson et al. (2023) set the outer test: posterior intervals that
+    separate across prior specs mean the prior, not the data, is deciding.
+    Between "separated" and "identical" sits a band the tutorial reads by
+    eye — how far the means and intervals travelled — which this function
+    grades explicitly rather than collapsing to a pass/fail.
+
+    Parameters
+    ----------
+    shift_table
+        Output of :func:`beta_binomial_prior_sensitivity` or
+        :func:`prior_sensitivity` — needs ``prior``, ``hdi_low``,
+        ``hdi_high``. ``mean_delta`` and ``prob_delta_gt_0`` sharpen the
+        grade when present.
+    primary
+        Prior name to compare every other row against. Defaults to the
+        first row.
+    prob_threshold, min_overlap, max_shift_frac
+        Forwarded to :func:`prior_overlap_table`.
+
+    Returns
+    -------
+    str
+        The worst row grade:
+
+        * ``"PRIOR_ROBUST"``    — every interval overlaps the reference by at
+          least ``min_overlap``, no mean moved more than ``max_shift_frac``
+          reference widths, and every prior supports the same conclusion.
+        * ``"PRIOR_SENSITIVE"`` — intervals still overlap, but the estimate
+          or the conclusion shifts with the prior. Report the range, not a
+          single number.
+        * ``"PRIOR_DRIVEN"``    — at least one interval is disjoint from the
+          reference. The sample cannot outvote the prior.
+
+        The verdict speaks only about the influence of the prior. An answer
+        can be ``PRIOR_ROBUST`` and still be inconclusive, since an interval
+        that stays put across priors may straddle zero under all of them.
+
+    Example
+    -------
+    >>> import pandas as pd
+    >>> table = pd.DataFrame({
+    ...     "prior": ["noninformative", "informative"],
+    ...     "hdi_low": [-0.01, -0.02], "hdi_high": [0.03, 0.01],
+    ... })
+    >>> prior_sensitivity_verdict(table)
+    'PRIOR_ROBUST'
+    """
+    graded = prior_overlap_table(
+        shift_table, primary=primary, prob_threshold=prob_threshold,
+        min_overlap=min_overlap, max_shift_frac=max_shift_frac,
+    )
+    return max(graded["row_verdict"], key=_VERDICT_RANK.__getitem__)
 
 
 # ---------------------------------------------------------------------------
