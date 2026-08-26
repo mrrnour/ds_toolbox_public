@@ -236,3 +236,11 @@ from .stat_bayes import (
     rope_comparison_table,
     rope_decision,
 )
+
+from .stat_freq import (
+    WelchTestResult,
+    delta_method_two_sample,
+    permutation_welch_two_sample,
+    student_t_two_sample,
+    welch_t_two_sample,
+)
