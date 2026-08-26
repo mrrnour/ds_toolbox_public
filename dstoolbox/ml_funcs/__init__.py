@@ -220,14 +220,27 @@ from .intervention_plots import (
 from .stat_bayes import (
     BestResult,
     BetaBinomialResult,
+    BetaPrior,
     RopeDecision,
     best_two_sample,
+    beta_binomial_prior_sensitivity,
     beta_binomial_two_sample,
+    beta_prior_from_baseline,
     plot_beta_binomial_report,
     plot_kruschke_report,
     plot_prior_sensitivity,
     plot_rope_decision,
+    prior_overlap_table,
     prior_sensitivity,
+    prior_sensitivity_verdict,
     rope_comparison_table,
     rope_decision,
+)
+
+from .stat_freq import (
+    WelchTestResult,
+    delta_method_two_sample,
+    permutation_welch_two_sample,
+    student_t_two_sample,
+    welch_t_two_sample,
 )
