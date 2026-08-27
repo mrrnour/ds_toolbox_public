@@ -237,6 +237,41 @@ from .stat_bayes import (
     rope_decision,
 )
 
+from .stat_bayes_hier import (
+    DEFAULT_KAPPA_PRIOR,
+    HierBetaBinomialFit,
+    hier_beta_binomial_fit,
+    verdict_without_rope,
+)
+
+from .stat_bayes_group import (
+    GroupCounts,
+    GroupEffect,
+    PrePostWindow,
+    aggregate_counts,
+    fit_group_comparison,
+    fit_prepost,
+    rope_from_baseline,
+    split_by_window,
+)
+
+from .stat_bayes_group_tools import (
+    prior_forest_rows,
+    prior_shape_table,
+    matched_sequential_windows,
+    prior_sensitivity_groups,
+    sequential_scan,
+)
+
+from .stat_bayes_group_plots import (
+    plot_prior_forest,
+    plot_convergence,
+    plot_effect,
+    plot_forest,
+    plot_summary,
+    verdict_style,
+)
+
 from .stat_freq import (
     WelchTestResult,
     delta_method_two_sample,

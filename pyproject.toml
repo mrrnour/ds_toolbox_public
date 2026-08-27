@@ -138,6 +138,9 @@ webreader-harvest = "dstoolbox.web_reader.harvest:main"
 webreader-convert = "dstoolbox.web_reader.convert:main"
 webreader-pipeline = "dstoolbox.web_reader.run_pipeline:main"
 
+# Pre/post conversion verdict from an event-level CSV.
+dsbayes-group = "dstoolbox.ml_funcs.stat_bayes_group_cli:main"
+
 # ---------------------------------------------------------------------------
 # Tooling
 # ---------------------------------------------------------------------------
