@@ -42,15 +42,16 @@ _PRE_COLOR = "#1565c0"
 _POST_COLOR = "#6a1b9a"
 _DELTA_COLOR = "#2e7d32"
 
-# One lookup for every verdict the model can return, including the
-# direction-only ones produced when no equivalence band was supplied.
+# One lookup for every verdict the model can return. Both decision rules
+# share this vocabulary, so the label alone cannot say whether a band was
+# consulted and these strings do not claim it did. Callers that know the
+# band is set can make the stronger claim in their own prose; this module
+# cannot.
 _VERDICT_STYLE: dict[str, tuple[str, str]] = {
-    "meaningful_positive": ("#2e7d32", "Meaningful improvement"),
-    "meaningful_negative": ("#c62828", "Meaningful regression"),
-    "equivalent":          ("#f57f17", "Practically equivalent"),
-    "inconclusive":        ("#555555", "Inconclusive"),
-    "positive":            ("#2e7d32", "Positive (no band set)"),
-    "negative":            ("#c62828", "Negative (no band set)"),
+    "positive":     ("#2e7d32", "Improvement"),
+    "negative":     ("#c62828", "Regression"),
+    "equivalent":   ("#f57f17", "Practically equivalent"),
+    "inconclusive": ("#555555", "Inconclusive"),
 }
 
 # The user-level ``theta`` is marginalised out of the model, so ``mu`` and
@@ -108,15 +109,17 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
     )
 
     # ── Left: mu_pre vs mu_post ──────────────────────────────────────────
-    mu_pre, mu_post = effect.fit_baseline.mu_samples, effect.fit_variant.mu_samples
+    # Same estimand the delta panel adjudicates. Annotating this density
+    # with any other rate would put two quantities in one axes.
+    mu_pre, mu_post = effect.fit_control.mu_samples, effect.fit_treatment.mu_samples
     lo = min(mu_pre.min(), mu_post.min())
     hi = max(mu_pre.max(), mu_post.max())
     pad = 0.15 * (hi - lo)
     grid = np.linspace(lo - pad, hi + pad, 400)
 
     for samples, color, label, mean in (
-        (mu_pre, _PRE_COLOR, "pre", effect.mu_baseline_mean),
-        (mu_post, _POST_COLOR, "post", effect.mu_variant_mean),
+        (mu_pre, _PRE_COLOR, "pre", effect.mu_control_mean),
+        (mu_post, _POST_COLOR, "post", effect.mu_treatment_mean),
     ):
         ax_mu.fill_between(
             grid, _density(samples, grid),
@@ -124,15 +127,15 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
         )
         ax_mu.axvline(mean, color=color, lw=1.5, ls="--")
 
-    ax_mu.set_xlabel("Population conversion rate μ  (per user)")
+    ax_mu.set_xlabel("Population conversion rate μ  (per unit)")
     ax_mu.set_ylabel("Density")
     ax_mu.set_title("Posterior: μ_pre vs μ_post")
     ax_mu.legend(fontsize=8)
     _annotate(
         ax_mu, 0.03, 0.97,
-        f"users  pre={effect.n_units_baseline:,}  post={effect.n_units_variant:,}\n"
-        f"events pre={effect.n_trials_baseline:,}  post={effect.n_trials_variant:,}\n"
-        f"pooled {effect.pooled_rate_baseline:.3%} → {effect.pooled_rate_variant:.3%}",
+        f"users  pre={effect.n_users_control:,}  post={effect.n_users_treatment:,}\n"
+        f"events pre={effect.n_events_control:,}  post={effect.n_events_treatment:,}\n"
+        f"pooled {effect.pooled_rate_control:.3%} → {effect.pooled_rate_treatment:.3%}",
     )
 
     # ── Right: delta, its interval, and the band ─────────────────────────
@@ -142,14 +145,14 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
 
     ax_delta.fill_between(grid_d, _density(delta, grid_d), alpha=0.45, color=_DELTA_COLOR)
     ax_delta.axvspan(
-        effect.hdi_low, effect.hdi_high,
+        effect.lcl, effect.ucl,
         alpha=0.15, color=_DELTA_COLOR,
         label=f"{effect.hdi_prob:.0%} HDI",
     )
     ax_delta.axvline(0, color="black", lw=0.8, ls=":")
     ax_delta.axvline(
-        effect.delta_mean, color=_DELTA_COLOR, lw=1.5, ls="--",
-        label=f"mean = {effect.delta_mean:+.3%}",
+        effect.estimate, color=_DELTA_COLOR, lw=1.5, ls="--",
+        label=f"mean = {effect.estimate:+.3%}",
     )
 
     lines = [f"P(δ>0) = {effect.prob_gt_zero:.3f}"]
@@ -163,7 +166,7 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
             f"P(δ∈ROPE) = {effect.rope.prob_in_rope:.3f}",
             f"P(δ<ROPE) = {effect.rope.prob_lt_low:.3f}",
         ]
-    lines.append(f"HDI [{effect.hdi_low:+.3%}, {effect.hdi_high:+.3%}]")
+    lines.append(f"HDI [{effect.lcl:+.3%}, {effect.ucl:+.3%}]")
 
     color, label = verdict_style(effect.decision)
     ax_delta.set_title(
@@ -197,7 +200,7 @@ def plot_convergence(effect: GroupEffect, *, label: str = "") -> dict[str, Figur
     """
     import arviz as az  # noqa: PLC0415 (heavy; import deferred)
 
-    traces = {"pre": effect.fit_baseline.trace, "post": effect.fit_variant.trace}
+    traces = {"pre": effect.fit_control.trace, "post": effect.fit_treatment.trace}
     n = len(traces)
     header = (
         f"{label or effect.metric}  "
@@ -237,8 +240,8 @@ def plot_forest(effect: GroupEffect, *, label: str = "") -> Figure:
 
     az.plot_forest(
         {
-            "mu_pre": effect.fit_baseline.mu_samples.reshape(1, -1),
-            "mu_post": effect.fit_variant.mu_samples.reshape(1, -1),
+            "mu_pre": effect.fit_control.mu_samples.reshape(1, -1),
+            "mu_post": effect.fit_treatment.mu_samples.reshape(1, -1),
         },
         combined=True,
         hdi_prob=effect.hdi_prob,
@@ -268,18 +271,18 @@ def _summary_view(item: GroupEffect | Mapping[str, Any]) -> dict[str, Any]:
         rope = None if item.rope is None else (item.rope.rope_low, item.rope.rope_high)
         return {
             "decision": item.decision,
-            "delta_mean": item.delta_mean,
-            "hdi_low": item.hdi_low,
-            "hdi_high": item.hdi_high,
+            "estimate": item.estimate,
+            "lcl": item.lcl,
+            "ucl": item.ucl,
             "rope": rope,
         }
 
     has_rope = item.get("rope_low") is not None and item.get("rope_high") is not None
     return {
         "decision": str(item["decision"]),
-        "delta_mean": float(item["delta_mean"]),
-        "hdi_low": float(item["delta_hdi_low"]),
-        "hdi_high": float(item["delta_hdi_high"]),
+        "estimate": float(item["estimate"]),
+        "lcl": float(item["lcl"]),
+        "ucl": float(item["ucl"]),
         "rope": (float(item["rope_low"]), float(item["rope_high"])) if has_rope else None,
     }
 
@@ -315,8 +318,8 @@ def plot_summary(
     ValueError
         If ``effects`` is empty.
     KeyError
-        If a mapping is missing ``decision``, ``delta_mean``,
-        ``delta_hdi_low`` or ``delta_hdi_high``.
+        If a mapping is missing ``decision``, ``estimate``,
+        ``lcl`` or ``ucl``.
     """
     if not effects:
         raise ValueError("nothing to plot: `effects` is empty.")
@@ -338,13 +341,13 @@ def plot_summary(
                 color="gray", alpha=0.15, zorder=1,
             )
         ax.plot(
-            [view["hdi_low"], view["hdi_high"]], [y, y],
+            [view["lcl"], view["ucl"]], [y, y],
             color=color, lw=2.5, solid_capstyle="round", zorder=2,
         )
-        ax.scatter(view["delta_mean"], y, color=color, s=60, zorder=3)
+        ax.scatter(view["estimate"], y, color=color, s=60, zorder=3)
         ax.annotate(
-            f"{view['delta_mean']:+.2%}   {verdict}",
-            xy=(view["hdi_high"], y), xytext=(6, 0), textcoords="offset points",
+            f"{view['estimate']:+.2%}   {verdict}",
+            xy=(view["ucl"], y), xytext=(6, 0), textcoords="offset points",
             va="center", fontsize=8.5, color=color,
         )
 
@@ -352,13 +355,13 @@ def plot_summary(
     ax.set_yticks(positions)
     ax.set_yticklabels([label for label, _ in views], fontsize=9)
     ax.set_ylim(-0.7, n - 0.3)
-    ax.set_xlabel("δ = μ_variant − μ_baseline  (absolute rate difference)")
+    ax.set_xlabel("δ = μ_treatment − μ_control  (absolute rate difference)")
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.xaxis.set_major_formatter(lambda v, _: f"{v:+.1%}")
 
     # Leave room on the right for the longest annotation.
-    left = min(v["hdi_low"] for _, v in views)
-    right = max(v["hdi_high"] for _, v in views)
+    left = min(v["lcl"] for _, v in views)
+    right = max(v["ucl"] for _, v in views)
     span = right - left or abs(right) or 1.0
     ax.set_xlim(left - 0.08 * span, right + 0.55 * span)
 
@@ -375,7 +378,7 @@ def plot_prior_forest(
     verdicts: dict[str, str] | None = None,
     *,
     title: str = "Prior sensitivity — δ and credible interval by group and prior",
-    xlabel: str = "δ = mu_variant − mu_baseline  (percentage points)",
+    xlabel: str = "δ = μ_treatment − μ_control  (percentage points)",
 ):
     """Draw one dot-and-interval per (group, prior), grouped by group.
 
@@ -409,7 +412,7 @@ def plot_prior_forest(
     for _, row in rows.iterrows():
         c = colour[row["prior"]]
         ax.plot(
-            [row["hdi_low_pp"], row["hdi_high_pp"]], [row["y"], row["y"]],
+            [row["lcl_pp"], row["ucl_pp"]], [row["y"], row["y"]],
             color=c, linewidth=2.5, solid_capstyle="butt",
         )
         ax.plot(row["mean_pp"], row["y"], "o", color=c, markersize=7)

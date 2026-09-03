@@ -19,7 +19,7 @@ Every row of a CSV is one trial: a unit column (default ``user_id``) and a
 :class:`~dstoolbox.ml_funcs.stat_bayes_group.GroupCounts` takes, so there is
 no second data path to keep in step.
 
-The first group named is the baseline: it anchors the ROPE and the relative
+The first group named is the control: it anchors the ROPE and the relative
 lift.
 
 Exit codes: ``0`` the fit ran, ``1`` bad input or a failed check. The
@@ -63,14 +63,13 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             "The estimand is an unweighted mean over units, so it moves with "
             "a group's composition and not only with behaviour in it. Keep "
-            "the groups comparable; --pre/--post enforce equal lengths for "
-            "you unless --allow-unequal is given."
+            "the groups comparable."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "data", nargs="+", metavar="CSV",
-        help="one CSV per group (baseline first), or a single CSV to split "
+        help="one CSV per group (control first), or a single CSV to split "
              "with --group-col or --pre/--post",
     )
 
@@ -80,8 +79,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="column holding the group label; must take exactly two values",
     )
     split.add_argument(
-        "--baseline", metavar="VALUE",
-        help="which --group-col value is the baseline "
+        "--control", metavar="VALUE",
+        help="which --group-col value is the control "
              "(default: whichever sorts first)",
     )
     split.add_argument(
@@ -92,10 +91,6 @@ def _build_parser() -> argparse.ArgumentParser:
         "--post", type=_window_arg, metavar="START:END",
         help="post-period, both bounds inclusive",
     )
-    split.add_argument(
-        "--allow-unequal", action="store_true",
-        help="permit date windows of different lengths, artefact and all",
-    )
 
     columns = parser.add_argument_group("columns")
     columns.add_argument("--user-col", default="user_id")
@@ -105,8 +100,21 @@ def _build_parser() -> argparse.ArgumentParser:
     model = parser.add_argument_group("model")
     model.add_argument(
         "--rope-pct", type=float, default=None, metavar="FRAC",
-        help="equivalence band as a fraction of the baseline rate, e.g. "
-             "0.10 for +/-10%%. Omitted means a direction-only verdict.",
+        help="equivalence band as a fraction of the control rate, e.g. "
+             "0.10 for +/-10%%.",
+    )
+    model.add_argument(
+        "--rope-stat", type=float, default=None, metavar="COEF",
+        help="equivalence band as a multiple of the control's standard "
+             "error, e.g. 0.1 for the Cohen-like 'smaller than noise' band",
+    )
+    model.add_argument(
+        "--rope-biz", type=float, nargs=2, default=None, metavar=("LOW", "HIGH"),
+        help="explicit equivalence band in the units of the rate difference",
+    )
+    model.add_argument(
+        "--min-users", type=int, default=0, metavar="N",
+        help="refuse to fit if either group has fewer units than this",
     )
     model.add_argument(
         "--threshold", type=float, default=0.95, metavar="P",
@@ -132,7 +140,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _groups_from_files(args) -> tuple[GroupCounts, GroupCounts, None]:
-    """One CSV per group, baseline first. Labels come from the filenames."""
+    """One CSV per group, control first. Labels come from the filenames."""
     from pathlib import Path  # noqa: PLC0415
 
     shared = dict(unit_col=args.user_col, metric_col=args.metric_col)
@@ -158,10 +166,10 @@ def _groups_from_column(args, events: pd.DataFrame) -> tuple[GroupCounts, GroupC
             f"--group-col {args.group_col!r} takes {len(values)} distinct "
             f"values ({values[:5]}); this compares exactly two."
         )
-    if args.baseline is not None:
-        if args.baseline not in values:
-            raise ValueError(f"--baseline {args.baseline!r} is not one of {values}.")
-        values = [args.baseline, *[v for v in values if v != args.baseline]]
+    if args.control is not None:
+        if args.control not in values:
+            raise ValueError(f"--control {args.control!r} is not one of {values}.")
+        values = [args.control, *[v for v in values if v != args.control]]
 
     shared = dict(unit_col=args.user_col, metric_col=args.metric_col)
     return (
@@ -178,7 +186,7 @@ def _groups_from_column(args, events: pd.DataFrame) -> tuple[GroupCounts, GroupC
 
 def _groups_from_dates(args, events: pd.DataFrame):
     """Split one CSV on two date windows."""
-    window = PrePostWindow(*args.pre, *args.post, allow_unequal=args.allow_unequal)
+    window = PrePostWindow(*args.pre, *args.post)
     pre, post = split_by_window(
         events, window,
         unit_col=args.user_col, metric_col=args.metric_col, date_col=args.date_col,
@@ -221,14 +229,17 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
     try:
-        baseline, variant, window = _resolve_groups(args)
+        control, treatment, window = _resolve_groups(args)
         effect = fit_group_comparison(
-            baseline,
-            variant,
+            control,
+            treatment,
             metric=args.metric_col,
             window=window,
             prior=args.prior,
             rope_pct_coef=args.rope_pct,
+            rope_stat_coef=args.rope_stat,
+            rope_biz=None if args.rope_biz is None else tuple(args.rope_biz),
+            min_users=args.min_users,
             credibility_threshold=args.threshold,
             hdi_prob=args.ci,
             draws=args.draws,
@@ -239,6 +250,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     except (ValueError, KeyError, FileNotFoundError) as exc:
         print(f"dsbayes-group: {exc}", file=sys.stderr)
+        return 1
+
+    if effect is None:
+        print(
+            f"dsbayes-group: a group has fewer than --min-users "
+            f"{args.min_users} units; no fit was run.",
+            file=sys.stderr,
+        )
         return 1
 
     if args.quiet:

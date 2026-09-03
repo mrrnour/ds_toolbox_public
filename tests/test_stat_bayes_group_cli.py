@@ -77,20 +77,6 @@ def test_group_col_and_dates_are_two_different_splits(capsys):
 # Failures exit 1 with a message, never a traceback
 # --------------------------------------------------------------------------- #
 
-def test_unequal_windows_exit_nonzero(events_csv, capsys):
-    code = main([events_csv, "--pre", "2025-12-22:2026-01-10", "--post", POST, *SMALL])
-    assert code == 1
-    assert "unweighted mean over units" in capsys.readouterr().err
-
-
-def test_allow_unequal_gets_past_the_guard(events_csv):
-    code = main([
-        events_csv, "--pre", "2025-12-22:2026-01-10", "--post", POST,
-        "--allow-unequal", *SMALL,
-    ])
-    assert code == 0
-
-
 def test_missing_file_exits_nonzero(capsys):
     code = main(["nope.csv", "--pre", PRE, "--post", POST, *SMALL])
     assert code == 1
@@ -114,7 +100,7 @@ def test_quiet_prints_only_the_verdict(events_csv, capsys):
                  "--rope-pct", "0.10", *SMALL])
     out = capsys.readouterr().out.strip()
     assert code == 0
-    assert out == "meaningful_positive"
+    assert out == "positive"
 
 
 def test_writes_csv_and_plot(events_csv, tmp_path, capsys):
@@ -130,5 +116,5 @@ def test_writes_csv_and_plot(events_csv, tmp_path, capsys):
     assert png_out.stat().st_size > 0
     row = pd.read_csv(csv_out)
     assert len(row) == 1
-    assert row.loc[0, "decision"] == "meaningful_positive"
+    assert row.loc[0, "decision"] == "positive"
     assert row.loc[0, "n_days_pre"] == row.loc[0, "n_days_post"] == 10

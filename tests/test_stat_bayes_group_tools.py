@@ -88,8 +88,38 @@ def test_sensitivity_returns_one_row_per_prior(sensitivity):
 
 def test_sensitivity_table_matches_the_overlap_contract(sensitivity):
     table, _ = sensitivity
-    assert {"prior", "hdi_low", "hdi_high", "mean_delta",
-            "prob_delta_gt_0"} <= set(table.columns)
+    assert {"prior", "lcl", "ucl", "mean_delta", "prob_delta_gt_0",
+            "shift_from_primary"} <= set(table.columns)
+
+
+def test_sensitivity_measures_the_shift_against_the_first_prior(sensitivity):
+    table, _ = sensitivity
+    assert table.iloc[0]["shift_from_primary"] == 0.0
+    expected = table["mean_delta"] - table.iloc[0]["mean_delta"]
+    pd.testing.assert_series_equal(
+        table["shift_from_primary"], expected, check_names=False,
+    )
+
+
+def test_sensitivity_rejects_duplicate_prior_names():
+    pytest.importorskip("pymc")
+    window = PrePostWindow("2026-01-01", "2026-01-28", "2026-01-29", "2026-02-25")
+    with pytest.raises(ValueError, match="unique"):
+        prior_sensitivity_groups(
+            _events(0.10, 0.25), window,
+            priors=("uniform", BetaPrior("uniform", 2.0, 2.0)),
+            **FIT_KW,
+        )
+
+
+def test_sensitivity_rejects_an_unswept_primary():
+    pytest.importorskip("pymc")
+    window = PrePostWindow("2026-01-01", "2026-01-28", "2026-01-29", "2026-02-25")
+    with pytest.raises(ValueError, match="not among the priors swept"):
+        prior_sensitivity_groups(
+            _events(0.10, 0.25), window,
+            priors=("uniform", "jeffreys"), primary="kruschke", **FIT_KW,
+        )
 
 
 def test_a_clear_effect_is_robust_to_the_prior(sensitivity):
@@ -136,8 +166,8 @@ def _group_table(means: list[float]) -> pd.DataFrame:
     return pd.DataFrame({
         "prior": ["noninformative", "weakly_informative", "informative"],
         "mean_delta": means,
-        "hdi_low": [m - 0.01 for m in means],
-        "hdi_high": [m + 0.01 for m in means],
+        "lcl": [m - 0.01 for m in means],
+        "ucl": [m + 0.01 for m in means],
     })
 
 
@@ -166,8 +196,8 @@ def test_forest_rows_stacks_the_first_group_at_the_top():
 def test_forest_rows_converts_to_percentage_points():
     rows = prior_forest_rows({"video_newest": _group_table([0.025, 0.024, 0.020])})
     assert rows["mean_pp"].iloc[0] == pytest.approx(2.5)
-    assert rows["hdi_low_pp"].iloc[0] == pytest.approx(1.5)
-    assert rows["hdi_high_pp"].iloc[0] == pytest.approx(3.5)
+    assert rows["lcl_pp"].iloc[0] == pytest.approx(1.5)
+    assert rows["ucl_pp"].iloc[0] == pytest.approx(3.5)
 
 
 def test_forest_rows_rejects_empty_input():

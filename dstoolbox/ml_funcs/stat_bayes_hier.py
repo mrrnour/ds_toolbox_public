@@ -18,18 +18,12 @@ sampled — the fit cost does not grow with unit count.
 Use it when trials cluster within units, which breaks the flat model's
 independence assumption.
 
-The fit reports **two** population rates, and they answer different
-questions. ``mu`` is *unit-averaged*: one unit, one vote, whatever its trial
-count. ``mu_weighted`` is *trial-weighted*, ``sum(n_i theta_i)/sum(n_i)``,
-reconstructed from the conjugate posterior of the shrunk per-unit rates.
-
-They can move in opposite directions whenever heavy and light units convert
-at different rates and the mix shifts between periods, so pick the one that
-matches the decision: ``mu`` for "did the average user get a better
-experience", ``mu_weighted`` for "did total conversions per trial go up".
-``mu`` tracks the raw per-unit mean closely and is *not* the pooled rate
-``sum(k_i)/sum(n_i)``; ``mu_weighted`` is the shrunk counterpart of that
-pooled rate. Because ``mu`` averages over whoever is in the sample, it is
+The fit reports one population rate, ``mu``, and it is *unit*-averaged: one
+unit, one vote, whatever its trial count. It is deliberately **not** the
+pooled rate ``sum(k_i)/sum(n_i)``, which weights by trial and so is
+dominated by heavy units. The two answer different questions and can move
+in opposite directions when the heavy/light mix shifts; say which one you
+are quoting. Because ``mu`` averages over whoever is in the sample, it is
 also not invariant to the observation window. See
 :mod:`dstoolbox.ml_funcs.stat_bayes_group` for the two-group workflow built on
 this model, which enforces equal-length windows for that reason.
@@ -73,10 +67,9 @@ class HierBetaBinomialFit:
     trace: object  # arviz.InferenceData
     mu_samples: np.ndarray
     kappa_samples: np.ndarray
-    mu_weighted_samples: np.ndarray
     diagnostics: pd.DataFrame
     divergences: int
-    n_units: int
+    n_users: int
     successes: int
     trials: int
     prior_spec: str
@@ -85,17 +78,6 @@ class HierBetaBinomialFit:
     def mu_mean(self) -> float:
         """Posterior mean of the unit-level population rate — one unit, one vote."""
         return float(self.mu_samples.mean())
-
-    @property
-    def mu_weighted_mean(self) -> float:
-        """Posterior mean of the trial-weighted rate — one *trial*, one vote.
-
-        Sits between :attr:`mu_mean` and :attr:`rate`: it answers the same
-        question as the pooled rate but through shrunk per-unit estimates,
-        so units with few trials pull toward the population mean instead of
-        contributing their noisy raw ratio.
-        """
-        return float(self.mu_weighted_samples.mean())
 
     @property
     def kappa_mean(self) -> float:
@@ -135,59 +117,6 @@ def _as_counts(trials, successes) -> tuple[np.ndarray, np.ndarray]:
     if (k < 0).any() or (k > n).any():
         raise ValueError("every entry of successes must lie in [0, trials].")
     return n, k
-
-
-def _weighted_rate_samples(
-    n: np.ndarray,
-    k: np.ndarray,
-    mu_samples: np.ndarray,
-    kappa_samples: np.ndarray,
-    *,
-    random_seed: int | None = None,
-    max_elements: int = 20_000_000,
-) -> np.ndarray:
-    """Posterior draws of the trial-weighted rate ``sum(n_i th_i) / sum(n_i)``.
-
-    ``theta_i`` is marginalised out of the sampler, but its conditional
-    posterior is conjugate and closed-form::
-
-        theta_i | mu, kappa, data ~ Beta(mu*kappa + k_i,
-                                         (1-mu)*kappa + n_i - k_i)
-
-    so its mean is ``(mu*kappa + k_i) / (kappa + n_i)`` — the usual shrinkage
-    estimator. Plugging that mean in rather than drawing ``theta_i`` is a
-    deliberate approximation: the weighted average runs over every unit, so
-    the spread contributed by the ``theta_i`` draws is ``O(1/U)`` and
-    negligible beside the two terms kept below.
-
-    Each draw is then reweighted by a **Bayesian bootstrap** over units:
-    ``g ~ Dirichlet(1, ..., 1)`` replaces the fixed ``1/U`` unit weights, so
-    the interval covers *which units you would see next*, not just this
-    sample. Without it the estimand collapses to a finite-population
-    quantity that the observed counts almost determine, and the credible
-    interval comes out an order of magnitude too narrow — units are the
-    resampling stratum here because trials cluster inside them.
-
-    Works in draw-sized chunks because the intermediate is
-    ``n_draws x n_units`` — 8k draws over 40k units is 3.2e8 floats, which
-    will not fit in memory as one array.
-    """
-    n_f = n.astype(float)
-    k_f = k.astype(float)
-    rng = np.random.default_rng(random_seed)
-
-    chunk = max(1, int(max_elements // max(1, n_f.size)))
-    out = np.empty(mu_samples.size, dtype=float)
-    for start in range(0, mu_samples.size, chunk):
-        mu_c = mu_samples[start:start + chunk, None]
-        kap_c = kappa_samples[start:start + chunk, None]
-        theta = (mu_c * kap_c + k_f) / (kap_c + n_f)
-        # Dirichlet(1,...,1) via normalised exponentials; the normalising
-        # constant cancels in the ratio, so it is never formed.
-        g = rng.standard_exponential(size=theta.shape)
-        w = g * n_f
-        out[start:start + chunk] = (w * theta).sum(axis=1) / w.sum(axis=1)
-    return out
 
 
 def hier_beta_binomial_fit(
@@ -263,12 +192,9 @@ def hier_beta_binomial_fit(
         trace=trace,
         mu_samples=mu_samples,
         kappa_samples=kappa_samples,
-        mu_weighted_samples=_weighted_rate_samples(
-            n, k, mu_samples, kappa_samples, random_seed=random_seed
-        ),
         diagnostics=diagnostics,
         divergences=int(np.asarray(trace.sample_stats["diverging"]).sum()),  # type: ignore[attr-defined]
-        n_units=int(n.size),
+        n_users=int(n.size),
         successes=int(k.sum()),
         trials=int(n.sum()),
         prior_spec=spec.name,
@@ -281,11 +207,12 @@ def verdict_without_rope(
 ) -> str:
     """Direction-only verdict for analyses with no agreed equivalence band.
 
-    The counterpart to :func:`~dstoolbox.ml_funcs.stat_bayes.rope_decision`.
-    Returns ``"positive"`` / ``"negative"`` rather than
-    ``"meaningful_positive"`` / ``"meaningful_negative"``: nothing here
-    establishes the effect is large enough to matter, only that its sign is
-    credible.
+    The counterpart to :func:`~dstoolbox.ml_funcs.stat_bayes.rope_decision`,
+    and returns the same four labels so a caller can render a verdict without
+    knowing which rule produced it. The label therefore does not record that
+    no band was consulted — a ``"positive"`` here only clears zero, whereas one
+    from ``rope_decision`` cleared a band edge. Anything that must tell those
+    apart has to carry the band alongside the label.
 
     Parameters
     ----------

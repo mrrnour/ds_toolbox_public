@@ -8,8 +8,8 @@ mean difference into a categorical verdict.
 The module is cfg-free — inputs are primitive ``numpy`` arrays / ``pandas``
 Series, outputs are ``@dataclass(frozen=True)`` results and DataFrames.
 It is general-purpose: any two continuous samples, not TS-specific. The
-pre/post application in ``oldest-newest-prepost`` is one caller among
-many.
+control/treatment split can be two experiment arms, two cohorts or two
+date windows — the model does not care which.
 
 Heavy dependencies (``pymc``, ``arviz``) are guarded via the shared
 ``optional_import`` helper — importing this module without them succeeds;
@@ -29,6 +29,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import NormalDist
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,12 +56,12 @@ class BestResult:
     trace
         The full :class:`arviz.InferenceData` object (posterior + sample_stats).
     posterior_delta
-        1-D flattened posterior draws of ``delta = mu_post - mu_pre``.
+        1-D flattened posterior draws of ``delta = mu_treatment - mu_control``.
     posterior_mean_delta
         Posterior mean of ``delta``.
     hdi
         ``(low, high)`` highest-density interval on ``delta`` at ``hdi_prob``.
-    n_pre, n_post
+    n_control, n_treatment
         Sample sizes fed to the fit.
     prior_spec
         Which prior set was used (``"kruschke"`` or ``"weakly_informative"``).
@@ -70,8 +71,8 @@ class BestResult:
     posterior_delta: np.ndarray
     posterior_mean_delta: float
     hdi: tuple[float, float]
-    n_pre: int
-    n_post: int
+    n_control: int
+    n_treatment: int
     prior_spec: str
 
 
@@ -81,10 +82,19 @@ class RopeDecision:
 
     ``decision`` is one of:
 
-    - ``"meaningful_positive"`` — ``P(delta > rope_high) >= threshold``.
-    - ``"meaningful_negative"`` — ``P(delta < rope_low)  >= threshold``.
-    - ``"equivalent"``           — ``P(delta in ROPE)    >= threshold``.
-    - ``"inconclusive"``         — none of the above.
+    - ``"positive"``     — ``P(delta > rope_high) >= threshold``.
+    - ``"negative"``     — ``P(delta < rope_low)  >= threshold``.
+    - ``"equivalent"``   — ``P(delta in ROPE)    >= threshold``.
+    - ``"inconclusive"`` — none of the above.
+
+    This is the same four-label vocabulary
+    :func:`~dstoolbox.ml_funcs.stat_bayes_hier.verdict_without_rope` returns,
+    so a caller can render a verdict without knowing which rule produced it.
+    The labels therefore no longer say whether a band was consulted: a
+    ``"positive"`` from here cleared a ROPE edge, one from ``verdict_without_rope``
+    only cleared zero. Callers that need to tell those apart must carry the
+    band alongside the label — see :attr:`GroupEffect.rope`, which is ``None``
+    exactly when no band was applied.
     """
 
     rope_low: float
@@ -109,15 +119,15 @@ class BetaBinomialResult:
     ----------
     trace
         Full :class:`arviz.InferenceData` object (posterior + sample_stats).
-    posterior_p_pre, posterior_p_post
+    posterior_p_control, posterior_p_treatment
         1-D flattened posterior draws of the rate parameters.
     posterior_delta
-        1-D flattened posterior draws of ``delta = p_post - p_pre``.
+        1-D flattened posterior draws of ``delta = p_treatment - p_control``.
     posterior_mean_delta
         Posterior mean of ``delta``.
     hdi
         ``(low, high)`` highest-density interval on ``delta`` at ``hdi_prob``.
-    successes_pre, trials_pre, successes_post, trials_post
+    successes_control, trials_control, successes_treatment, trials_treatment
         The four numbers fed to the fit.
     prior_spec
         Name of the prior used: ``"uniform"`` = Beta(1,1),
@@ -126,26 +136,26 @@ class BetaBinomialResult:
     """
 
     trace: object  # arviz.InferenceData
-    posterior_p_pre: np.ndarray
-    posterior_p_post: np.ndarray
+    posterior_p_control: np.ndarray
+    posterior_p_treatment: np.ndarray
     posterior_delta: np.ndarray
     posterior_mean_delta: float
     hdi: tuple[float, float]
-    successes_pre: int
-    trials_pre: int
-    successes_post: int
-    trials_post: int
+    successes_control: int
+    trials_control: int
+    successes_treatment: int
+    trials_treatment: int
     prior_spec: str
 
     @property
-    def rate_pre(self) -> float:
-        """Empirical pre-rate ``successes_pre / trials_pre``."""
-        return self.successes_pre / self.trials_pre
+    def rate_control(self) -> float:
+        """Empirical control rate ``successes_control / trials_control``."""
+        return self.successes_control / self.trials_control
 
     @property
-    def rate_post(self) -> float:
-        """Empirical post-rate ``successes_post / trials_post``."""
-        return self.successes_post / self.trials_post
+    def rate_treatment(self) -> float:
+        """Empirical treatment rate ``successes_treatment / trials_treatment``."""
+        return self.successes_treatment / self.trials_treatment
 
 
 # ---------------------------------------------------------------------------
@@ -174,40 +184,40 @@ def _weakly_informative_priors(pooled_mean: float, pooled_sd: float) -> dict[str
     }
 
 
-def _build_model(y_pre: np.ndarray, y_post: np.ndarray, prior: str):
+def _build_model(y_control: np.ndarray, y_treatment: np.ndarray, prior: str):
     """Return a ``pymc.Model`` implementing BEST with the requested prior set."""
-    pooled_mean = float(np.mean(np.concatenate([y_pre, y_post])))
-    pooled_sd = float(np.std(np.concatenate([y_pre, y_post]), ddof=1))
+    pooled_mean = float(np.mean(np.concatenate([y_control, y_treatment])))
+    pooled_sd = float(np.std(np.concatenate([y_control, y_treatment]), ddof=1))
     if pooled_sd == 0.0:
         raise ValueError("pooled_sd is zero; cannot fit BEST on constant data.")
 
     with _pm.Model() as model:  # type: ignore[union-attr]
         if prior == "kruschke":
             p = _kruschke_priors(pooled_mean, pooled_sd)
-            mu_pre = _pm.Normal("mu_pre", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
-            mu_post = _pm.Normal("mu_post", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
-            sigma_pre = _pm.Uniform("sigma_pre", lower=p["sigma_low"], upper=p["sigma_high"])
-            sigma_post = _pm.Uniform("sigma_post", lower=p["sigma_low"], upper=p["sigma_high"])
+            mu_c = _pm.Normal("mu_control", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
+            mu_t = _pm.Normal("mu_treatment", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
+            sigma_c = _pm.Uniform("sigma_control", lower=p["sigma_low"], upper=p["sigma_high"])
+            sigma_t = _pm.Uniform("sigma_treatment", lower=p["sigma_low"], upper=p["sigma_high"])
             nu_minus_one = _pm.Exponential("nu_minus_one", 1.0 / p["nu_mean"])
             nu = _pm.Deterministic("nu", nu_minus_one + 1.0)
         elif prior == "weakly_informative":
             p = _weakly_informative_priors(pooled_mean, pooled_sd)
-            mu_pre = _pm.Normal("mu_pre", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
-            mu_post = _pm.Normal("mu_post", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
-            sigma_pre = _pm.HalfNormal("sigma_pre", sigma=p["sigma_scale"])
-            sigma_post = _pm.HalfNormal("sigma_post", sigma=p["sigma_scale"])
+            mu_c = _pm.Normal("mu_control", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
+            mu_t = _pm.Normal("mu_treatment", mu=p["mu_prior_mean"], sigma=p["mu_prior_sd"])
+            sigma_c = _pm.HalfNormal("sigma_control", sigma=p["sigma_scale"])
+            sigma_t = _pm.HalfNormal("sigma_treatment", sigma=p["sigma_scale"])
             nu = _pm.Gamma("nu", alpha=p["nu_alpha"], beta=p["nu_beta"])
         else:
             raise ValueError(
                 f"Unknown prior spec: {prior!r}. Use 'kruschke' or 'weakly_informative'."
             )
 
-        _pm.StudentT("y_pre", nu=nu, mu=mu_pre, sigma=sigma_pre, observed=y_pre)
-        _pm.StudentT("y_post", nu=nu, mu=mu_post, sigma=sigma_post, observed=y_post)
-        _pm.Deterministic("delta", mu_post - mu_pre)
-        _pm.Deterministic("delta_sigma", sigma_post - sigma_pre)
-        pooled_sigma = (sigma_pre + sigma_post) / 2.0
-        _pm.Deterministic("effect_size", (mu_post - mu_pre) / pooled_sigma)
+        _pm.StudentT("y_control", nu=nu, mu=mu_c, sigma=sigma_c, observed=y_control)
+        _pm.StudentT("y_treatment", nu=nu, mu=mu_t, sigma=sigma_t, observed=y_treatment)
+        _pm.Deterministic("delta", mu_t - mu_c)
+        _pm.Deterministic("delta_sigma", sigma_t - sigma_c)
+        pooled_sigma = (sigma_c + sigma_t) / 2.0
+        _pm.Deterministic("effect_size", (mu_t - mu_c) / pooled_sigma)
 
     return model
 
@@ -217,8 +227,8 @@ def _build_model(y_pre: np.ndarray, y_post: np.ndarray, prior: str):
 # ---------------------------------------------------------------------------
 
 def best_two_sample(
-    y_pre,
-    y_post,
+    y_control,
+    y_treatment,
     *,
     prior: str = "kruschke",
     hdi_prob: float = 0.95,
@@ -233,7 +243,7 @@ def best_two_sample(
 
     Parameters
     ----------
-    y_pre, y_post
+    y_control, y_treatment
         1-D numeric arrays of the two samples. Do NOT need to be the same length.
     prior
         ``"kruschke"`` (canonical, very wide) or ``"weakly_informative"``.
@@ -251,15 +261,15 @@ def best_two_sample(
     BestResult
         Dataclass with the trace and the summarised posterior on ``delta``.
     """
-    y_pre_arr = np.asarray(y_pre, dtype=float).ravel()
-    y_post_arr = np.asarray(y_post, dtype=float).ravel()
-    if y_pre_arr.size < 2 or y_post_arr.size < 2:
+    y_control_arr = np.asarray(y_control, dtype=float).ravel()
+    y_treatment_arr = np.asarray(y_treatment, dtype=float).ravel()
+    if y_control_arr.size < 2 or y_treatment_arr.size < 2:
         raise ValueError(
-            f"Need >=2 observations per group; got n_pre={y_pre_arr.size}, "
-            f"n_post={y_post_arr.size}."
+            f"Need >=2 observations per group; got n_control={y_control_arr.size}, "
+            f"n_treatment={y_treatment_arr.size}."
         )
 
-    model = _build_model(y_pre_arr, y_post_arr, prior)
+    model = _build_model(y_control_arr, y_treatment_arr, prior)
     with model:
         trace = _pm.sample(  # type: ignore[union-attr]
             draws=draws,
@@ -279,8 +289,8 @@ def best_two_sample(
         posterior_delta=delta_samples,
         posterior_mean_delta=float(delta_samples.mean()),
         hdi=(float(hdi_arr[0]), float(hdi_arr[1])),
-        n_pre=int(y_pre_arr.size),
-        n_post=int(y_post_arr.size),
+        n_control=int(y_control_arr.size),
+        n_treatment=int(y_treatment_arr.size),
         prior_spec=prior,
     )
 
@@ -296,7 +306,7 @@ def best_two_sample(
 # - Every A/B testing library (VWO, Google Analytics, PyMC A/B examples).
 #
 # Advantages over feeding daily aggregates to BEST:
-#   1. Posterior is on the *rate* difference p_post - p_pre — the causal target
+#   1. Posterior is on the *rate* difference p_treatment - p_control — the causal
 #      of a reranker / editorial change, not a count that confounds rate and
 #      traffic volume.
 #   2. Sample-size weighting is automatic (a heavier-traffic day contributes
@@ -410,10 +420,10 @@ def _resolve_beta_prior(prior: str | BetaPrior) -> BetaPrior:
 
 
 def _build_beta_binomial_model(
-    successes_pre: int,
-    trials_pre: int,
-    successes_post: int,
-    trials_post: int,
+    successes_control: int,
+    trials_control: int,
+    successes_treatment: int,
+    trials_treatment: int,
     prior: str | BetaPrior,
 ):
     """Return a ``pymc.Model`` implementing the two-proportion Beta-Binomial."""
@@ -421,45 +431,50 @@ def _build_beta_binomial_model(
     alpha, beta = spec.alpha, spec.beta
 
     with _pm.Model() as model:  # type: ignore[union-attr]
-        p_pre = _pm.Beta("p_pre", alpha=alpha, beta=beta)
-        p_post = _pm.Beta("p_post", alpha=alpha, beta=beta)
-        _pm.Binomial("obs_pre",  n=trials_pre,  p=p_pre,  observed=successes_pre)
-        _pm.Binomial("obs_post", n=trials_post, p=p_post, observed=successes_post)
-        _pm.Deterministic("delta", p_post - p_pre)
-        _pm.Deterministic("rel_lift", (p_post - p_pre) / p_pre)
+        p_c = _pm.Beta("p_control", alpha=alpha, beta=beta)
+        p_t = _pm.Beta("p_treatment", alpha=alpha, beta=beta)
+        _pm.Binomial(
+            "obs_control", n=trials_control, p=p_c, observed=successes_control,
+        )
+        _pm.Binomial(
+            "obs_treatment", n=trials_treatment, p=p_t, observed=successes_treatment,
+        )
+        _pm.Deterministic("delta", p_t - p_c)
+        _pm.Deterministic("rel_lift", (p_t - p_c) / p_c)
 
     return model
 
 
 def _build_beta_bernoulli_model(
-    y_pre: np.ndarray,
-    y_post: np.ndarray,
+    y_control: np.ndarray,
+    y_treatment: np.ndarray,
     prior: str | BetaPrior,
 ):
     """Return a ``pymc.Model`` implementing the flat Beta-Bernoulli model on raw obs.
 
-    Each element of ``y_pre`` / ``y_post`` is a single binary (0/1) observation.
-    Mathematically equivalent to :func:`_build_beta_binomial_model` on the same
-    data, but takes raw row-level arrays instead of aggregated counts.
+    Each element of ``y_control`` / ``y_treatment`` is a single binary (0/1)
+    observation. Mathematically equivalent to
+    :func:`_build_beta_binomial_model` on the same data, but takes raw
+    row-level arrays instead of aggregated counts.
     """
     spec = _resolve_beta_prior(prior)
     alpha, beta = spec.alpha, spec.beta
 
     with _pm.Model() as model:  # type: ignore[union-attr]
-        p_pre  = _pm.Beta("p_pre",  alpha=alpha, beta=beta)
-        p_post = _pm.Beta("p_post", alpha=alpha, beta=beta)
-        _pm.Bernoulli("obs_pre",  p=p_pre,  observed=y_pre)
-        _pm.Bernoulli("obs_post", p=p_post, observed=y_post)
-        _pm.Deterministic("delta",    p_post - p_pre)
-        _pm.Deterministic("rel_lift", (p_post - p_pre) / p_pre)
+        p_c = _pm.Beta("p_control", alpha=alpha, beta=beta)
+        p_t = _pm.Beta("p_treatment", alpha=alpha, beta=beta)
+        _pm.Bernoulli("obs_control", p=p_c, observed=y_control)
+        _pm.Bernoulli("obs_treatment", p=p_t, observed=y_treatment)
+        _pm.Deterministic("delta", p_t - p_c)
+        _pm.Deterministic("rel_lift", (p_t - p_c) / p_c)
 
     return model
 
 
 
 def beta_bernoulli_two_sample(
-    y_pre,
-    y_post,
+    y_control,
+    y_treatment,
     *,
     prior: str | BetaPrior = "jeffreys",
     hdi_prob: float = 0.95,
@@ -472,8 +487,8 @@ def beta_bernoulli_two_sample(
 ) -> BetaBinomialResult:
     """Fit the flat Beta-Bernoulli model on raw binary observations.
 
-    Each element of ``y_pre`` / ``y_post`` is a single 0/1 event (e.g. one
-    search row).  No user-level aggregation is performed.  Produces the same
+    Each element of ``y_control`` / ``y_treatment`` is a single 0/1 event (e.g.
+    one search row).  No user-level aggregation is performed.  Produces the same
     posterior as :func:`beta_binomial_two_sample` on the same data because
     ``Binomial(n, p)`` is the sufficient statistic of ``n`` i.i.d.
     ``Bernoulli(p)`` draws — useful as a baseline that skips the aggregation
@@ -481,14 +496,14 @@ def beta_bernoulli_two_sample(
 
     Parameters
     ----------
-    y_pre, y_post
+    y_control, y_treatment
         1-D integer arrays of 0/1 binary values (one element per row).
     prior
         ``"jeffreys"`` (Beta(0.5, 0.5), default), ``"uniform"``
         (Beta(1, 1)), or a :class:`BetaPrior` — see
         :func:`beta_prior_from_baseline`.
     hdi_prob
-        Coverage of the returned HDI on ``delta = p_post - p_pre``.
+        Coverage of the returned HDI on ``delta = p_treatment - p_control``.
     draws, tune, chains, target_accept, random_seed, progressbar
         Forwarded to :func:`pymc.sample`.
 
@@ -497,9 +512,9 @@ def beta_bernoulli_two_sample(
     BetaBinomialResult
         Same result container as :func:`beta_binomial_two_sample`.
     """
-    y_pre  = np.asarray(y_pre,  dtype=int)
-    y_post = np.asarray(y_post, dtype=int)
-    for name, arr in (("pre", y_pre), ("post", y_post)):
+    y_control = np.asarray(y_control, dtype=int)
+    y_treatment = np.asarray(y_treatment, dtype=int)
+    for name, arr in (("control", y_control), ("treatment", y_treatment)):
         if arr.ndim != 1:
             raise ValueError(f"y_{name} must be 1-D; got shape {arr.shape}.")
         if len(arr) == 0:
@@ -507,7 +522,7 @@ def beta_bernoulli_two_sample(
         if not np.isin(arr, [0, 1]).all():
             raise ValueError(f"y_{name} must contain only 0/1 values.")
 
-    model = _build_beta_bernoulli_model(y_pre, y_post, prior)
+    model = _build_beta_bernoulli_model(y_control, y_treatment, prior)
     with model:
         trace = _pm.sample(  # type: ignore[union-attr]
             draws=draws,
@@ -519,31 +534,31 @@ def beta_bernoulli_two_sample(
             return_inferencedata=True,
         )
 
-    delta_samples  = np.asarray(trace.posterior["delta"]).ravel()    # type: ignore[attr-defined]
-    p_pre_samples  = np.asarray(trace.posterior["p_pre"]).ravel()    # type: ignore[attr-defined]
-    p_post_samples = np.asarray(trace.posterior["p_post"]).ravel()   # type: ignore[attr-defined]
+    delta_samples = np.asarray(trace.posterior["delta"]).ravel()          # type: ignore[attr-defined]
+    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()        # type: ignore[attr-defined]
+    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()      # type: ignore[attr-defined]
     hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)              # type: ignore[union-attr]
     hdi_arr = np.asarray(hdi_arr).ravel()
     return BetaBinomialResult(
         trace=trace,
-        posterior_p_pre=p_pre_samples,
-        posterior_p_post=p_post_samples,
+        posterior_p_control=p_c_samples,
+        posterior_p_treatment=p_t_samples,
         posterior_delta=delta_samples,
         posterior_mean_delta=float(delta_samples.mean()),
         hdi=(float(hdi_arr[0]), float(hdi_arr[1])),
-        successes_pre=int(y_pre.sum()),
-        trials_pre=len(y_pre),
-        successes_post=int(y_post.sum()),
-        trials_post=len(y_post),
+        successes_control=int(y_control.sum()),
+        trials_control=len(y_control),
+        successes_treatment=int(y_treatment.sum()),
+        trials_treatment=len(y_treatment),
         prior_spec=_resolve_beta_prior(prior).name,
     )
 
 
 def beta_binomial_two_sample(
-    successes_pre,
-    trials_pre,
-    successes_post,
-    trials_post,
+    successes_control,
+    trials_control,
+    successes_treatment,
+    trials_treatment,
     *,
     prior: str | BetaPrior = "uniform",
     hdi_prob: float = 0.95,
@@ -558,17 +573,17 @@ def beta_binomial_two_sample(
 
     Parameters
     ----------
-    successes_pre, trials_pre
-        Total converting searches / total searches in the pre-window.
-    successes_post, trials_post
-        Same for the post-window.
+    successes_control, trials_control
+        Total converting searches / total searches in the control group.
+    successes_treatment, trials_treatment
+        Same for the treatment group.
     prior
         ``"uniform"`` (Beta(1, 1), Bayes-Laplace), ``"jeffreys"``
         (Beta(0.5, 0.5), reference prior), or a :class:`BetaPrior` built
         by :func:`beta_prior_from_baseline`. A custom prior applies to
-        ``p_pre`` and ``p_post`` alike.
+        ``p_control`` and ``p_treatment`` alike.
     hdi_prob
-        Coverage of the returned HDI on ``delta = p_post - p_pre``.
+        Coverage of the returned HDI on ``delta = p_treatment - p_control``.
     draws, tune, chains, target_accept, random_seed, progressbar
         Forwarded to :func:`pymc.sample`. Conjugate posteriors sample cheaply.
 
@@ -576,11 +591,11 @@ def beta_binomial_two_sample(
     -------
     BetaBinomialResult
     """
-    s_pre = int(successes_pre)
-    n_pre = int(trials_pre)
-    s_post = int(successes_post)
-    n_post = int(trials_post)
-    for name, s, n in (("pre", s_pre, n_pre), ("post", s_post, n_post)):
+    s_c = int(successes_control)
+    n_c = int(trials_control)
+    s_t = int(successes_treatment)
+    n_t = int(trials_treatment)
+    for name, s, n in (("control", s_c, n_c), ("treatment", s_t, n_t)):
         if n <= 0:
             raise ValueError(f"trials_{name} must be positive; got {n}.")
         if s < 0 or s > n:
@@ -589,7 +604,7 @@ def beta_binomial_two_sample(
                 f"successes={s}, trials={n}."
             )
 
-    model = _build_beta_binomial_model(s_pre, n_pre, s_post, n_post, prior)
+    model = _build_beta_binomial_model(s_c, n_c, s_t, n_t, prior)
     with model:
         trace = _pm.sample(  # type: ignore[union-attr]
             draws=draws,
@@ -602,21 +617,21 @@ def beta_binomial_two_sample(
         )
 
     delta_samples = np.asarray(trace.posterior["delta"]).ravel()          # type: ignore[attr-defined]
-    p_pre_samples = np.asarray(trace.posterior["p_pre"]).ravel()          # type: ignore[attr-defined]
-    p_post_samples = np.asarray(trace.posterior["p_post"]).ravel()        # type: ignore[attr-defined]
+    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()        # type: ignore[attr-defined]
+    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()      # type: ignore[attr-defined]
     hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)                   # type: ignore[union-attr]
     hdi_arr = np.asarray(hdi_arr).ravel()
     return BetaBinomialResult(
         trace=trace,
-        posterior_p_pre=p_pre_samples,
-        posterior_p_post=p_post_samples,
+        posterior_p_control=p_c_samples,
+        posterior_p_treatment=p_t_samples,
         posterior_delta=delta_samples,
         posterior_mean_delta=float(delta_samples.mean()),
         hdi=(float(hdi_arr[0]), float(hdi_arr[1])),
-        successes_pre=s_pre,
-        trials_pre=n_pre,
-        successes_post=s_post,
-        trials_post=n_post,
+        successes_control=s_c,
+        trials_control=n_c,
+        successes_treatment=s_t,
+        trials_treatment=n_t,
         prior_spec=_resolve_beta_prior(prior).name,
     )
 
@@ -625,6 +640,142 @@ def beta_binomial_two_sample(
 # ROPE decision
 # ---------------------------------------------------------------------------
 
+#: Every label a Bayesian verdict can take, under either decision rule.
+VERDICTS: tuple[str, ...] = ("positive", "negative", "equivalent", "inconclusive")
+
+#: The labels that assert an effect. ``equivalent`` is a finding but not a
+#: call for an effect, and ``inconclusive`` is a refusal to call at all.
+_CALLS = frozenset({"positive", "negative"})
+
+
+def is_call(decision: str) -> bool:
+    """Did this verdict name an effect.
+
+    The one place that question is answered, so counts taken in different
+    modules reconcile.
+
+    ``equivalent`` is deliberately not a call: it is a decision that the
+    effect is too small to act on, which is a finding, not an effect.
+
+    Example
+    -------
+    >>> is_call("positive"), is_call("equivalent"), is_call("inconclusive")
+    (True, False, False)
+    """
+    return decision in _CALLS
+
+
+#: Direction certainty that promotes an ``inconclusive`` verdict to a call in
+#: :func:`is_flagged`. Applied at both tails, so the mirror threshold is
+#: ``1 - this``: the rule is "the posterior is this sure of the sign", not
+#: "the effect is positive". ``0.95`` is the Bayesian counterpart of a
+#: two-sided 5% test, which keeps a Bayesian and a frequentist arm answering
+#: at comparable strictness.
+INCONCLUSIVE_PROB_THRESHOLD = 0.95
+
+
+def is_flagged(
+    decision: str,
+    prob_gt_zero: float | None = None,
+    *,
+    threshold: float = INCONCLUSIVE_PROB_THRESHOLD,
+) -> bool:
+    """Did the Bayesian arm name an effect, allowing direction to rescue a verdict.
+
+    :func:`is_call` asks only what the ROPE rule decided. This adds the one
+    promotion a reporting layer legitimately wants on top of it: an
+    ``inconclusive`` verdict whose posterior sits almost entirely on one side
+    of zero *did* say something about the sign, even though its HDI overlaps a
+    band chosen to answer a different question (is the effect big enough to
+    act on). Without the promotion such a slice is scored as "said nothing",
+    which understates the Bayesian call rate against any frequentist arm that
+    only ever tests against zero.
+
+    ``equivalent`` is never promoted, however certain the direction: it is a
+    decision that the effect is too small to act on, not an absence of
+    evidence, so which side of zero it falls on changes nothing.
+
+    Parameters
+    ----------
+    decision
+        A label from :data:`VERDICTS`. Anything else reads as "no call".
+    prob_gt_zero
+        ``P(delta > 0)`` under the posterior. ``None`` or NaN — the usual case
+        for results written before the direction rule existed — falls back to
+        :func:`is_call` alone.
+    threshold
+        Direction certainty required, tested at both tails.
+
+    Returns
+    -------
+    bool
+
+    Example
+    -------
+    >>> is_flagged("inconclusive", 0.97)
+    True
+    >>> is_flagged("inconclusive", 0.60)
+    False
+    >>> is_flagged("equivalent", 0.999)
+    False
+    """
+    decision = str(decision)
+    if is_call(decision):
+        return True
+    if decision != "inconclusive" or prob_gt_zero is None or pd.isna(prob_gt_zero):
+        return False
+    prob = float(prob_gt_zero)
+    return prob >= threshold or prob <= 1.0 - threshold
+
+
+#: The four states a (Bayesian, comparison-arm) pair of calls can be in. One
+#: label rather than an agree/disagree flag plus a side, because "agree" pools
+#: two opposite situations — both arms named an effect, and neither did — and a
+#: reader cannot tell those apart without a second column.
+CALLED_BOTH = "both"
+CALLED_BAYES = "bayes"
+CALLED_FREQ = "freq"
+CALLED_NONE = "none"
+
+#: The two states in which the arms reached the same call.
+AGREEING_STATES = frozenset({CALLED_BOTH, CALLED_NONE})
+
+
+def call_agreement(bayes_flagged: bool, other_flagged: bool) -> str:
+    """Which arms named an effect on this slice: both, one of them, or neither.
+
+    Agreement is a property of a *pair* of adjudications, not of either one
+    alone. ``other_flagged`` is whatever the comparison arm counts as naming an
+    effect — surviving BH, a raw rejection, a second Bayesian fit — since the
+    label only records which side made a call, not how it decided.
+
+    Parameters
+    ----------
+    bayes_flagged, other_flagged
+        Whether each arm named an effect. See :func:`is_flagged`.
+
+    Returns
+    -------
+    str
+        :data:`CALLED_BOTH`, :data:`CALLED_BAYES`, :data:`CALLED_FREQ` or
+        :data:`CALLED_NONE`. The first and last are :data:`AGREEING_STATES`.
+
+    Example
+    -------
+    >>> call_agreement(True, False)
+    'bayes'
+    >>> call_agreement(False, False) in AGREEING_STATES
+    True
+    """
+    if bayes_flagged and other_flagged:
+        return CALLED_BOTH
+    if bayes_flagged:
+        return CALLED_BAYES
+    if other_flagged:
+        return CALLED_FREQ
+    return CALLED_NONE
+
+
 def _classify(
     prob_gt_high: float,
     prob_in_rope: float,
@@ -632,11 +783,16 @@ def _classify(
     *,
     threshold: float = 0.95,
 ) -> str:
-    """Bucket a posterior into one of the four decision labels."""
+    """Bucket a posterior into one of the four decision labels.
+
+    The three regions are disjoint and ``threshold`` is above 0.5 in any sane
+    configuration, so at most one branch can fire and the order of the tests
+    does not affect the result.
+    """
     if prob_gt_high >= threshold:
-        return "meaningful_positive"
+        return "positive"
     if prob_lt_low >= threshold:
-        return "meaningful_negative"
+        return "negative"
     if prob_in_rope >= threshold:
         return "equivalent"
     return "inconclusive"
@@ -654,12 +810,12 @@ def rope_decision(
     Parameters
     ----------
     posterior_delta
-        1-D array of posterior draws of ``delta = mu_post - mu_pre``.
+        1-D array of posterior draws of ``delta = mu_treatment - mu_control``.
     rope_low, rope_high
         ROPE bounds. ``rope_low < rope_high`` required.
     threshold
-        Posterior mass needed in a region to trigger a meaningful/equivalent
-        verdict. Kruschke's default is ``0.95``.
+        Posterior mass needed in a region to trigger a directional or
+        equivalence verdict. Kruschke's default is ``0.95``.
 
     Returns
     -------
@@ -671,6 +827,75 @@ def rope_decision(
     prob_gt_high = float((samples > rope_high).mean())
     prob_lt_low = float((samples < rope_low).mean())
     prob_in_rope = float(((samples >= rope_low) & (samples <= rope_high)).mean())
+    return RopeDecision(
+        rope_low=float(rope_low),
+        rope_high=float(rope_high),
+        prob_gt_high=prob_gt_high,
+        prob_in_rope=prob_in_rope,
+        prob_lt_low=prob_lt_low,
+        decision=_classify(prob_gt_high, prob_in_rope, prob_lt_low, threshold=threshold),
+    )
+
+
+def rope_decision_normal(
+    mean: float,
+    sd: float,
+    *,
+    rope_low: float,
+    rope_high: float,
+    threshold: float = 0.95,
+) -> RopeDecision:
+    """Apply the same ROPE rule to a posterior summarised by mean and scale.
+
+    :func:`rope_decision` needs the draws. Results that have been through a
+    CSV rarely still have them — what survives is a posterior mean and an
+    interval — and a reporting layer that wants to re-adjudicate those against
+    a *different* band (a ROPE selector on a dashboard, a sensitivity ladder)
+    would otherwise have to restate Kruschke's rule locally. This is that rule
+    with the region masses read off a normal instead of counted over samples,
+    so the second band is judged by the same code as the first.
+
+    The approximation is the caller's to justify. It holds where the posterior
+    is near-normal — a rate model on tens of thousands of trials, say — and
+    not for a small-sample BEST fit with a fat-tailed ``nu``. Where both are
+    available, prefer the stored sample-based verdict and use this only for
+    the bands that were never fitted.
+
+    Parameters
+    ----------
+    mean
+        Posterior mean of ``delta``.
+    sd
+        Posterior standard deviation of ``delta``. Recover it from a stored
+        HDI as ``(high - low) / (2 * z)`` with ``z`` the standard normal
+        quantile at ``0.5 + hdi_prob / 2``.
+    rope_low, rope_high
+        ROPE bounds. ``rope_low < rope_high`` required.
+    threshold
+        Posterior mass needed in a region to trigger a verdict.
+
+    Returns
+    -------
+    RopeDecision
+        Carrying the same four-label vocabulary and the same three region
+        masses as the sample-based rule, so the two are interchangeable
+        downstream.
+
+    Example
+    -------
+    >>> rope_decision_normal(0.0, 0.2, rope_low=-2.6, rope_high=2.6,
+    ...                      threshold=0.9).decision
+    'equivalent'
+    """
+    if not rope_low < rope_high:
+        raise ValueError(f"rope_low ({rope_low}) must be < rope_high ({rope_high}).")
+    if not sd > 0:
+        raise ValueError(f"sd must be > 0; got {sd}.")
+    dist = NormalDist(float(mean), float(sd))
+    cdf_low, cdf_high = dist.cdf(rope_low), dist.cdf(rope_high)
+    prob_lt_low = float(cdf_low)
+    prob_gt_high = float(1.0 - cdf_high)
+    prob_in_rope = float(cdf_high - cdf_low)
     return RopeDecision(
         rope_low=float(rope_low),
         rope_high=float(rope_high),
@@ -725,8 +950,8 @@ def rope_comparison_table(
 # ---------------------------------------------------------------------------
 
 def prior_sensitivity(
-    y_pre,
-    y_post,
+    y_control,
+    y_treatment,
     *,
     priors: tuple[str, ...] = ("kruschke", "weakly_informative"),
     hdi_prob: float = 0.95,
@@ -743,7 +968,7 @@ def prior_sensitivity(
     results: dict[str, BestResult] = {}
     for name in priors:
         results[name] = best_two_sample(
-            y_pre, y_post, prior=name, hdi_prob=hdi_prob, **sample_kwargs,
+            y_control, y_treatment, prior=name, hdi_prob=hdi_prob, **sample_kwargs,
         )
     primary_name = priors[0]
     primary_mean = results[primary_name].posterior_mean_delta
@@ -752,76 +977,8 @@ def prior_sensitivity(
         rows.append({
             "prior": name,
             "mean_delta": res.posterior_mean_delta,
-            "hdi_low": res.hdi[0],
-            "hdi_high": res.hdi[1],
-            "shift_from_primary": res.posterior_mean_delta - primary_mean,
-        })
-    return results, pd.DataFrame(rows)
-
-
-def beta_binomial_prior_sensitivity(
-    successes_pre,
-    trials_pre,
-    successes_post,
-    trials_post,
-    *,
-    priors: Sequence[str | BetaPrior] = ("uniform", "jeffreys"),
-    hdi_prob: float = 0.95,
-    **sample_kwargs,
-) -> tuple[dict[str, BetaBinomialResult], pd.DataFrame]:
-    """Fit Beta-Binomial under multiple prior specs; return per-fit results + shift table.
-
-    The Beta-Binomial counterpart of :func:`prior_sensitivity`.  Feeds the
-    same four count inputs to :func:`beta_binomial_two_sample` under each
-    prior, then returns a shift table whose ``shift_from_primary`` column
-    measures how far each alternative posterior mean moves relative to the
-    *first* prior in ``priors``.
-
-    Parameters
-    ----------
-    successes_pre, trials_pre, successes_post, trials_post
-        Total converting searches / total searches per window — the same
-        inputs as :func:`beta_binomial_two_sample`.
-    priors
-        Ordered sequence of prior specs: the names accepted by
-        :func:`beta_binomial_two_sample` (``"uniform"``, ``"jeffreys"``)
-        and/or :class:`BetaPrior` instances. The first element is the
-        primary spec; all others are compared to it. Names must be unique.
-    hdi_prob
-        HDI coverage forwarded to every fit.
-    **sample_kwargs
-        Forwarded to :func:`pymc.sample` (``draws``, ``tune``, ``chains``,
-        ``target_accept``, ``random_seed``, ``progressbar``).
-
-    Returns
-    -------
-    results : dict[str, BetaBinomialResult]
-        One fitted result per prior name, in the order given.
-    shift_table : pd.DataFrame
-        Columns: ``prior``, ``mean_delta``, ``hdi_low``, ``hdi_high``,
-        ``shift_from_primary``.  Row order matches ``priors``.
-    """
-    if not priors:
-        raise ValueError("`priors` must contain at least one prior spec.")
-    specs = [_resolve_beta_prior(p) for p in priors]
-    names = [s.name for s in specs]
-    if len(set(names)) != len(names):
-        raise ValueError(f"Prior names must be unique; got {names}.")
-
-    results: dict[str, BetaBinomialResult] = {}
-    for spec in specs:
-        results[spec.name] = beta_binomial_two_sample(
-            successes_pre, trials_pre, successes_post, trials_post,
-            prior=spec, hdi_prob=hdi_prob, **sample_kwargs,
-        )
-    primary_mean = results[names[0]].posterior_mean_delta
-    rows = []
-    for name, res in results.items():
-        rows.append({
-            "prior": name,
-            "mean_delta": res.posterior_mean_delta,
-            "hdi_low": res.hdi[0],
-            "hdi_high": res.hdi[1],
+            "lcl": res.hdi[0],
+            "ucl": res.hdi[1],
             "shift_from_primary": res.posterior_mean_delta - primary_mean,
         })
     return results, pd.DataFrame(rows)
@@ -847,8 +1004,8 @@ _OVERLAP_COLUMNS = (
 
 def _direction(
     prob_gt_zero: float | None,
-    hdi_low: float,
-    hdi_high: float,
+    lcl: float,
+    ucl: float,
     *,
     prob_threshold: float,
 ) -> str:
@@ -863,9 +1020,9 @@ def _direction(
         if prob_gt_zero <= 1.0 - prob_threshold:
             return "negative"
         return "unclear"
-    if hdi_low > 0:
+    if lcl > 0:
         return "positive"
-    if hdi_high < 0:
+    if ucl < 0:
         return "negative"
     return "unclear"
 
@@ -889,9 +1046,10 @@ def prior_overlap_table(
     Parameters
     ----------
     shift_table
-        Output of :func:`beta_binomial_prior_sensitivity` or
-        :func:`prior_sensitivity` — needs ``prior``, ``hdi_low``,
-        ``hdi_high``. ``mean_delta`` and ``prob_delta_gt_0`` are used when
+        Output of
+        :func:`~dstoolbox.ml_funcs.stat_bayes_group_tools.prior_sensitivity_groups`
+        or :func:`prior_sensitivity` — needs ``prior``, ``lcl``,
+        ``ucl``. ``mean_delta`` and ``prob_delta_gt_0`` are used when
         present.
     primary
         Prior every other row is compared against. Defaults to the first row.
@@ -914,7 +1072,7 @@ def prior_overlap_table(
         scores 1.0 however much tighter it is. A prior that only sharpens
         the estimate is not a prior that changed the answer.
     """
-    required = {"prior", "hdi_low", "hdi_high"}
+    required = {"prior", "lcl", "ucl"}
     missing = required - set(shift_table.columns)
     if missing:
         raise ValueError(f"shift_table is missing columns: {sorted(missing)}.")
@@ -929,7 +1087,7 @@ def prior_overlap_table(
         )
 
     ref = shift_table.iloc[names.index(primary_name)]
-    ref_low, ref_high = float(ref["hdi_low"]), float(ref["hdi_high"])
+    ref_low, ref_high = float(ref["lcl"]), float(ref["ucl"])
     ref_width = ref_high - ref_low
     ref_mean = float(ref["mean_delta"]) if "mean_delta" in shift_table else float("nan")
     ref_direction = _direction(
@@ -939,7 +1097,7 @@ def prior_overlap_table(
 
     rows = []
     for name, (_, row) in zip(names, shift_table.iterrows()):
-        low, high = float(row["hdi_low"]), float(row["hdi_high"])
+        low, high = float(row["lcl"]), float(row["ucl"])
         shared = min(ref_high, high) - max(ref_low, low)
         narrower = min(ref_width, high - low)
         overlap = 1.0 if narrower <= 0 else max(0.0, shared) / narrower
@@ -1002,9 +1160,10 @@ def prior_sensitivity_verdict(
     Parameters
     ----------
     shift_table
-        Output of :func:`beta_binomial_prior_sensitivity` or
-        :func:`prior_sensitivity` — needs ``prior``, ``hdi_low``,
-        ``hdi_high``. ``mean_delta`` and ``prob_delta_gt_0`` sharpen the
+        Output of
+        :func:`~dstoolbox.ml_funcs.stat_bayes_group_tools.prior_sensitivity_groups`
+        or :func:`prior_sensitivity` — needs ``prior``, ``lcl``,
+        ``ucl``. ``mean_delta`` and ``prob_delta_gt_0`` sharpen the
         grade when present.
     primary
         Prior name to compare every other row against. Defaults to the
@@ -1035,7 +1194,7 @@ def prior_sensitivity_verdict(
     >>> import pandas as pd
     >>> table = pd.DataFrame({
     ...     "prior": ["noninformative", "informative"],
-    ...     "hdi_low": [-0.01, -0.02], "hdi_high": [0.03, 0.01],
+    ...     "lcl": [-0.01, -0.02], "ucl": [0.03, 0.01],
     ... })
     >>> prior_sensitivity_verdict(table)
     'PRIOR_ROBUST'
@@ -1125,8 +1284,8 @@ def _plot_posterior_predictive(
 def plot_kruschke_report(
     result: BestResult,
     *,
-    y_pre,
-    y_post,
+    y_control,
+    y_treatment,
     out_path: Path | str | None = None,
 ) -> Figure:
     """Render the canonical Kruschke 10-panel report for a BEST fit.
@@ -1134,11 +1293,11 @@ def plot_kruschke_report(
     Layout (5 rows × 2 cols) mirrors the `best` package website:
 
     ┌─────────────────────┬──────────────────────────────────────┐
-    │ μ_post posterior    │ post data + posterior predictive     │
-    │ μ_pre  posterior    │ pre  data + posterior predictive     │
-    │ σ_post posterior    │ Difference of means                  │
-    │ σ_pre  posterior    │ Difference of std devs               │
-    │ ν (normality)       │ Effect size                          │
+    │ μ_treatment posterior │ treatment data + posterior pred.     │
+    │ μ_control   posterior │ control   data + posterior pred.     │
+    │ σ_treatment posterior │ Difference of means                 │
+    │ σ_control   posterior │ Difference of std devs              │
+    │ ν (normality)        │ Effect size                         │
     └─────────────────────┴──────────────────────────────────────┘
     """
     trace = result.trace
@@ -1147,47 +1306,47 @@ def plot_kruschke_report(
     def _flat(var: str) -> np.ndarray:
         return np.asarray(post[var]).ravel()
 
-    mu_post_s    = _flat("mu_post")
-    mu_pre_s     = _flat("mu_pre")
-    sigma_post_s = _flat("sigma_post")
-    sigma_pre_s  = _flat("sigma_pre")
-    nu_s         = _flat("nu")
+    mu_t_s = _flat("mu_treatment")
+    mu_c_s = _flat("mu_control")
+    sigma_t_s = _flat("sigma_treatment")
+    sigma_c_s = _flat("sigma_control")
+    nu_s = _flat("nu")
 
-    y_pre_arr  = np.asarray(y_pre,  dtype=float).ravel()
-    y_post_arr = np.asarray(y_post, dtype=float).ravel()
+    y_control_arr = np.asarray(y_control, dtype=float).ravel()
+    y_treatment_arr = np.asarray(y_treatment, dtype=float).ravel()
 
     fig, axes = plt.subplots(5, 2, figsize=(12, 18))
 
-    # Row 0 — μ_post | post data + posterior predictive
-    _az.plot_posterior(trace, var_names=["mu_post"], ax=axes[0, 0],  # type: ignore[union-attr]
+    # Row 0 — μ_treatment | treatment data + posterior predictive
+    _az.plot_posterior(trace, var_names=["mu_treatment"], ax=axes[0, 0],  # type: ignore[union-attr]
                        point_estimate="mean")
     axes[0, 0].set_title("Study group mean", pad=8)
     _plot_posterior_predictive(
-        axes[0, 1], y_post_arr, mu_post_s, sigma_post_s, nu_s,
-        n_label=f"N = {result.n_post}",
+        axes[0, 1], y_treatment_arr, mu_t_s, sigma_t_s, nu_s,
+        n_label=f"N = {result.n_treatment}",
     )
     axes[0, 1].set_title("Study group data with post. pred.", pad=8)
 
-    # Row 1 — μ_pre | pre data + posterior predictive
-    _az.plot_posterior(trace, var_names=["mu_pre"], ax=axes[1, 0],  # type: ignore[union-attr]
+    # Row 1 — μ_control | control data + posterior predictive
+    _az.plot_posterior(trace, var_names=["mu_control"], ax=axes[1, 0],  # type: ignore[union-attr]
                        point_estimate="mean")
     axes[1, 0].set_title("Control group mean", pad=8)
     _plot_posterior_predictive(
-        axes[1, 1], y_pre_arr, mu_pre_s, sigma_pre_s, nu_s,
-        n_label=f"N = {result.n_pre}",
+        axes[1, 1], y_control_arr, mu_c_s, sigma_c_s, nu_s,
+        n_label=f"N = {result.n_control}",
     )
     axes[1, 1].set_title("Control group data with post. pred.", pad=8)
 
-    # Row 2 — σ_post | Difference of means
-    _az.plot_posterior(trace, var_names=["sigma_post"], ax=axes[2, 0],  # type: ignore[union-attr]
+    # Row 2 — σ_treatment | Difference of means
+    _az.plot_posterior(trace, var_names=["sigma_treatment"], ax=axes[2, 0],  # type: ignore[union-attr]
                        point_estimate="mode")
     axes[2, 0].set_title("Study group std. dev.", pad=8)
     _az.plot_posterior(trace, var_names=["delta"], ax=axes[2, 1],  # type: ignore[union-attr]
                        point_estimate="mean", ref_val=0)
     axes[2, 1].set_title("Difference of means", pad=8)
 
-    # Row 3 — σ_pre | Difference of std devs
-    _az.plot_posterior(trace, var_names=["sigma_pre"], ax=axes[3, 0],  # type: ignore[union-attr]
+    # Row 3 — σ_control | Difference of std devs
+    _az.plot_posterior(trace, var_names=["sigma_control"], ax=axes[3, 0],  # type: ignore[union-attr]
                        point_estimate="mode")
     axes[3, 0].set_title("Control group std. dev.", pad=8)
     _az.plot_posterior(trace, var_names=["delta_sigma"], ax=axes[3, 1],  # type: ignore[union-attr]
@@ -1204,7 +1363,8 @@ def plot_kruschke_report(
     axes[4, 1].set_xlabel(r"$(\mu_1 - \mu_2)\,/\,\sqrt{(\sigma_1^2 + \sigma_2^2)\,/\,2}$")
 
     fig.suptitle(
-        f"BEST — {result.prior_spec} priors  |  n_pre={result.n_pre}, n_post={result.n_post}",
+        f"BEST — {result.prior_spec} priors  |  "
+        f"n_control={result.n_control}, n_treatment={result.n_treatment}",
         fontsize=13,
     )
     fig.tight_layout(rect=(0, 0, 1, 0.97))
@@ -1249,7 +1409,7 @@ def plot_prior_sensitivity(
             ax=ax,
         )
     ax.axvline(0.0, color="gray", linestyle=":", linewidth=1)
-    ax.set_xlabel("δ = μ_post − μ_pre")
+    ax.set_xlabel("δ = μ_treatment − μ_control")
     ax.set_ylabel("posterior density")
     ax.set_title("Prior sensitivity — δ posterior across priors")
     ax.legend(loc="best", fontsize=9)
@@ -1267,33 +1427,33 @@ def plot_beta_binomial_report(
 
     Panels
     ------
-    (0, 0) Posterior of ``p_pre``.
-    (0, 1) Posterior of ``p_post``.
-    (1, 0) Posterior of ``delta = p_post - p_pre`` with optional ROPE overlay.
-    (1, 1) Posterior of ``rel_lift = (p_post - p_pre) / p_pre`` (percent lift).
+    (0, 0) Posterior of ``p_control``.
+    (0, 1) Posterior of ``p_treatment``.
+    (1, 0) Posterior of ``delta = p_treatment - p_control`` with optional ROPE overlay.
+    (1, 1) Posterior of ``rel_lift = (p_treatment - p_control) / p_control``.
     """
     trace = result.trace
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
-    _az.plot_posterior(trace, var_names=["p_pre"],  ax=axes[0, 0])   # type: ignore[union-attr]
-    axes[0, 0].set_title(f"p_pre  (empirical = {result.rate_pre:.4f})")
+    _az.plot_posterior(trace, var_names=["p_control"], ax=axes[0, 0])    # type: ignore[union-attr]
+    axes[0, 0].set_title(f"p_control  (empirical = {result.rate_control:.4f})")
 
-    _az.plot_posterior(trace, var_names=["p_post"], ax=axes[0, 1])   # type: ignore[union-attr]
-    axes[0, 1].set_title(f"p_post  (empirical = {result.rate_post:.4f})")
+    _az.plot_posterior(trace, var_names=["p_treatment"], ax=axes[0, 1])  # type: ignore[union-attr]
+    axes[0, 1].set_title(f"p_treatment  (empirical = {result.rate_treatment:.4f})")
 
     _plot_kw: dict[str, object] = {"var_names": ["delta"], "ax": axes[1, 0], "ref_val": 0.0}
     if rope is not None:
         _plot_kw["rope"] = list(rope)
     _az.plot_posterior(trace, **_plot_kw)                            # type: ignore[union-attr]
-    axes[1, 0].set_title("δ = p_post − p_pre")
+    axes[1, 0].set_title("δ = p_treatment − p_control")
 
     _az.plot_posterior(trace, var_names=["rel_lift"], ax=axes[1, 1], ref_val=0.0)  # type: ignore[union-attr]
-    axes[1, 1].set_title("relative lift = δ / p_pre")
+    axes[1, 1].set_title("relative lift = δ / p_control")
 
     fig.suptitle(
         f"Beta-Binomial — {result.prior_spec} prior  |  "
-        f"pre: {result.successes_pre}/{result.trials_pre},  "
-        f"post: {result.successes_post}/{result.trials_post}",
+        f"control: {result.successes_control}/{result.trials_control},  "
+        f"treatment: {result.successes_treatment}/{result.trials_treatment}",
         fontsize=13,
     )
     fig.tight_layout(rect=(0, 0, 1, 0.96))

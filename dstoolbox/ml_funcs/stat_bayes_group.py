@@ -4,10 +4,22 @@ One question, one answer: *does the rate differ between two groups of
 units?* Give it each group's per-unit counts and an equivalence band; get
 back a verdict.
 
-    baseline = GroupCounts.from_events(control_df, label="control")
-    variant  = GroupCounts.from_events(treated_df, label="treated")
-    effect   = fit_group_comparison(baseline, variant, rope_pct_coef=0.10)
-    print(effect.decision)      # 'meaningful_positive' | ... | 'inconclusive'
+    control = GroupCounts.from_events(control_df, label="control")
+    treatment  = GroupCounts.from_events(treated_df, label="treated")
+    effect   = fit_group_comparison(control, treatment, rope_pct_coef=0.10)
+    print(effect.decision)      # 'positive' | 'negative' | 'equivalent' | 'inconclusive'
+
+Three equivalence bands are available and can be asked for together, since
+"bigger than noise", "big relative to where we started" and "big enough to
+act on" are three different questions:
+
+    effect = fit_group_comparison(
+        control, treatment,
+        rope_stat_coef=0.1,          # +/-0.1 * SE of the control group
+        rope_pct_coef=0.10,          # +/-10% of the control rate
+        rope_biz=(-0.005, 0.005),    # a threshold somebody signed off on
+    )
+    {b: d.decision for b, d in effect.ropes.items() if d}
 
 The model does not know what separates the groups. A/B arms, two cohorts,
 two countries and two date windows are all the same problem once the data
@@ -39,10 +51,9 @@ one-off units to one side drags that side's ``mu`` down.
 
 Date windows are where this bites hardest, because a longer window
 mechanically sweeps in a longer tail of one-off users. Comparing a long pre
-against a short post manufactures an effect out of the mismatch alone, so
-:class:`PrePostWindow` **rejects unequal windows** unless you pass
-``allow_unequal=True`` and accept the artefact. When you build groups by
-some other rule, that check is yours to make.
+against a short post manufactures an effect out of the mismatch alone.
+Matching the window lengths — and, for any other split rule, checking that
+the groups are comparably composed — is the caller's job.
 
 ``pymc`` / ``arviz`` are optional — ``pip install 'dstoolbox[bayes]'``.
 
@@ -54,6 +65,7 @@ References
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -74,12 +86,17 @@ __all__ = [
     "GroupCounts",
     "GroupEffect",
     "PrePostWindow",
+    "ROPE_BANDS",
     "aggregate_counts",
     "fit_group_comparison",
     "fit_prepost",
-    "rope_from_baseline",
+    "rope_from_control",
+    "rope_from_control_se",
     "split_by_window",
 ]
+
+#: The named equivalence bands every fit reports on, in report order.
+ROPE_BANDS: tuple[str, ...] = ("stat", "pct", "biz")
 
 
 # ---------------------------------------------------------------------------
@@ -95,11 +112,6 @@ class PrePostWindow:
     pre_start, pre_end, post_start, post_end
         Anything :func:`pandas.Timestamp` accepts. Must satisfy
         ``pre_start <= pre_end < post_start <= post_end``.
-    allow_unequal
-        Permit ``n_days_pre != n_days_post``. Off by default, and leaving it
-        off is the point — see the module docstring. Turn it on only when
-        you have decided the composition artefact is acceptable for the
-        question you are asking, and say so where the result is reported.
 
     Example
     -------
@@ -112,7 +124,6 @@ class PrePostWindow:
     pre_end: pd.Timestamp
     post_start: pd.Timestamp
     post_end: pd.Timestamp
-    allow_unequal: bool = False
 
     def __post_init__(self) -> None:
         for name in ("pre_start", "pre_end", "post_start", "post_end"):
@@ -132,17 +143,6 @@ class PrePostWindow:
             raise ValueError(
                 f"windows overlap: pre_end ({self.pre_end.date()}) must be "
                 f"before post_start ({self.post_start.date()})."
-            )
-        if not self.allow_unequal and self.n_days_pre != self.n_days_post:
-            raise ValueError(
-                f"pre window is {self.n_days_pre} days, post is "
-                f"{self.n_days_post}. `mu` is an unweighted mean over units, "
-                "so it drifts with window length: conversion runs 5.3% for "
-                "one-search users up to 14.2% for 100+, and the longer "
-                "window sweeps in the one-off tail. An unequal comparison "
-                "measures that composition shift, not the intervention. "
-                "Match the lengths, or pass allow_unequal=True and report "
-                "the caveat."
             )
 
     @property
@@ -196,7 +196,7 @@ class GroupCounts:
     Example
     -------
     >>> g = GroupCounts("control", [10, 4, 7], [1, 0, 3])
-    >>> g.n_units, g.trials_total, g.pooled_rate
+    >>> g.n_users, g.events_total, g.pooled_rate
     (3, 21, 0.19047619047619047)
     """
 
@@ -247,12 +247,12 @@ class GroupCounts:
         return cls(label, counts["trials"].to_numpy(), counts["successes"].to_numpy())
 
     @property
-    def n_units(self) -> int:
+    def n_users(self) -> int:
         """Number of units contributing to this group."""
         return int(self.trials.size)
 
     @property
-    def trials_total(self) -> int:
+    def events_total(self) -> int:
         """Total trials summed over units."""
         return int(self.trials.sum())
 
@@ -264,7 +264,7 @@ class GroupCounts:
     @property
     def pooled_rate(self) -> float:
         """Per-*trial* rate. Context only — the model estimates per-*unit* ``mu``."""
-        return self.successes_total / self.trials_total
+        return self.successes_total / self.events_total
 
 
 def split_by_window(
@@ -303,9 +303,17 @@ def split_by_window(
 
 @dataclass(frozen=True)
 class GroupEffect:
-    """Posterior on ``delta = mu_variant - mu_baseline``, plus its verdict.
+    """Posterior on ``delta = mu_treatment - mu_control``, plus its verdict.
 
-    ``hdi_low`` / ``hdi_high`` are the narrowest interval holding
+    ``mu`` is the model's own population parameter, so ``estimate``,
+    ``lcl`` / ``ucl`` and ``prob_gt_zero`` are read directly off the
+    sampled posterior. Nothing is reconstructed or reweighted after the fit.
+    ``mu`` is *unit*-level — one unit, one vote — so it will not track a
+    trial-weighted pooled rate, and need not. ``pooled_rate_control`` /
+    ``pooled_rate_treatment`` carry the empirical trial-weighted rates when you
+    want to see how far the two questions diverge.
+
+    ``lcl`` / ``ucl`` are the narrowest interval holding
     ``hdi_prob`` of the posterior, computed by :func:`arviz.hdi` — the same
     interval the rest of :mod:`dstoolbox.ml_funcs.stat_bayes` reports, and
     the one the plots draw.
@@ -315,67 +323,74 @@ class GroupEffect:
     ``"negative"`` or ``"inconclusive"`` — and never ``"equivalent"``,
     since nothing defines what counts as small.
 
+    ``ropes`` holds all three named bands — ``"stat"``, ``"pct"``, ``"biz"``
+    — with ``None`` for any that was not requested. They are three different
+    questions about the same posterior, so they can and do disagree:
+    ``stat`` asks whether the shift beats the control's own noise, ``pct``
+    whether it is large relative to where we started, ``biz`` whether it
+    clears a threshold somebody signed off on. ``decision`` is the verdict of
+    the primary band (the first of ``stat``, ``pct``, ``biz`` that was
+    supplied), kept as the single headline answer.
+
     ``window`` is set only when the groups came from :func:`split_by_window`.
     """
 
-    baseline_label: str
-    variant_label: str
+    control_label: str
+    treatment_label: str
     metric: str
     prior_spec: str
     window: PrePostWindow | None
 
-    n_units_baseline: int
-    n_units_variant: int
-    n_trials_baseline: int
-    n_trials_variant: int
-    n_successes_baseline: int
-    n_successes_variant: int
+    n_users_control: int
+    n_users_treatment: int
+    n_events_control: int
+    n_events_treatment: int
+    n_successes_control: int
+    n_successes_treatment: int
 
-    mu_baseline_mean: float
-    mu_variant_mean: float
-    mu_per_unit_baseline_mean: float
-    mu_per_unit_variant_mean: float
-    delta_mean: float
+    mu_control_mean: float
+    mu_treatment_mean: float
+    estimate: float
     delta_median: float
-    hdi_low: float
-    hdi_high: float
+    lcl: float
+    ucl: float
     hdi_prob: float
     prob_gt_zero: float
     rel_lift: float
 
     rope: RopeDecision | None
     decision: str
+    ropes: dict[str, RopeDecision | None]
 
     diagnostics: pd.DataFrame
     rhat_max: float
     ess_min: float
     divergences: int
 
-    fit_baseline: HierBetaBinomialFit = field(repr=False)
-    fit_variant: HierBetaBinomialFit = field(repr=False)
+    fit_control: HierBetaBinomialFit = field(repr=False)
+    fit_treatment: HierBetaBinomialFit = field(repr=False)
     delta_samples: np.ndarray = field(repr=False)
 
     @property
-    def hdi_width(self) -> float:
+    def ci_width(self) -> float:
         """Width of the credible interval on the delta."""
-        return self.hdi_high - self.hdi_low
+        return self.ucl - self.lcl
 
     @property
-    def pooled_rate_baseline(self) -> float:
+    def pooled_rate_control(self) -> float:
         """Empirical pooled rate over the pre window, ``successes/trials``.
 
-        Context only, and the closest raw analogue of ``mu_baseline_mean``:
-        both weight by trial. The modelled one shrinks light units toward the
-        population mean, so the two differ but should stay in the same
-        neighbourhood. ``mu_per_unit_baseline_mean`` can sit well away from
-        both when heavy and light units convert at different rates.
+        Context only, and a different question from the one the verdict
+        answers: this weights by *trial*, so heavy units dominate it, while
+        ``mu_control_mean`` weights by *unit*. The two can sit well apart
+        when heavy and light units convert at different rates.
         """
-        return self.n_successes_baseline / self.n_trials_baseline
+        return self.n_successes_control / self.n_events_control
 
     @property
-    def pooled_rate_variant(self) -> float:
+    def pooled_rate_treatment(self) -> float:
         """Empirical pooled rate over the post window."""
-        return self.n_successes_variant / self.n_trials_variant
+        return self.n_successes_treatment / self.n_events_treatment
 
     @property
     def converged(self) -> bool:
@@ -388,22 +403,21 @@ class GroupEffect:
             "metric": self.metric,
             "model": "hierarchical_beta_binomial",
             "prior": self.prior_spec,
-            "baseline": self.baseline_label,
-            "variant": self.variant_label,
-            "n_units_baseline": self.n_units_baseline,
-            "n_units_variant": self.n_units_variant,
-            "n_trials_baseline": self.n_trials_baseline,
-            "n_trials_variant": self.n_trials_variant,
-            "n_successes_baseline": self.n_successes_baseline,
-            "n_successes_variant": self.n_successes_variant,
-            "mu_baseline_mean": self.mu_baseline_mean,
-            "mu_variant_mean": self.mu_variant_mean,
-            "mu_per_unit_baseline_mean": self.mu_per_unit_baseline_mean,
-            "mu_per_unit_variant_mean": self.mu_per_unit_variant_mean,
-            "delta_mean": self.delta_mean,
+            "control": self.control_label,
+            "treatment": self.treatment_label,
+            "n_users_control": self.n_users_control,
+            "n_users_treatment": self.n_users_treatment,
+            "n_events_control": self.n_events_control,
+            "n_events_treatment": self.n_events_treatment,
+            "n_successes_control": self.n_successes_control,
+            "n_successes_treatment": self.n_successes_treatment,
+            "estimand": "mu",
+            "mu_control_mean": self.mu_control_mean,
+            "mu_treatment_mean": self.mu_treatment_mean,
+            "estimate": self.estimate,
             "delta_median": self.delta_median,
-            "delta_hdi_low": self.hdi_low,
-            "delta_hdi_high": self.hdi_high,
+            "lcl": self.lcl,
+            "ucl": self.ucl,
             "rel_lift_mean": self.rel_lift,
             "prob_delta_gt_0": self.prob_gt_zero,
             "decision": self.decision,
@@ -428,28 +442,41 @@ class GroupEffect:
                 "prob_in_rope": self.rope.prob_in_rope,
                 "prob_lt_rope": self.rope.prob_lt_low,
             })
+        # Every band gets a column whether or not it was requested, so a
+        # summary table over several fits keeps a stable schema.
+        for band in ROPE_BANDS:
+            dec = self.ropes.get(band)
+            row[f"decision_{band}"] = None if dec is None else dec.decision
+            row[f"rope_{band}_low"] = np.nan if dec is None else dec.rope_low
+            row[f"rope_{band}_high"] = np.nan if dec is None else dec.rope_high
         return row
 
     def __str__(self) -> str:
-        band = (
-            f"ROPE ±{self.rope.rope_high:.4%}"
-            if self.rope is not None
-            else "no ROPE"
-        )
         header = (
             str(self.window) if self.window is not None
-            else f"{self.baseline_label} vs {self.variant_label}"
+            else f"{self.control_label} vs {self.treatment_label}"
         )
-        return (
-            f"{header}\n"
-            f"mu  {self.mu_baseline_mean:.4%} -> {self.mu_variant_mean:.4%}   "
-            f"delta {self.delta_mean:+.4%} "
-            f"[{self.hdi_low:+.4%}, {self.hdi_high:+.4%}]\n"
-            f"per-unit  {self.mu_per_unit_baseline_mean:.4%} -> "
-            f"{self.mu_per_unit_variant_mean:.4%}\n"
-            f"P(delta>0) = {self.prob_gt_zero:.3f}   {band}   "
-            f"verdict: {self.decision}"
-        )
+        lines = [
+            header,
+            f"mu  {self.mu_control_mean:.4%} -> {self.mu_treatment_mean:.4%}   "
+            f"delta {self.estimate:+.4%} "
+            f"[{self.lcl:+.4%}, {self.ucl:+.4%}]",
+            f"pooled (context)  {self.pooled_rate_control:.4%} -> "
+            f"{self.pooled_rate_treatment:.4%}",
+            f"P(delta>0) = {self.prob_gt_zero:.3f}",
+        ]
+        # One line per band that was asked for. They interrogate the same
+        # posterior with different questions, so they are allowed to disagree.
+        asked = [(b, self.ropes[b]) for b in ROPE_BANDS if self.ropes.get(b)]
+        if asked:
+            for band, dec in asked:
+                lines.append(
+                    f"  {band:<4} ROPE [{dec.rope_low:+.4%}, "
+                    f"{dec.rope_high:+.4%}]   verdict: {dec.decision}"
+                )
+        else:
+            lines.append(f"  no ROPE   verdict: {self.decision}")
+        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -479,17 +506,73 @@ def aggregate_counts(
     )
 
 
-def rope_from_baseline(baseline_mean: float, pct_coef: float) -> tuple[float, float]:
-    """Symmetric equivalence band as a fraction of the baseline group's rate.
+def rope_from_control(control_mean: float, pct_coef: float) -> tuple[float, float]:
+    """Symmetric equivalence band as a fraction of the control group's rate.
 
-    Scaling by the baseline keeps "10% of where we started" meaning the same
+    Scaling by the control keeps "10% of where we started" meaning the same
     thing whether the rate is 2% or 20%, which an absolute band in
     percentage points does not.
     """
     if pct_coef <= 0:
         raise ValueError(f"pct_coef must be > 0; got {pct_coef}.")
-    half = pct_coef * baseline_mean
+    half = pct_coef * control_mean
     return -half, half
+
+
+def rope_from_control_se(
+    control_mean: float,
+    n_users_control: int,
+    stat_coef: float,
+) -> tuple[float, float]:
+    """Symmetric equivalence band as a multiple of the control's standard error.
+
+    ``half = stat_coef * sqrt(mu_c * (1 - mu_c) / n_users_c)``, the Cohen-like
+    "effect too small to care about" band: ``stat_coef=0.1`` is a tenth of the
+    noise the control group alone carries.
+
+    Unlike :func:`rope_from_control` this is **sample-size aware** — the band
+    shrinks as the control grows, so a study with the resolution to detect a
+    small shift is allowed to call it meaningful, while a small one is not.
+    That is also its hazard: the band is not a fixed statement of what matters
+    to the business, so it can only ever answer "is this bigger than noise?".
+    Use ``biz`` for "is this worth acting on?".
+
+    Both inputs come from the *control* group only, so the band is fixed
+    before the delta is looked at.
+    """
+    if stat_coef <= 0:
+        raise ValueError(f"stat_coef must be > 0; got {stat_coef}.")
+    if n_users_control <= 0:
+        raise ValueError(f"n_users_control must be > 0; got {n_users_control}.")
+    half = stat_coef * float(np.sqrt(control_mean * (1.0 - control_mean) / n_users_control))
+    if half <= 0:
+        raise ValueError(
+            "the control rate is 0 or 1, so its standard error is 0 and the "
+            "band collapses to a point; use rope_pct_coef or rope_biz instead."
+        )
+    return -half, half
+
+
+def _band_bounds(
+    *,
+    control_mean: float,
+    n_users_control: int,
+    rope_stat_coef: float | None,
+    rope_pct_coef: float | None,
+    rope_biz: tuple[float, float] | None,
+) -> dict[str, tuple[float, float] | None]:
+    """Resolve the three named bands to bounds, ``None`` where not requested."""
+    return {
+        "stat": (
+            rope_from_control_se(control_mean, n_users_control, rope_stat_coef)
+            if rope_stat_coef is not None else None
+        ),
+        "pct": (
+            rope_from_control(control_mean, rope_pct_coef)
+            if rope_pct_coef is not None else None
+        ),
+        "biz": rope_biz,
+    }
 
 
 def _paired_delta(pre: np.ndarray, post: np.ndarray) -> np.ndarray:
@@ -505,8 +588,8 @@ def _paired_delta(pre: np.ndarray, post: np.ndarray) -> np.ndarray:
 
 
 def _merge_diagnostics(
-    fit_baseline: HierBetaBinomialFit,
-    fit_variant: HierBetaBinomialFit,
+    fit_control: HierBetaBinomialFit,
+    fit_treatment: HierBetaBinomialFit,
 ) -> tuple[pd.DataFrame, float, float, int]:
     """Worst-case convergence view across both fits.
 
@@ -516,14 +599,14 @@ def _merge_diagnostics(
     quantities — a healthy bulk ESS alone does not license them.
     """
     table = pd.concat([
-        fit_baseline.diagnostics.rename(index=lambda v: f"pre:{v}"),
-        fit_variant.diagnostics.rename(index=lambda v: f"post:{v}"),
+        fit_control.diagnostics.rename(index=lambda v: f"pre:{v}"),
+        fit_treatment.diagnostics.rename(index=lambda v: f"post:{v}"),
     ])
     return (
         table,
         float(table["r_hat"].max()),
         float(table[["ess_bulk", "ess_tail"]].min().min()),
-        fit_baseline.divergences + fit_variant.divergences,
+        fit_control.divergences + fit_treatment.divergences,
     )
 
 
@@ -532,14 +615,16 @@ def _merge_diagnostics(
 # ---------------------------------------------------------------------------
 
 def fit_group_comparison(
-    baseline: GroupCounts,
-    variant: GroupCounts,
+    control: GroupCounts,
+    treatment: GroupCounts,
     *,
     metric: str = "convert",
     window: PrePostWindow | None = None,
     prior: str | BetaPrior = "uniform",
     kappa_prior: tuple[float, float] = DEFAULT_KAPPA_PRIOR,
+    rope_stat_coef: float | None = None,
     rope_pct_coef: float | None = None,
+    rope_biz: tuple[float, float] | None = None,
     credibility_threshold: float = 0.95,
     hdi_prob: float = 0.95,
     draws: int = 2000,
@@ -547,22 +632,27 @@ def fit_group_comparison(
     chains: int = 4,
     target_accept: float = 0.9,
     random_seed: int = 0,
+    min_users: int = 0,
     progressbar: bool = False,
-) -> GroupEffect:
-    """Fit both groups and adjudicate ``delta = mu_variant - mu_baseline``.
+) -> GroupEffect | None:
+    """Fit both groups and adjudicate ``delta = mu_treatment - mu_control``.
 
-    ``mu`` here is the **trial-weighted** population rate, so the verdict
-    answers "did successes per trial move". The unit-averaged rate is
-    reported too, as ``mu_per_unit_baseline_mean`` /
-    ``mu_per_unit_variant_mean``. Check them: when heavy and light units
-    convert at different rates and the mix shifts between groups, the two
-    estimands can move in opposite directions, and that disagreement is a
-    finding rather than a bug.
+    ``mu`` is the hierarchical model's population parameter, so the effect,
+    its interval and its verdict come straight off the sampled posterior.
+    There is no post-fit reconstruction step in the verdict path.
+
+    ``mu`` is a **unit-level** rate — one unit, one vote, whatever its trial
+    count. It is therefore not the trial-weighted pooled rate, and the two
+    can move in opposite directions when heavy and light units convert at
+    different rates and the mix shifts between groups. That is a difference
+    of question, not an error. ``pooled_rate_control`` /
+    ``pooled_rate_treatment`` carry the empirical trial-weighted rates so the
+    divergence stays visible.
 
     Parameters
     ----------
-    baseline, variant
-        The two groups. ``baseline`` anchors the ROPE and the relative
+    control, treatment
+        The two groups. ``control`` anchors the ROPE and the relative
         lift, so put the status quo there.
     metric
         Recorded on the result so a summary table says what was measured.
@@ -572,23 +662,50 @@ def fit_group_comparison(
     prior
         Prior on ``mu``: ``"uniform"``, ``"jeffreys"``, or a
         :class:`~dstoolbox.ml_funcs.stat_bayes.BetaPrior`. Applied to
-        *both* groups, so a baseline-anchored prior does not tilt the delta.
+        *both* groups, so a control-anchored prior does not tilt the delta.
     rope_pct_coef
-        Half-width of the equivalence band as a fraction of the baseline
-        rate — ``0.10`` means "±10% of baseline is not worth acting on".
-        ``None`` gives a direction-only verdict.
+        Half-width of the equivalence band as a fraction of the control
+        rate — ``0.10`` means "±10% of control is not worth acting on".
+    rope_stat_coef
+        Half-width of the equivalence band as a multiple of the control's
+        standard error — ``0.1`` is the Cohen-like "smaller than noise"
+        band. Sample-size aware, unlike ``rope_pct_coef``.
+    rope_biz
+        Explicit ``(low, high)`` band in the units of ``delta``, for a
+        threshold somebody has actually signed off on.
+
+        All three are adjudicated independently and reported side by side on
+        ``ropes`` / ``to_row()``; leave one out and its verdict is ``None``.
+        Leave out all three for a direction-only verdict. ``decision`` is the
+        first supplied band's verdict, in the order ``stat``, ``pct``,
+        ``biz``.
     credibility_threshold
         Posterior mass a region needs to win the verdict.
     hdi_prob
         Mass of the reported credible interval.
+    min_users
+        Refuse to fit if either group has fewer units than this. A
+        hierarchical model needs several units to learn ``kappa`` from; below
+        a handful the concentration is set by the prior and the delta's
+        interval is not worth quoting. Warns and returns ``None`` rather than
+        handing back a confident-looking number.
     random_seed
-        The baseline fit uses this, the variant fit uses ``random_seed + 1``.
+        The control fit uses this, the treatment fit uses ``random_seed + 1``.
         Two independent chains on the same seed would be perfectly
         correlated and shrink the delta's spread.
 
     Returns
     -------
-    GroupEffect
+    GroupEffect or None
+        ``None`` when the ``min_users`` guard fired.
+
+    Raises
+    ------
+    ValueError
+        If ``hdi_prob`` or ``credibility_threshold`` is outside ``(0, 1)``,
+        or a ROPE coefficient is not positive. Checked before sampling —
+        :func:`arviz.hdi` would otherwise reject ``hdi_prob`` only after
+        both models had been fitted.
 
     Example
     -------
@@ -598,6 +715,30 @@ def fit_group_comparison(
     ...     rope_pct_coef=0.10,
     ... )
     """
+    if not 0.0 < hdi_prob < 1.0:
+        raise ValueError(f"hdi_prob must be in (0, 1); got {hdi_prob}.")
+    if not 0.0 < credibility_threshold < 1.0:
+        raise ValueError(
+            f"credibility_threshold must be in (0, 1); got {credibility_threshold}."
+        )
+    if rope_pct_coef is not None and rope_pct_coef <= 0:
+        raise ValueError(f"rope_pct_coef must be > 0; got {rope_pct_coef}.")
+    if rope_stat_coef is not None and rope_stat_coef <= 0:
+        raise ValueError(f"rope_stat_coef must be > 0; got {rope_stat_coef}.")
+    if rope_biz is not None and not rope_biz[0] < rope_biz[1]:
+        raise ValueError(f"rope_biz must satisfy low < high; got {rope_biz}.")
+
+    # Guard before sampling: nothing downstream can rescue a fit whose kappa
+    # is pure prior, and returning None makes the caller confront that.
+    for group in (control, treatment):
+        if group.n_users < min_users:
+            warnings.warn(
+                f"group {group.label!r} has {group.n_users} unit(s), below "
+                f"min_users={min_users}; skipping the fit and returning None.",
+                stacklevel=2,
+            )
+            return None
+
     shared = dict(
         prior=prior,
         kappa_prior=kappa_prior,
@@ -607,69 +748,82 @@ def fit_group_comparison(
         target_accept=target_accept,
         progressbar=progressbar,
     )
-    fit_baseline = hier_beta_binomial_fit(
-        baseline.trials, baseline.successes, random_seed=random_seed, **shared,
+    fit_control = hier_beta_binomial_fit(
+        control.trials, control.successes, random_seed=random_seed, **shared,
     )
-    fit_variant = hier_beta_binomial_fit(
-        variant.trials, variant.successes, random_seed=random_seed + 1, **shared,
+    fit_treatment = hier_beta_binomial_fit(
+        treatment.trials, treatment.successes, random_seed=random_seed + 1, **shared,
     )
 
-    # Trial-weighted, so the headline answers "did conversions per trial
-    # move" — the same question the pooled rate asks. The unit-averaged
-    # rate rides along in `mu_per_unit_*`; the two can disagree in sign
-    # when the heavy/light mix shifts between windows.
-    delta = _paired_delta(
-        fit_baseline.mu_weighted_samples, fit_variant.mu_weighted_samples
-    )
-    hdi_low, hdi_high = np.asarray(_az.hdi(delta, hdi_prob=hdi_prob)).ravel()
+    # The verdict is on the model's own parameter. `delta` is a difference of
+    # sampled posteriors, so its mean, HDI and P(>0) are read off directly —
+    # nothing is reconstructed or reweighted after the fit.
+    delta = _paired_delta(fit_control.mu_samples, fit_treatment.mu_samples)
+    lcl, ucl = np.asarray(_az.hdi(delta, hdi_prob=hdi_prob)).ravel()
     prob_gt_zero = float((delta > 0).mean())
-    mu_baseline_mean = fit_baseline.mu_weighted_mean
+    mu_control_mean = fit_control.mu_mean
 
-    if rope_pct_coef is None:
-        rope = None
+    # Every requested band is adjudicated against the same posterior; they
+    # answer different questions and are allowed to disagree. The headline
+    # `decision` takes the first one supplied.
+    bounds = _band_bounds(
+        control_mean=mu_control_mean,
+        n_users_control=control.n_users,
+        rope_stat_coef=rope_stat_coef,
+        rope_pct_coef=rope_pct_coef,
+        rope_biz=rope_biz,
+    )
+    ropes: dict[str, RopeDecision | None] = {
+        band: (
+            None if b is None
+            else rope_decision(
+                delta, rope_low=b[0], rope_high=b[1],
+                threshold=credibility_threshold,
+            )
+        )
+        for band, b in bounds.items()
+    }
+    primary = next((ropes[b] for b in ROPE_BANDS if ropes[b] is not None), None)
+    if primary is None:
         decision = verdict_without_rope(prob_gt_zero, credibility_threshold)
     else:
-        lo, hi = rope_from_baseline(mu_baseline_mean, rope_pct_coef)
-        rope = rope_decision(
-            delta, rope_low=lo, rope_high=hi, threshold=credibility_threshold
-        )
-        decision = rope.decision
+        decision = primary.decision
 
     diagnostics, rhat_max, ess_min, divergences = _merge_diagnostics(
-        fit_baseline, fit_variant
+        fit_control, fit_treatment
     )
 
     return GroupEffect(
-        baseline_label=baseline.label,
-        variant_label=variant.label,
+        control_label=control.label,
+        treatment_label=treatment.label,
         metric=metric,
-        prior_spec=fit_baseline.prior_spec,
+        prior_spec=fit_control.prior_spec,
         window=window,
-        n_units_baseline=fit_baseline.n_units,
-        n_units_variant=fit_variant.n_units,
-        n_trials_baseline=fit_baseline.trials,
-        n_trials_variant=fit_variant.trials,
-        n_successes_baseline=fit_baseline.successes,
-        n_successes_variant=fit_variant.successes,
-        mu_baseline_mean=mu_baseline_mean,
-        mu_variant_mean=fit_variant.mu_weighted_mean,
-        mu_per_unit_baseline_mean=fit_baseline.mu_mean,
-        mu_per_unit_variant_mean=fit_variant.mu_mean,
-        delta_mean=float(delta.mean()),
+        n_users_control=fit_control.n_users,
+        n_users_treatment=fit_treatment.n_users,
+        n_events_control=fit_control.trials,
+        n_events_treatment=fit_treatment.trials,
+        n_successes_control=fit_control.successes,
+        n_successes_treatment=fit_treatment.successes,
+        mu_control_mean=mu_control_mean,
+        mu_treatment_mean=fit_treatment.mu_mean,
+        estimate=float(delta.mean()),
         delta_median=float(np.median(delta)),
-        hdi_low=float(hdi_low),
-        hdi_high=float(hdi_high),
+        lcl=float(lcl),
+        ucl=float(ucl),
         hdi_prob=hdi_prob,
         prob_gt_zero=prob_gt_zero,
-        rel_lift=float(delta.mean() / mu_baseline_mean) if mu_baseline_mean else 0.0,
-        rope=rope,
+        rel_lift=float(delta.mean() / mu_control_mean)
+        if mu_control_mean else 0.0,
+        rope=primary,
         decision=decision,
+        ropes=ropes,
         diagnostics=diagnostics,
         rhat_max=rhat_max,
         ess_min=ess_min,
         divergences=divergences,
-        fit_baseline=fit_baseline,
-        fit_variant=fit_variant,
+        fit_control=fit_control,
+        fit_treatment=fit_treatment,
         delta_samples=delta,
     )
 
@@ -682,18 +836,18 @@ def fit_prepost(
     metric_col: str = "convert",
     date_col: str = "datepart",
     **kwargs,
-) -> GroupEffect:
+) -> GroupEffect | None:
     """:func:`split_by_window` then :func:`fit_group_comparison`.
 
     The pre/post path in one call, for callers whose groups are two date
     windows over the same population. ``**kwargs`` are passed straight
-    through to :func:`fit_group_comparison`.
+    through to :func:`fit_group_comparison`, and ``None`` comes back if its
+    ``min_users`` guard fires.
 
     Raises
     ------
     ValueError
-        If the windows are unequal length (see :class:`PrePostWindow`), or
-        either window selects no rows.
+        If a required column is missing, or either window selects no rows.
     """
     pre, post = split_by_window(
         events, window,

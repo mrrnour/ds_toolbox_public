@@ -8,7 +8,7 @@ Three tests share one result container and one variance engine:
 - :func:`permutation_welch_two_sample` — studentised permutation test
   with a studentised bootstrap-t interval.
 
-The distinguishing feature is the ``cluster_pre`` / ``cluster_post``
+The distinguishing feature is the ``cluster_control`` / ``cluster_treatment``
 arguments. Passing them switches the variance from the naive iid form to
 the delta method of Deng et al. (2018), formula (6), which is what an
 online-experimentation ratio metric needs when one visitor contributes
@@ -78,16 +78,16 @@ class WelchTestResult:
 
     Attributes
     ----------
-    mean_pre, mean_post
+    mean_control, mean_treatment
         Event-weighted arm means, ``sum(S_i) / sum(N_i)``.
     delta_mean
-        ``mean_post - mean_pre``.
+        ``mean_treatment - mean_control``.
     delta_rel_pct
-        ``delta_mean`` as a percentage of ``mean_pre``; ``nan`` when the
-        pre-period mean is zero.
-    n_pre, n_post
+        ``delta_mean`` as a percentage of ``mean_control``; ``nan`` when the
+        control mean is zero.
+    n_control, n_treatment
         Row counts.
-    n_clusters_pre, n_clusters_post
+    n_clusters_control, n_clusters_treatment
         Distinct cluster counts. Equal to the row counts when no cluster
         ids were supplied.
     se_naive
@@ -114,14 +114,14 @@ class WelchTestResult:
         Populated only by :func:`permutation_welch_two_sample`.
     """
 
-    mean_pre: float
-    mean_post: float
+    mean_control: float
+    mean_treatment: float
     delta_mean: float
     delta_rel_pct: float
-    n_pre: int
-    n_post: int
-    n_clusters_pre: int
-    n_clusters_post: int
+    n_control: int
+    n_treatment: int
+    n_clusters_control: int
+    n_clusters_treatment: int
     se_naive: float
     se_cluster: float
     se: float
@@ -159,10 +159,10 @@ class WelchTestResult:
         verdict = "reject H0" if self.reject_h0 else "fail to reject H0"
         return (
             f"{self.method}\n"
-            f"  mean_pre      = {self.mean_pre:.6g}  (n={self.n_pre}, "
-            f"clusters={self.n_clusters_pre})\n"
-            f"  mean_post     = {self.mean_post:.6g}  (n={self.n_post}, "
-            f"clusters={self.n_clusters_post})\n"
+            f"  mean_control  = {self.mean_control:.6g}  (n={self.n_control}, "
+            f"clusters={self.n_clusters_control})\n"
+            f"  mean_treatment= {self.mean_treatment:.6g}  (n={self.n_treatment}, "
+            f"clusters={self.n_clusters_treatment})\n"
             f"  delta_mean    = {self.delta_mean:.6g}  ({self.delta_rel_pct:.3g}%)\n"
             f"  se_naive      = {self.se_naive:.6g}\n"
             f"  se_cluster    = {self.se_cluster:.6g}  "
@@ -331,7 +331,7 @@ def _prepare_arm(
         values: Row-level metric values.
         cluster: Cluster id per row, or ``None`` to treat every row as
             its own cluster.
-        label: ``"pre"`` or ``"post"``, used in error messages.
+        label: ``"control"`` or ``"treatment"``, used in error messages.
 
     Returns:
         A populated :class:`_Arm`.
@@ -413,8 +413,8 @@ def _studentised_delta(units: _Units, left: np.ndarray, right: np.ndarray, varia
 
     Args:
         units: Per-cluster sufficient statistics.
-        left: Cluster positions assigned to the pre arm.
-        right: Cluster positions assigned to the post arm.
+        left: Cluster positions assigned to the control arm.
+        right: Cluster positions assigned to the treatment arm.
         variance: ``"naive"`` or ``"cluster"``.
 
     Returns:
@@ -429,12 +429,14 @@ def _studentised_delta(units: _Units, left: np.ndarray, right: np.ndarray, varia
     return (mean_right - mean_left) / se
 
 
-def _permutation_p(pre: _Arm, post: _Arm, spec: _TestSpec, rng: np.random.Generator) -> float:
+def _permutation_p(
+    control: _Arm, treatment: _Arm, spec: _TestSpec, rng: np.random.Generator,
+) -> float:
     """Two-sided p-value from permuting whole clusters between arms.
 
     Args:
-        pre: Prepared pre-period arm.
-        post: Prepared post-period arm.
+        control: Prepared control arm.
+        treatment: Prepared treatment arm.
         spec: Test configuration.
         rng: Random generator, consumed in place.
 
@@ -443,12 +445,12 @@ def _permutation_p(pre: _Arm, post: _Arm, spec: _TestSpec, rng: np.random.Genera
         strictly positive and the test valid at finite ``n_perm``.
     """
     pooled = _Units(
-        counts=np.concatenate([pre.units.counts, post.units.counts]),
-        sums=np.concatenate([pre.units.sums, post.units.sums]),
-        sqsums=np.concatenate([pre.units.sqsums, post.units.sqsums]),
+        counts=np.concatenate([control.units.counts, treatment.units.counts]),
+        sums=np.concatenate([control.units.sums, treatment.units.sums]),
+        sqsums=np.concatenate([control.units.sqsums, treatment.units.sqsums]),
     )
     total = pooled.counts.size
-    split = pre.n_clusters
+    split = control.n_clusters
     observed = abs(
         _studentised_delta(pooled, np.arange(split), np.arange(split, total), spec.variance)
     )
@@ -462,8 +464,8 @@ def _permutation_p(pre: _Arm, post: _Arm, spec: _TestSpec, rng: np.random.Genera
 
 
 def _bootstrap_t_ci(
-    pre: _Arm,
-    post: _Arm,
+    control: _Arm,
+    treatment: _Arm,
     spec: _TestSpec,
     rng: np.random.Generator,
 ) -> tuple[float, float]:
@@ -473,26 +475,32 @@ def _bootstrap_t_ci(
     interval inherits the same clustering assumption as ``se_cluster``.
 
     Args:
-        pre: Prepared pre-period arm.
-        post: Prepared post-period arm.
+        control: Prepared control arm.
+        treatment: Prepared treatment arm.
         spec: Test configuration.
         rng: Random generator, consumed in place.
 
     Returns:
         ``(low, high)`` at level ``1 - alpha``.
     """
-    delta = post.mean - pre.mean
-    se = float(np.sqrt(_pick(pre, spec.variance)[0] + _pick(post, spec.variance)[0]))
+    delta = treatment.mean - control.mean
+    se = float(
+        np.sqrt(_pick(control, spec.variance)[0] + _pick(treatment, spec.variance)[0])
+    )
     pivots = np.empty(spec.n_boot, dtype=float)
     for draw in range(spec.n_boot):
-        mean_pre, var_pre = _subset_stats(
-            pre.units, rng.integers(0, pre.n_clusters, pre.n_clusters), spec.variance
+        mean_c, var_c = _subset_stats(
+            control.units,
+            rng.integers(0, control.n_clusters, control.n_clusters),
+            spec.variance,
         )
-        mean_post, var_post = _subset_stats(
-            post.units, rng.integers(0, post.n_clusters, post.n_clusters), spec.variance
+        mean_t, var_t = _subset_stats(
+            treatment.units,
+            rng.integers(0, treatment.n_clusters, treatment.n_clusters),
+            spec.variance,
         )
-        se_draw = float(np.sqrt(var_pre + var_post))
-        pivots[draw] = ((mean_post - mean_pre) - delta) / se_draw if se_draw > 0.0 else 0.0
+        se_draw = float(np.sqrt(var_c + var_t))
+        pivots[draw] = ((mean_t - mean_c) - delta) / se_draw if se_draw > 0.0 else 0.0
     low, high = np.nanpercentile(
         pivots, [100.0 * spec.alpha / 2.0, 100.0 * (1.0 - spec.alpha / 2.0)]
     )
@@ -505,8 +513,8 @@ def _bootstrap_t_ci(
 
 
 def _assemble(
-    pre: _Arm,
-    post: _Arm,
+    control: _Arm,
+    treatment: _Arm,
     spec: _TestSpec,
     *,
     se: float,
@@ -516,8 +524,8 @@ def _assemble(
     """Build a result from an arm pair and an already-chosen standard error.
 
     Args:
-        pre: Prepared pre-period arm.
-        post: Prepared post-period arm.
+        control: Prepared control arm.
+        treatment: Prepared treatment arm.
         spec: Test configuration.
         se: Standard error of the difference driving the inference.
         dof: Degrees of freedom for the reference t distribution.
@@ -526,20 +534,22 @@ def _assemble(
     Returns:
         A populated :class:`WelchTestResult` with an analytic interval.
     """
-    delta = post.mean - pre.mean
+    delta = treatment.mean - control.mean
     t_stat = delta / se if se > 0.0 else float("nan")
     half_width = float(stats.t.ppf(1.0 - spec.alpha / 2.0, dof)) * se
     return WelchTestResult(
-        mean_pre=pre.mean,
-        mean_post=post.mean,
+        mean_control=control.mean,
+        mean_treatment=treatment.mean,
         delta_mean=delta,
-        delta_rel_pct=100.0 * delta / pre.mean if pre.mean != 0.0 else float("nan"),
-        n_pre=pre.n,
-        n_post=post.n,
-        n_clusters_pre=pre.n_clusters,
-        n_clusters_post=post.n_clusters,
-        se_naive=float(np.sqrt(pre.var_naive + post.var_naive)),
-        se_cluster=float(np.sqrt(pre.var_cluster + post.var_cluster)),
+        delta_rel_pct=(
+            100.0 * delta / control.mean if control.mean != 0.0 else float("nan")
+        ),
+        n_control=control.n,
+        n_treatment=treatment.n,
+        n_clusters_control=control.n_clusters,
+        n_clusters_treatment=treatment.n_clusters,
+        se_naive=float(np.sqrt(control.var_naive + treatment.var_naive)),
+        se_cluster=float(np.sqrt(control.var_cluster + treatment.var_cluster)),
         se=se,
         variance=spec.variance,
         t_stat=float(t_stat),
@@ -558,28 +568,28 @@ def _assemble(
 
 
 def welch_t_two_sample(
-    y_pre: np.ndarray | Sequence[float],
-    y_post: np.ndarray | Sequence[float],
+    y_control: np.ndarray | Sequence[float],
+    y_treatment: np.ndarray | Sequence[float],
     *,
-    cluster_pre: np.ndarray | Sequence[object] | None = None,
-    cluster_post: np.ndarray | Sequence[object] | None = None,
+    cluster_control: np.ndarray | Sequence[object] | None = None,
+    cluster_treatment: np.ndarray | Sequence[object] | None = None,
     variance: str = "cluster",
     alpha: float = 0.05,
 ) -> WelchTestResult:
     """Unequal-variance t-test, optionally with a cluster-robust standard error.
 
     With no cluster ids this is the textbook Welch test and reproduces
-    ``scipy.stats.ttest_ind(y_post, y_pre, equal_var=False)``. With
+    ``scipy.stats.ttest_ind(y_treatment, y_control, equal_var=False)``. With
     cluster ids the standard error switches to the delta method, which is
     the correct choice for a row-level ratio metric where one unit — a
     visitor, a session — contributes many rows.
 
     Args:
-        y_pre: Pre-period values, one entry per row.
-        y_post: Post-period values, one entry per row.
-        cluster_pre: Cluster id per pre-period row. ``None`` treats each
+        y_control: Control-arm values, one entry per row.
+        y_treatment: Treatment-arm values, one entry per row.
+        cluster_control: Cluster id per control row. ``None`` treats each
             row as independent.
-        cluster_post: Cluster id per post-period row.
+        cluster_treatment: Cluster id per treatment row.
         variance: Which standard error drives the inference — ``"naive"``
             or ``"cluster"``. Both are always reported.
         alpha: Two-sided significance level.
@@ -593,32 +603,32 @@ def welch_t_two_sample(
     Examples:
         >>> import numpy as np
         >>> rng = np.random.default_rng(0)
-        >>> pre, post = rng.normal(0, 1, 200), rng.normal(0.4, 1, 200)
-        >>> res = welch_t_two_sample(pre, post, variance="naive")
+        >>> ctl, trt = rng.normal(0, 1, 200), rng.normal(0.4, 1, 200)
+        >>> res = welch_t_two_sample(ctl, trt, variance="naive")
         >>> res.p_value < 0.05
         True
     """
     spec = _TestSpec(variance=variance, alpha=alpha)
-    pre = _prepare_arm(y_pre, cluster_pre, "pre")
-    post = _prepare_arm(y_post, cluster_post, "post")
-    var_pre, dof_pre = _pick(pre, spec.variance)
-    var_post, dof_post = _pick(post, spec.variance)
+    control = _prepare_arm(y_control, cluster_control, "control")
+    treatment = _prepare_arm(y_treatment, cluster_treatment, "treatment")
+    var_c, dof_c = _pick(control, spec.variance)
+    var_t, dof_t = _pick(treatment, spec.variance)
     return _assemble(
-        pre,
-        post,
+        control,
+        treatment,
         spec,
-        se=float(np.sqrt(var_pre + var_post)),
-        dof=_satterthwaite_dof(var_pre, dof_pre, var_post, dof_post),
+        se=float(np.sqrt(var_c + var_t)),
+        dof=_satterthwaite_dof(var_c, dof_c, var_t, dof_t),
         method=f"Welch t-test ({spec.variance} variance)",
     )
 
 
 def delta_method_two_sample(
-    y_pre: np.ndarray | Sequence[float],
-    y_post: np.ndarray | Sequence[float],
+    y_control: np.ndarray | Sequence[float],
+    y_treatment: np.ndarray | Sequence[float],
     *,
-    cluster_pre: np.ndarray | Sequence[object] | None = None,
-    cluster_post: np.ndarray | Sequence[object] | None = None,
+    cluster_control: np.ndarray | Sequence[object] | None = None,
+    cluster_treatment: np.ndarray | Sequence[object] | None = None,
     alpha: float = 0.05,
 ) -> WelchTestResult:
     """Clustered z-test, transcribing ``gettyab.modelling.run_delta``.
@@ -627,8 +637,8 @@ def delta_method_two_sample(
 
     1. Collapse each arm to per-cluster ``(count, sum)`` pairs.
     2. Take each arm's delta-method variance, Deng et al. (2018) eq. (6).
-    3. ``delta = mean_post - mean_pre``.
-    4. ``var_diff = var_pre + var_post``; ``z = delta / sqrt(var_diff)``.
+    3. ``delta = mean_treatment - mean_control``.
+    4. ``var_diff = var_control + var_treatment``; ``z = delta / sqrt(var_diff)``.
     5. ``p = 2 * (1 - Phi(|z|))`` and ``delta +/- z_crit * se``.
 
     The reference is the **standard normal**, not a t distribution, so
@@ -642,11 +652,11 @@ def delta_method_two_sample(
     not lean on the normal approximation.
 
     Args:
-        y_pre: Pre-period values, one entry per row.
-        y_post: Post-period values, one entry per row.
-        cluster_pre: Cluster id per pre-period row. ``None`` treats every
+        y_control: Control-arm values, one entry per row.
+        y_treatment: Treatment-arm values, one entry per row.
+        cluster_control: Cluster id per control row. ``None`` treats every
             row as its own cluster, which reduces to the naive z-test.
-        cluster_post: Cluster id per post-period row.
+        cluster_treatment: Cluster id per treatment row.
         alpha: Two-sided significance level.
 
     Returns:
@@ -660,25 +670,27 @@ def delta_method_two_sample(
         in metric analytics. *KDD*, 233-242.
     """
     spec = _TestSpec(variance="cluster", alpha=alpha)
-    pre = _prepare_arm(y_pre, cluster_pre, "pre")
-    post = _prepare_arm(y_post, cluster_post, "post")
+    control = _prepare_arm(y_control, cluster_control, "control")
+    treatment = _prepare_arm(y_treatment, cluster_treatment, "treatment")
 
-    delta = post.mean - pre.mean
-    se = float(np.sqrt(pre.var_cluster + post.var_cluster))
+    delta = treatment.mean - control.mean
+    se = float(np.sqrt(control.var_cluster + treatment.var_cluster))
     z_stat = delta / se if se > 0.0 else float("nan")
     z_crit = float(stats.norm.ppf(1.0 - alpha / 2.0))
     half_width = z_crit * se
 
     return WelchTestResult(
-        mean_pre=pre.mean,
-        mean_post=post.mean,
+        mean_control=control.mean,
+        mean_treatment=treatment.mean,
         delta_mean=delta,
-        delta_rel_pct=100.0 * delta / pre.mean if pre.mean != 0.0 else float("nan"),
-        n_pre=pre.n,
-        n_post=post.n,
-        n_clusters_pre=pre.n_clusters,
-        n_clusters_post=post.n_clusters,
-        se_naive=float(np.sqrt(pre.var_naive + post.var_naive)),
+        delta_rel_pct=(
+            100.0 * delta / control.mean if control.mean != 0.0 else float("nan")
+        ),
+        n_control=control.n,
+        n_treatment=treatment.n,
+        n_clusters_control=control.n_clusters,
+        n_clusters_treatment=treatment.n_clusters,
+        se_naive=float(np.sqrt(control.var_naive + treatment.var_naive)),
         se_cluster=se,
         se=se,
         variance=spec.variance,
@@ -693,27 +705,27 @@ def delta_method_two_sample(
 
 
 def student_t_two_sample(
-    y_pre: np.ndarray | Sequence[float],
-    y_post: np.ndarray | Sequence[float],
+    y_control: np.ndarray | Sequence[float],
+    y_treatment: np.ndarray | Sequence[float],
     *,
-    cluster_pre: np.ndarray | Sequence[object] | None = None,
-    cluster_post: np.ndarray | Sequence[object] | None = None,
+    cluster_control: np.ndarray | Sequence[object] | None = None,
+    cluster_treatment: np.ndarray | Sequence[object] | None = None,
     alpha: float = 0.05,
 ) -> WelchTestResult:
     """Pooled-variance t-test, reproducing ``ttest_ind(..., equal_var=True)``.
 
     Kept as a reference companion. Pooling assumes equal variances across
-    arms, which pre/post comparisons routinely violate, so prefer
+    arms, which two-group comparisons routinely violate, so prefer
     :func:`welch_t_two_sample` for decisions. Cluster ids do not change
     the pooled statistic but are honoured when populating
     :attr:`WelchTestResult.se_cluster`, which makes the gap between the
     pooled and cluster-robust standard errors easy to read off.
 
     Args:
-        y_pre: Pre-period values, one entry per row.
-        y_post: Post-period values, one entry per row.
-        cluster_pre: Cluster id per pre-period row, for reporting only.
-        cluster_post: Cluster id per post-period row, for reporting only.
+        y_control: Control-arm values, one entry per row.
+        y_treatment: Treatment-arm values, one entry per row.
+        cluster_control: Cluster id per control row, for reporting only.
+        cluster_treatment: Cluster id per treatment row, for reporting only.
         alpha: Two-sided significance level.
 
     Returns:
@@ -724,20 +736,25 @@ def student_t_two_sample(
         ValueError: On unusable input — see :func:`_prepare_arm`.
     """
     spec = _TestSpec(variance="naive", alpha=alpha)
-    pre = _prepare_arm(y_pre, cluster_pre, "pre")
-    post = _prepare_arm(y_post, cluster_post, "post")
-    dof = pre.n + post.n - 2
-    pooled_var = ((pre.n - 1) * pre.raw_var + (post.n - 1) * post.raw_var) / dof
-    se = float(np.sqrt(pooled_var * (1.0 / pre.n + 1.0 / post.n)))
-    return _assemble(pre, post, spec, se=se, dof=float(dof), method="Student t-test (pooled)")
+    control = _prepare_arm(y_control, cluster_control, "control")
+    treatment = _prepare_arm(y_treatment, cluster_treatment, "treatment")
+    dof = control.n + treatment.n - 2
+    pooled_var = (
+        (control.n - 1) * control.raw_var + (treatment.n - 1) * treatment.raw_var
+    ) / dof
+    se = float(np.sqrt(pooled_var * (1.0 / control.n + 1.0 / treatment.n)))
+    return _assemble(
+        control, treatment, spec, se=se, dof=float(dof),
+        method="Student t-test (pooled)",
+    )
 
 
 def permutation_welch_two_sample(
-    y_pre: np.ndarray | Sequence[float],
-    y_post: np.ndarray | Sequence[float],
+    y_control: np.ndarray | Sequence[float],
+    y_treatment: np.ndarray | Sequence[float],
     *,
-    cluster_pre: np.ndarray | Sequence[object] | None = None,
-    cluster_post: np.ndarray | Sequence[object] | None = None,
+    cluster_control: np.ndarray | Sequence[object] | None = None,
+    cluster_treatment: np.ndarray | Sequence[object] | None = None,
     variance: str = "cluster",
     alpha: float = 0.05,
     n_perm: int = 10_000,
@@ -759,10 +776,10 @@ def permutation_welch_two_sample(
     permutation value.
 
     Args:
-        y_pre: Pre-period values, one entry per row.
-        y_post: Post-period values, one entry per row.
-        cluster_pre: Cluster id per pre-period row.
-        cluster_post: Cluster id per post-period row.
+        y_control: Control-arm values, one entry per row.
+        y_treatment: Treatment-arm values, one entry per row.
+        cluster_control: Cluster id per control row.
+        cluster_treatment: Cluster id per treatment row.
         variance: Which standard error studentises the statistic —
             ``"naive"`` or ``"cluster"``.
         alpha: Two-sided significance level.
@@ -782,30 +799,30 @@ def permutation_welch_two_sample(
     Examples:
         >>> import numpy as np
         >>> rng = np.random.default_rng(0)
-        >>> pre, post = rng.normal(0, 1, 60), rng.normal(1.5, 1, 60)
-        >>> res = permutation_welch_two_sample(pre, post, n_perm=200, n_boot=0)
+        >>> ctl, trt = rng.normal(0, 1, 60), rng.normal(1.5, 1, 60)
+        >>> res = permutation_welch_two_sample(ctl, trt, n_perm=200, n_boot=0)
         >>> res.p_value_perm < 0.05
         True
     """
     spec = _TestSpec(variance=variance, alpha=alpha, n_perm=n_perm, n_boot=n_boot, seed=seed)
-    pre = _prepare_arm(y_pre, cluster_pre, "pre")
-    post = _prepare_arm(y_post, cluster_post, "post")
-    var_pre, dof_pre = _pick(pre, spec.variance)
-    var_post, dof_post = _pick(post, spec.variance)
+    control = _prepare_arm(y_control, cluster_control, "control")
+    treatment = _prepare_arm(y_treatment, cluster_treatment, "treatment")
+    var_c, dof_c = _pick(control, spec.variance)
+    var_t, dof_t = _pick(treatment, spec.variance)
     base = _assemble(
-        pre,
-        post,
+        control,
+        treatment,
         spec,
-        se=float(np.sqrt(var_pre + var_post)),
-        dof=_satterthwaite_dof(var_pre, dof_pre, var_post, dof_post),
+        se=float(np.sqrt(var_c + var_t)),
+        dof=_satterthwaite_dof(var_c, dof_c, var_t, dof_t),
         method=f"permutation Welch t-test ({spec.variance} variance)",
     )
     rng = np.random.default_rng(spec.seed)
-    p_perm = _permutation_p(pre, post, spec, rng)
+    p_perm = _permutation_p(control, treatment, spec, rng)
     if spec.n_boot > 0:
         return replace(
             base,
-            ci=_bootstrap_t_ci(pre, post, spec, rng),
+            ci=_bootstrap_t_ci(control, treatment, spec, rng),
             ci_method="bootstrap-t",
             p_value_perm=p_perm,
             n_perm=spec.n_perm,

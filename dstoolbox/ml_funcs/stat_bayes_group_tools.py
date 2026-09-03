@@ -19,7 +19,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .stat_bayes import BetaPrior, prior_sensitivity_verdict
+from .stat_bayes import BetaPrior, _resolve_beta_prior, prior_sensitivity_verdict
 from .stat_bayes_group import GroupEffect, PrePostWindow, fit_prepost
 
 __all__ = [
@@ -50,7 +50,7 @@ def prior_sensitivity_groups(
     """Refit the same windows under several priors and grade the spread.
 
     The prior is applied to *both* periods, so a prior that pulls ``mu``
-    toward some baseline pulls both ends of the delta and largely cancels.
+    toward some control pulls both ends of the delta and largely cancels.
     That is why a well-powered pre/post is usually ``PRIOR_ROBUST`` — and
     why it is worth checking rather than assuming.
 
@@ -71,38 +71,54 @@ def prior_sensitivity_groups(
     Returns
     -------
     table : pd.DataFrame
-        One row per prior. Columns are named ``hdi_low`` / ``hdi_high`` /
-        ``mean_delta`` / ``prob_delta_gt_0`` because that is the contract
+        One row per prior. Columns are named ``lcl`` / ``ucl`` /
+        ``mean_delta`` / ``prob_delta_gt_0`` / ``shift_from_primary``
+        because that is the contract
         :func:`~dstoolbox.ml_funcs.stat_bayes.prior_overlap_table` reads,
-        and they carry the same bounds as ``GroupEffect.hdi_low`` /
-        ``GroupEffect.hdi_high``.
+        and they carry the same bounds as ``GroupEffect.lcl`` /
+        ``GroupEffect.ucl``.
     verdict : str
         ``"PRIOR_ROBUST"``, ``"PRIOR_SENSITIVE"`` or ``"PRIOR_DRIVEN"``.
 
     Raises
     ------
     ValueError
-        If ``priors`` is empty or ``prior`` was passed in ``fit_kwargs``.
+        If ``priors`` is empty, ``prior`` was passed in ``fit_kwargs``, two
+        priors share a name, or ``primary`` names a prior that was not swept.
     """
     if "prior" in fit_kwargs:
         raise ValueError("pass the priors to sweep via `priors`, not `prior`.")
     priors = list(priors)
     if not priors:
         raise ValueError("`priors` is empty: nothing to compare.")
+    # Every downstream grade keys rows on `prior`, so duplicate names would
+    # silently compare a row against the wrong reference. Check before the
+    # fits, not after — these are minutes of sampling apiece.
+    names = [_resolve_beta_prior(p).name for p in priors]
+    if len(set(names)) != len(names):
+        raise ValueError(f"Prior names must be unique; got {names}.")
+    reference = primary if primary is not None else names[0]
+    if reference not in names:
+        raise ValueError(
+            f"primary prior {reference!r} is not among the priors swept; "
+            f"have {names}."
+        )
 
     rows = []
     for prior in priors:
         effect = fit_prepost(events, window, prior=prior, **fit_kwargs)
         rows.append({
             "prior": effect.prior_spec,
-            "mean_delta": effect.delta_mean,
-            "hdi_low": effect.hdi_low,
-            "hdi_high": effect.hdi_high,
+            "mean_delta": effect.estimate,
+            "lcl": effect.lcl,
+            "ucl": effect.ucl,
             "prob_delta_gt_0": effect.prob_gt_zero,
             "decision": effect.decision,
         })
 
     table = pd.DataFrame(rows)
+    primary_mean = float(table.loc[names.index(reference), "mean_delta"])
+    table["shift_from_primary"] = table["mean_delta"] - primary_mean
     return table, prior_sensitivity_verdict(table, primary=primary)
 
 
@@ -252,13 +268,13 @@ def prior_forest_rows(per_group: dict[str, pd.DataFrame]) -> pd.DataFrame:
     per_group
         ``{label: table}`` in display order, where each table came from
         :func:`prior_sensitivity_groups` — so it carries ``prior``,
-        ``mean_delta``, ``hdi_low`` and ``hdi_high``.
+        ``mean_delta``, ``lcl`` and ``ucl``.
 
     Returns
     -------
     pd.DataFrame
-        Columns ``group``, ``prior``, ``mean_pp``, ``hdi_low_pp``,
-        ``hdi_high_pp``, ``y``.
+        Columns ``group``, ``prior``, ``mean_pp``, ``lcl_pp``,
+        ``ucl_pp``, ``y``.
 
     Raises
     ------
@@ -273,8 +289,8 @@ def prior_forest_rows(per_group: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "group": label,
             "prior": row["prior"],
             "mean_pp": float(row["mean_delta"]) * 100.0,
-            "hdi_low_pp": float(row["hdi_low"]) * 100.0,
-            "hdi_high_pp": float(row["hdi_high"]) * 100.0,
+            "lcl_pp": float(row["lcl"]) * 100.0,
+            "ucl_pp": float(row["ucl"]) * 100.0,
         }
         for label, table in per_group.items()
         for _, row in table.iterrows()

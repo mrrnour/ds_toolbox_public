@@ -63,8 +63,7 @@ def _close_figures():
 
 @pytest.mark.parametrize(
     "decision",
-    ["meaningful_positive", "meaningful_negative", "equivalent",
-     "inconclusive", "positive", "negative"],
+    ["positive", "negative", "equivalent", "inconclusive"],
 )
 def test_every_verdict_has_a_colour_and_a_label(decision):
     color, label = verdict_style(decision)
@@ -159,8 +158,8 @@ def test_summary_keeps_the_given_order_top_down(effect):
 def test_summary_limits_come_from_the_intervals(effect):
     fig = plot_summary([("arm", effect)])
     lo, hi = fig.axes[0].get_xlim()
-    assert lo < effect.hdi_low
-    assert hi > effect.hdi_high
+    assert lo < effect.lcl
+    assert hi > effect.ucl
 
 
 def test_summary_rejects_an_empty_list():
@@ -173,8 +172,8 @@ def test_summary_replots_a_saved_row_without_refitting(effect):
     row = effect.to_row()
     fig = plot_summary([("from_csv", row)])
     lo, hi = fig.axes[0].get_xlim()
-    assert lo < effect.hdi_low
-    assert hi > effect.hdi_high
+    assert lo < effect.lcl
+    assert hi > effect.ucl
 
 
 def test_summary_row_and_effect_agree(effect):
