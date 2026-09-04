@@ -12,6 +12,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
+# Seconds to wait on the PI OAuth token exchange before giving up.
+HTTP_TIMEOUT_SECONDS = 30
+
 # === Errors ===
 
 
@@ -281,7 +284,7 @@ def _build_pi(entry, secret, target_id):
         "scope": entry["scope"],
         "client_secret": secret,
     }
-    response = requests.post(url, data=payload)
+    response = requests.post(url, data=payload, timeout=HTTP_TIMEOUT_SECONDS)
     token = response.json().get("access_token")
     if not token:
         raise DataSourceError(f"PI OAuth response did not include access_token for {target_id!r}")

@@ -13,7 +13,7 @@ def check_path(path):
     if "~" in path:
         path = os.path.expanduser(path)
     if not os.path.exists(path):
-        msg = "File (%s) not found!" % path
+        msg = f"File ({path}) not found!"
         raise argparse.ArgumentTypeError(msg)
     return path
 
@@ -42,7 +42,7 @@ def copy_ymls(dstoolbox, platform="databricks", destination=None):
     from io_funcs import io_funcs
 
     upath = dstoolbox.__file__
-    if destination == None:
+    if destination is None:
         destination = os.getcwd()
     for ufile in ["config.yml", "sql_template.yml"]:
         ufile_src = os.path.join(os.path.dirname(upath), ufile)

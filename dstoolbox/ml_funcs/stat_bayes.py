@@ -924,7 +924,7 @@ def rope_comparison_table(
     without a branch.
     """
     rows = []
-    for name, bounds in ropes.items():
+    for _name, bounds in ropes.items():
         lo, hi = bounds
         if lo is None or hi is None:
             rows.append(

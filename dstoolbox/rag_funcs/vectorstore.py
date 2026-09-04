@@ -20,7 +20,6 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from tqdm import tqdm
 
 # Local imports
-from .. import io_funcs as io_funcs
 
 
 @dataclass
@@ -124,7 +123,7 @@ class VectorStoreProcessor:
                     metadata = {}
                     if hasattr(doc, "metadata"):
                         for key, value in doc.metadata.items():
-                            if isinstance(value, (str, int, float, bool)):
+                            if isinstance(value, str | int | float | bool):
                                 metadata[key] = value
                             else:
                                 try:

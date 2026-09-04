@@ -136,7 +136,7 @@ def ext_for_response(url: str, content_type: str) -> str:
 
 def slug_for(url: str, ext: str = ".html") -> str:
     """Stable per-URL filename: <md5_10>_<sanitized_basename><ext>."""
-    h = hashlib.md5(url.encode("utf-8")).hexdigest()[:10]
+    h = hashlib.md5(url.encode("utf-8"), usedforsecurity=False).hexdigest()[:10]
     base = os.path.basename(urlparse(url).path) or urlparse(url).netloc
     base_noext, _ = os.path.splitext(base)
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", base_noext)[:30].strip("._-") or "index"
@@ -227,7 +227,7 @@ def process_one(item: dict, cfg: ScrapeConfig, fetcher: Fetcher) -> PipelineReco
         base_data["folder_path"] = folder_path
 
     if not cfg.overwrite:
-        h = hashlib.md5(url.encode("utf-8")).hexdigest()[:10]
+        h = hashlib.md5(url.encode("utf-8"), usedforsecurity=False).hexdigest()[:10]
         existing = glob.glob(str(cfg.html_dir / f"{h}_*"))
         if existing:
             base_data["file_path"] = existing[0]

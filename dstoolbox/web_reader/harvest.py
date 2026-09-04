@@ -90,7 +90,7 @@ def sanitize_path(name: str) -> str:
 
 def short_slug(text: str, ext: str = "") -> str:
     """``<md5[:10]>_<sanitized[:30]><ext>`` — used for the path-length fallback."""
-    h = hashlib.md5(text.encode("utf-8")).hexdigest()[:10]
+    h = hashlib.md5(text.encode("utf-8"), usedforsecurity=False).hexdigest()[:10]
     base = sanitize_path(text)[:30] or "idx"
     return f"{h}_{base}{ext}"
 

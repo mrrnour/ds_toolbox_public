@@ -33,8 +33,6 @@ from docling.document_converter import (
 # LangChain imports
 from langchain_core.documents import Document
 
-from .. import io_funcs as io_funcs
-
 # Local imports
 
 

@@ -50,7 +50,7 @@ def query_template_run(
 
     if custom_sql_template_yml is None:
         with res.open_binary("dstoolbox", "sql_template.yml") as fp:
-            templates = yaml.load(fp, Loader=yaml.Loader)
+            templates = yaml.safe_load(fp)
     else:
         from pathlib import Path
 

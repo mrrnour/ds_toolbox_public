@@ -252,7 +252,7 @@ class ProbabilisticClassifierReport:
         plt.title("ROC curve")
         ax.legend(loc="upper right", frameon=True)
         ax.annotate(
-            "ROC AUC=%.3f (random selection=.5)" % (model_auc),
+            f"ROC AUC={model_auc:.3f} (random selection=.5)",
             xy=(1, 0),
             xycoords="axes fraction",
             xytext=(-20, 20),

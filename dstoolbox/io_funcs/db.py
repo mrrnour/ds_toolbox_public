@@ -25,7 +25,7 @@ def engine(ds: Any, **engine_kwargs: Any) -> Any:
     """
     from sqlalchemy import create_engine
 
-    if isinstance(ds, (MSSQLDataSource, SynapseDataSource)):
+    if isinstance(ds, MSSQLDataSource | SynapseDataSource):
         from urllib.parse import quote_plus
 
         params = quote_plus(ds.odbc_connection_string)
@@ -42,7 +42,7 @@ def pyodbc_connection(ds: Any) -> Any:
 
     Supports ``MSSQLDataSource`` and ``SynapseDataSource``.
     """
-    if not isinstance(ds, (MSSQLDataSource, SynapseDataSource)):
+    if not isinstance(ds, MSSQLDataSource | SynapseDataSource):
         raise TypeError(
             f"db.pyodbc_connection: expected MSSQL/Synapse DataSource, " f"got {type(ds).__name__}"
         )

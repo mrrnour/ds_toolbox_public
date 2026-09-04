@@ -105,7 +105,6 @@ def plot_confusion_matrix_multi(y_model, map_lbls, outputFile=None, ncol=3, all_
             y_model_all["CV_Iteration"] = "All_data"
             y_model1 = pd.concat([y_model1, y_model_all], axis=0)
 
-        ncol = ncol
         fig_size = (25, 17)
     else:
         y_model1["CV_Iteration"] = "All_data"

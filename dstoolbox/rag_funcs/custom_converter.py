@@ -25,7 +25,7 @@ from IPython.display import clear_output
 # LangChain imports
 from tqdm import tqdm
 
-from .. import io_funcs as io_funcs
+from .. import io_funcs
 
 # Local imports
 from .setup_helpers import get_metadata_file, save_metadata

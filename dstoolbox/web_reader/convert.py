@@ -18,6 +18,8 @@ from tqdm import tqdm
 
 load_dotenv()
 
+import contextlib
+
 from . import params, utils
 from .utils import PipelineRecord, dict_to_record, record_to_dict
 
@@ -455,10 +457,8 @@ def convert_one(
         if re.match(r"^[0-9a-f]{10}_.+\.html?$", base_name) and os.path.abspath(
             file_path
         ) != os.path.abspath(mirrored_html_path):
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(file_path)
-            except OSError:
-                pass
 
     return PipelineRecord.ok(
         id=url,

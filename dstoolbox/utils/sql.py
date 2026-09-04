@@ -221,7 +221,7 @@ def _split_sql_expressions(text):
                 # end of quoted string
                 state = None
         else:
-            raise Exception("Illegal state %s" % state)
+            raise Exception(f"Illegal state {state}")
 
     if current:
         current = current.rstrip(";").strip()

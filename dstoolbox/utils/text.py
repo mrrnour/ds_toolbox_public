@@ -158,7 +158,7 @@ def find_fuzzy_matches(listA, listB, threshold=60):
     matches = {}
     used_b_indices = set()
 
-    for i, item_a in enumerate(listA):
+    for _i, item_a in enumerate(listA):
         normalized_a = normalize_text(item_a)
         best_match = None
         best_similarity = 0

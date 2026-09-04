@@ -38,7 +38,7 @@ def ml_prediction_sub_epochs(model):
     """
     results = model.evals_result()
     df_epochs = pd.DataFrame()
-    for metric_key in results["validation_0"].keys():
+    for metric_key in results["validation_0"]:
         val0 = results["validation_0"][metric_key]
         val1 = results["validation_1"][metric_key]
         tmp = pd.DataFrame(
@@ -77,7 +77,7 @@ def _resolve_cv(
             stacklevel=3,
         )
         return zip([range(X.shape[0])], [range(X.shape[0])], strict=False)
-    if isinstance(sk_fold, (list, tuple)) and len(sk_fold) == 2:
+    if isinstance(sk_fold, list | tuple) and len(sk_fold) == 2:
         # Legacy: caller passed (X_val, y_val). Caller must concat before calling _resolve_cv.
         raise TypeError("_resolve_cv does not support (X_val, y_val) tuples; handle in caller.")
     return sk_fold.split(X, y)
@@ -98,7 +98,7 @@ def _build_y_train_by_fold(X: pd.DataFrame, y: pd.Series, sk_fold: Any) -> dict[
     refitting models. The splitter is consumed once; callers needing the splits
     afterwards should re-call ``.split(...)``.
     """
-    if sk_fold is None or (isinstance(sk_fold, (list, tuple)) and len(sk_fold) == 2):
+    if sk_fold is None or (isinstance(sk_fold, list | tuple) and len(sk_fold) == 2):
         return {}
     return {i: y.iloc[train_idx] for i, (train_idx, _) in enumerate(sk_fold.split(X, y))}
 
@@ -238,7 +238,7 @@ def ml_prediction(
 
     if (
         (X_test is not None)
-        and isinstance(sk_fold, (StratifiedKFold, TimeSeriesSplit))
+        and isinstance(sk_fold, StratifiedKFold | TimeSeriesSplit)
         and early_stopping_rounds is None
     ):
         warnings.warn(
@@ -445,7 +445,7 @@ def ml_comparison(
         metrics_all = pd.DataFrame()
         preds_all: list[pd.DataFrame] = []
         for con, model in enumerate(ml_models):
-            if con in map_names.keys():
+            if con in map_names:
                 model_name = map_names.get(con)
             elif getattr(model, "display_name", None):
                 model_name = model.display_name

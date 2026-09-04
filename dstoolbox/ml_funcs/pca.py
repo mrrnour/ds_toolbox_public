@@ -160,7 +160,7 @@ def pca_ortho_rotation(lam, method="varimax", gamma=None, eps=1e-6, itermax=100)
     Return orthogal rotation matrix
     TODO: - other types beyond
     """
-    if gamma == None:
+    if gamma is None:
         if method == "varimax":
             gamma = 1.0
         if method == "quartimax":
@@ -170,7 +170,7 @@ def pca_ortho_rotation(lam, method="varimax", gamma=None, eps=1e-6, itermax=100)
     R = np.eye(ncol)
     var = 0
 
-    for i in range(itermax):
+    for _i in range(itermax):
         lam_rot = np.dot(lam, R)
         tmp = np.diag(np.sum(lam_rot**2, axis=0)) / nrow * gamma
         u, s, v = np.linalg.svd(np.dot(lam.T, lam_rot**3 - np.dot(lam_rot, tmp)))

@@ -13,6 +13,9 @@ DEFAULT_PI_WEBAPI_BASE = "https://<pi-webapi-host>/piwebapi"
 DEFAULT_PI_DATA_SERVER = "<PI-DATA-SERVER>"
 DEFAULT_TZ = "UTC"
 
+# Seconds to wait on any single PI Web API request before giving up.
+HTTP_TIMEOUT_SECONDS = 60
+
 
 def get_web_ids(
     access_token: str,
@@ -50,7 +53,7 @@ def get_web_ids(
     }
     for tag in tags:
         url = f"{webapi_base}/points?path=\\\\{data_server}\\{tag}"
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=headers, timeout=HTTP_TIMEOUT_SECONDS)
         web_id = json.loads(response.text).get("WebId")
         web_ids[tag] = web_id
         if web_id is None:
@@ -131,7 +134,7 @@ def pi2pd_interpolate(
         )
         params = {"startTime": start_date, "endTime": end_date, "interval": interval}
         url = f"{webapi_base}/streams/{web_id}/interpolated?{urllib.parse.urlencode(params)}"
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=headers, timeout=HTTP_TIMEOUT_SECONDS)
         body = json.loads(response.text)
         if i == 0:
             tag_data["Date"] = [j["Timestamp"] for j in body["Items"]]
@@ -208,7 +211,7 @@ def pi2pd_raw_data(
         )
         params = {"startTime": start_date, "endTime": end_date}
         url = f"{webapi_base}/streams/{web_id}/recorded?{urllib.parse.urlencode(params)}"
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=headers, timeout=HTTP_TIMEOUT_SECONDS)
         if response.status_code != 200:
             continue
         body = json.loads(response.text)

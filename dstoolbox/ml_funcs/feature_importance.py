@@ -96,10 +96,7 @@ def shap_plots_batch(X, y, umodel, test_size=0.2, kmeans=None, random_state=100)
 
     umodel.fit(X_train.values, y_train)
 
-    if kmeans is not None:
-        udata = shap.kmeans(X_train, kmeans)
-    else:
-        udata = X_train.values
+    udata = shap.kmeans(X_train, kmeans) if kmeans is not None else X_train.values
     explainer = shap.KernelExplainer(
         model=umodel.predict,
         data=udata,

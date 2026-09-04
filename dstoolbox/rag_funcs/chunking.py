@@ -24,7 +24,7 @@ from docling.chunking import BaseChunk
 from langchain_core.documents import Document
 from tqdm import tqdm
 
-from .. import io_funcs as io_funcs
+from .. import io_funcs
 
 # Local imports
 from .setup_helpers import get_metadata_file, setup_docling
@@ -382,7 +382,7 @@ class ChunkProcessor:
             # Initialize postfix
             progress_bar.set_postfix_str("Starting...")
 
-            for i, input_path in enumerate(input_paths):
+            for _i, input_path in enumerate(input_paths):
                 try:
                     # Get short filename for display
                     short_filename = os.path.basename(input_path)

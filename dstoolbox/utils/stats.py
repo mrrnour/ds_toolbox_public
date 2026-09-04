@@ -71,9 +71,8 @@ def compare_univariate_features(X, y, univar_fea_lst):
                 f"expected one of {sorted(_UNIVAR_REGISTRY)}."
             ) from e
         score = uFunc(X, y)
-        if univar in ["mutual_info_classif", "mutual_info_regression"]:
-            score = score
-        elif univar in ["chi2"]:
+        # mutual_info_* already return the score array directly and need no unpacking.
+        if univar in ["chi2"]:
             score = score[1]
         elif univar in ["SelectFdr", "SelectFdr", "SelectFwe", "f_classif"]:
             ###TODO: correct it:
@@ -970,10 +969,7 @@ def control_limit_grpby(
         ``MR_LL_<col>``, ``MR_AVG_<col>``, ``MR_UL_<col>`` indexed by group.
     """
     del coef  # documented as ignored
-    if grpby_col:
-        cls = df.groupby(grpby_col)[col].apply(control_limit)
-    else:
-        cls = control_limit(df[col])
+    cls = df.groupby(grpby_col)[col].apply(control_limit) if grpby_col else control_limit(df[col])
     return pd.DataFrame(
         cls.tolist(),
         index=cls.index,

@@ -914,7 +914,7 @@ def plot_I_MR(df_I: pd.DataFrame, limits, x_col: str = "TimeStamp", fig=None):
             shared_xaxes=True,
         )
 
-    cols = [c for c in df_I.columns if c != x_col and c != "TimeStamp"]
+    cols = [c for c in df_I.columns if c not in (x_col, "TimeStamp")]
 
     for panel_idx, (df_plot, prefix) in enumerate([(df_I, "I_"), (df_MR, "MR_")]):
         last_trace = _add_series_traces(fig, df_plot, x_col, cols, prefix, row=panel_idx + 1)
@@ -971,7 +971,7 @@ def plot_series_overlay(
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
 
-    cols0 = [c for c in df_plot.columns if c != x_col and c != "TimeStamp"]
+    cols0 = [c for c in df_plot.columns if c not in (x_col, "TimeStamp")]
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
 
     mode = "markers" if x_col == "TimeStamp" else "markers+lines"

@@ -2,6 +2,8 @@ import pandas as pd
 import pyspark.sql.functions as F
 from pyspark.sql.window import Window
 
+from .joins import asof_join_spark2
+
 
 # -------------------------------------------------------------------------
 # -----------------------------------------fEng----------------------------

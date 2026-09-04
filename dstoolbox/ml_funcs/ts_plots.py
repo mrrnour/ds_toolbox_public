@@ -47,7 +47,7 @@ def _as_intervention_list(intervention_date) -> list[pd.Timestamp]:
     """Normalize ``intervention_date`` (scalar / list / None) to a list of Timestamps."""
     if intervention_date is None:
         return []
-    if isinstance(intervention_date, (list, tuple)):
+    if isinstance(intervention_date, list | tuple):
         return [pd.Timestamp(e) for e in intervention_date]
     return [pd.Timestamp(intervention_date)]
 
@@ -62,7 +62,7 @@ def _as_anomaly_groups(anomalies) -> list[list]:
     if not anomalies:
         return []
     first = next(iter(anomalies))
-    if isinstance(first, (list, tuple)):
+    if isinstance(first, list | tuple):
         return [list(g) for g in anomalies]
     return [list(anomalies)]
 

@@ -105,10 +105,7 @@ def cell_share_of_total(df, axis=0):
         Same shape as ``df`` with values rescaled to sum to 1 along the
         requested axis.
     """
-    if axis == 0:
-        out = df.div(df.sum(axis=0), axis=1)
-    else:
-        out = df.div(df.sum(axis=1), axis=0)
+    out = df.div(df.sum(axis=0), axis=1) if axis == 0 else df.div(df.sum(axis=1), axis=0)
     return out
 
 
@@ -238,10 +235,10 @@ def _format_display_table(comparison_df: pd.DataFrame) -> pd.DataFrame:
     out.columns = _DISPLAY_COL_LABELS
     for col in ("DF1 Memory (MB)", "DF2 Memory (MB)"):
         out[col] = out[col].apply(
-            lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and x != 0 else str(x)
+            lambda x: f"{x:.4f}" if isinstance(x, int | float) and x != 0 else str(x)
         )
     for col in ("DF1 Missing %", "DF2 Missing %", "Value Match %"):
-        out[col] = out[col].apply(lambda x: f"{x:.1f}%" if isinstance(x, (int, float)) else str(x))
+        out[col] = out[col].apply(lambda x: f"{x:.1f}%" if isinstance(x, int | float) else str(x))
     return out
 
 

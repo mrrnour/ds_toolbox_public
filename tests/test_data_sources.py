@@ -170,9 +170,10 @@ def test_pi_oauth_post(monkeypatch):
         def json(self):
             return {"access_token": "BEARER123"}
 
-    def fake_post(url, data):
+    def fake_post(url, data, timeout=None):
         posted["url"] = url
         posted["data"] = data
+        posted["timeout"] = timeout
         return FakeResponse()
 
     monkeypatch.setattr("requests.post", fake_post)
@@ -183,6 +184,7 @@ def test_pi_oauth_post(monkeypatch):
     assert posted["url"] == "https://pi.example/oauth/token"
     assert posted["data"]["client_secret"] == "OAUTH_SECRET"
     assert posted["data"]["client_id"] == "cid"
+    assert posted["timeout"] == ds_module.HTTP_TIMEOUT_SECONDS
 
 
 def test_postgres_inline_password():
