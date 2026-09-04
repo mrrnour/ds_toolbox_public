@@ -2,8 +2,12 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
+      # Scraped HTML/markdown under web_reader/output is captured verbatim, so
+      # rewriting its whitespace would corrupt the fixtures it serves as.
       - id: trailing-whitespace
+        exclude: ^dstoolbox/web_reader/output/
       - id: end-of-file-fixer
+        exclude: ^dstoolbox/web_reader/output/
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files

@@ -197,6 +197,8 @@ def _comparison_row(col: str, df1: pd.DataFrame, df2: pd.DataFrame) -> dict:
     """Build one row of the column-comparison DataFrame."""
     in_df1, in_df2 = col in df1.columns, col in df2.columns
 
+    type_match: str
+    commonality: float | str
     if in_df1 and in_df2:
         type_match = "✓" if df1[col].dtype == df2[col].dtype else "✗"
         commonality = _value_commonality_pct(df1[col], df2[col])

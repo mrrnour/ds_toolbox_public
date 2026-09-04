@@ -24,16 +24,12 @@ lint:
     - python -m pip install --upgrade pip
     - pip install -e ".[dev,test]"
   stage: lint
-  # Non-blocking: pre-existing repo-wide ruff/black debt, tracked separately.
-  allow_failure: true
   script:
     - pip install pre-commit
     - pre-commit run --all-files --show-diff-on-failure
 
 typecheck:
   stage: typecheck
-  # Non-blocking: pre-existing mypy errors, tracked separately.
-  allow_failure: true
   script:
     - mypy
 

@@ -303,6 +303,7 @@ def update_output_specs(
 
         if i == 0:
             warn_text = False
+            first_resolved: dt.date | None
             if firstDate is not None:
                 if isinstance(firstDate, str):
                     _log_or_print(logger, firstDate)
@@ -485,7 +486,9 @@ def run_recursively(
 
     try:
         for ii in range(len(run_dates) - 1):
-            start_date, end_date = utils.extract_start_end(run_dates, ii)
+            # FIXME: utils.extract_start_end has never existed in this package, so
+            # reaching this line raises AttributeError. Needs a real implementation.
+            start_date, end_date = utils.extract_start_end(run_dates, ii)  # type: ignore[attr-defined]
             _log_or_print(
                 logger,
                 f"Running {df_generator_func.__name__} for "

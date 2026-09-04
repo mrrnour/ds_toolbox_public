@@ -969,7 +969,12 @@ def control_limit_grpby(
         ``MR_LL_<col>``, ``MR_AVG_<col>``, ``MR_UL_<col>`` indexed by group.
     """
     del coef  # documented as ignored
-    cls = df.groupby(grpby_col)[col].apply(control_limit) if grpby_col else control_limit(df[col])
+    if not grpby_col:
+        # control_limit returns a plain 6-tuple, so it needs wrapping rather
+        # than the Series handling used for the grouped case.
+        return pd.DataFrame([control_limit(df[col])], columns=_imr_columns(col))
+
+    cls = df.groupby(grpby_col)[col].apply(control_limit)
     return pd.DataFrame(
         cls.tolist(),
         index=cls.index,

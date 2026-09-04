@@ -170,7 +170,7 @@ def _fetch_via_azure_keyvault(entry: dict[str, Any]) -> str:
     secret_name = entry.get("secret")
     if not kv_name or not secret_name:
         raise DataSourceError("azure_keyvault auth requires 'key_vault' and 'secret' fields")
-    runtime = entry.get("runtime") or os.environ.get("DSTOOLBOX_RUNTIME", "databricks")
+    runtime = str(entry.get("runtime") or os.environ.get("DSTOOLBOX_RUNTIME", "databricks"))
     return _resolve_keyvault_secret(kv_name, secret_name, runtime)
 
 
