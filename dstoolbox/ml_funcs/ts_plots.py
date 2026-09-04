@@ -6,6 +6,7 @@ Data layer lives in :mod:`dstoolbox.ml_funcs.ts_eda` (``acf``, ``acf_confint``,
 
 from __future__ import annotations
 
+import logging
 import math
 
 import matplotlib.pyplot as plt
@@ -16,6 +17,8 @@ import plotly.graph_objects as go
 import seaborn as sns
 
 from . import ts_eda
+
+logger_mod = logging.getLogger(__name__)
 
 
 def _fit_control_limits(
@@ -614,7 +617,7 @@ def plot_residual_diagnostics(
             col=2,
         )
     except Exception:
-        pass
+        logger_mod.debug("KDE overlay skipped", exc_info=True)
     xg = np.linspace(-4, 4, 200)
     fig.add_trace(
         go.Scatter(

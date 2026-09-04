@@ -94,7 +94,7 @@ def compare_univariate_features(X, y, univar_fea_lst):
     )
 
     fig, ax = plt.subplots(figsize=(25, 15))
-    uplot = sns.scatterplot(
+    sns.scatterplot(
         y="feature",
         x="P_value",
         hue="Feature_selection_Method",

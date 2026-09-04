@@ -23,6 +23,7 @@ def setup_github_colab(
     """
     import os
     import shutil
+    import subprocess
 
     from google.colab import drive
 
@@ -31,9 +32,11 @@ def setup_github_colab(
         shutil.copytree(ssh_source, os.path.expanduser("~/.ssh"))
     else:
         "folder .ssh exists!"
-    os.system(f'git config --global user.email "{user_email}"')
-    os.system(f'git config --global user.name "{user_name}"')
-    os.system("ssh -T git@github.com")
+    # Argument lists (not a shell string) so an address or name containing
+    # shell metacharacters cannot be executed as a command.
+    subprocess.run(["git", "config", "--global", "user.email", user_email], check=False)
+    subprocess.run(["git", "config", "--global", "user.name", user_name], check=False)
+    subprocess.run(["ssh", "-T", "git@github.com"], check=False)
 
 
 def copy_kaggle_json_to_colab(kaggle_json_source):
@@ -84,6 +87,7 @@ def download_and_extract_dataset(
         prefixes are skipped.
     """
     import os
+    import subprocess
     import zipfile
 
     from google.colab import drive
@@ -96,7 +100,9 @@ def download_and_extract_dataset(
     if not os.path.exists(download_folder):
         os.mkdir(download_folder)
     os.chdir(download_folder)
-    os.system(f"kaggle competitions download -c {zip_file_name.split('.')[0]}")
+    subprocess.run(
+        ["kaggle", "competitions", "download", "-c", zip_file_name.split(".")[0]], check=False
+    )
 
     ## Extract specific folders
     print("unzip files...")

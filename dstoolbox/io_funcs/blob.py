@@ -19,7 +19,7 @@ logger_mod = logging.getLogger(__name__)
 
 
 _TMP_FILE_LOCS = {
-    "databricks": "/tmp",
+    "databricks": "/tmp",  # noqa: S108 - the Databricks driver's designated scratch path
     "aml": None,  # use cwd
     "local": None,
     "vm_docker": None,

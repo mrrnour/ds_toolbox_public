@@ -1,15 +1,18 @@
 import pandas as pd
 import pyspark.sql.types as spk_dtp
 
+# Default as-of matching window, hoisted out of the signatures so it is built once.
+_DEFAULT_TOLERANCE = pd.Timedelta("600S")
+
 
 def _asof_join(
-    l,
+    left,
     r,
     left_on,
     right_on,
     left_by,
     right_by,
-    tolerance=pd.Timedelta("600S"),
+    tolerance=_DEFAULT_TOLERANCE,
     direction="forward",
     **kwargs,
 ):
@@ -39,14 +42,14 @@ def _asof_join(
     pandas.DataFrame
         Result of ``pd.merge_asof``.
     """
-    l[left_on] = pd.to_datetime(l[left_on])
+    left[left_on] = pd.to_datetime(left[left_on])
     r[right_on] = pd.to_datetime(r[right_on])
 
-    l = l.sort_values(left_on)
+    left = left.sort_values(left_on)
     r = r.sort_values(right_on)
     r = r.dropna(subset=[right_on])
     return pd.merge_asof(
-        l,
+        left,
         r,
         left_on=left_on,
         right_on=right_on,
@@ -65,7 +68,7 @@ def asof_join_spark2(
     right_on,
     left_by,
     right_by,
-    tolerance=pd.Timedelta("600S"),
+    tolerance=_DEFAULT_TOLERANCE,
     direction="forward",
     **kwargs,
 ):
@@ -137,10 +140,10 @@ def asof_join_spark2(
     df_left.sort(left_by, left_on)
     df_right.sort(right_by, right_on)
 
-    def asof_join_wrapped(l, r):
+    def asof_join_wrapped(left, r):
         """Closure passed to ``applyInPandas`` that captures the resolved keys."""
         return _asof_join(
-            l,
+            left,
             r,
             left_on,
             right_on,

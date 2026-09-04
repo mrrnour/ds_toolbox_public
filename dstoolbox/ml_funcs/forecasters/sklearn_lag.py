@@ -80,7 +80,6 @@ class LagRegressor(BaseEstimator, RegressorMixin):
         check_is_fitted(self, ["_estimator_", "_history_", "_last_train_", "_freq_"])
         target = as_datetime_index(X, self.date_col)
         lags = list(self.lags)
-        max_lag = max(lags)
         max_steps = max(horizon_to_cover(self._last_train_, t, self._freq_) for t in target)
 
         history = list(self._history_)

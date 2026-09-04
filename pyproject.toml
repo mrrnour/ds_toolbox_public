@@ -178,11 +178,19 @@ ignore = [
     "S301",      # pickle usage (needed in some ML flows)
     "S608",      # possible SQL injection (SQL builders are internal)
     "E501",      # line-too-long (formatter handles)
+    # Modules append a "public-only extensions (preserved on vendor merge)" block
+    # below the main body, so late imports are a deliberate layout convention.
+    "E402",
+    # Rebinding the loop variable while cleaning a column/line in place is the
+    # dominant idiom in the dataframe and text helpers.
+    "PLW2901",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S", "PL"]
 "dstoolbox/web_reader/**/*.py" = ["S603", "S607"]  # subprocess usage is intentional
+"dstoolbox/web_reader/tests/**/*.py" = ["S603", "S607", "SIM115"]  # handles closed via fixtures
+"dstoolbox/io_funcs/colab.py" = ["S603", "S607"]   # Colab shells out to git/ssh/kaggle on PATH
 "**/__init__.py" = ["F401", "F403"]                # re-exports
 
 [tool.ruff.lint.isort]

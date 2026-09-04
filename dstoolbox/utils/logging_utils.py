@@ -28,7 +28,7 @@ def custom_print(message, logger=None):
     -------
     None
     """
-    global _DEPRECATION_EMITTED
+    global _DEPRECATION_EMITTED  # noqa: PLW0603 - one-shot flag so the warning fires once
     if not _DEPRECATION_EMITTED:
         warnings.warn(
             "custom_print is deprecated; use logging.getLogger(__name__).info/warning.",

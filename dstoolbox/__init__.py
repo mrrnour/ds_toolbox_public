@@ -110,7 +110,7 @@ for _subpkg in (
 ):
     try:
         __import__(f"{__name__}.{_subpkg}")
-    except Exception:  # noqa: BLE001 — optional extras may fail to import
+    except Exception:  # noqa: BLE001,S110 — optional extras may fail to import
         pass
     else:
         # Expose successfully imported subpackages so pdoc lists them as

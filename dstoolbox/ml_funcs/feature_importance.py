@@ -42,10 +42,9 @@ def feature_importance_batch(umodel, X, y):
 
         plt.figure(figsize=(5, 2), dpi=150)
 
-        importance_hist = feature_importance.hist()
+        feature_importance.hist()
 
         sns.set(rc={"figure.figsize": (20, 10)}, font_scale=1.5)
-        importance_hist
 
         sel_features = feature_importance[feature_importance > 0.01].index.tolist()
     else:
@@ -75,7 +74,7 @@ def pdp_plot_batch(X, umodel, sel_features):
         "kind": "both",
         "centered": True,
     }
-    display = PartialDependenceDisplay.from_estimator(
+    PartialDependenceDisplay.from_estimator(
         umodel,
         X,
         **features_info,

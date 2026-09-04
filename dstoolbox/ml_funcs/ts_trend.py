@@ -3568,7 +3568,7 @@ def mk_delta_mbb(
 
     # ── Moving-block bootstrap on Δ = slope_post − slope_pre ────────────────
     bl_requested = block_length if block_length is not None else (period or 1)
-    bl = max(1, min(int(bl_requested), min(n_pre, n_post)))
+    bl = max(1, min(int(bl_requested), n_pre, n_post))
     rng = np.random.default_rng(seed)
     slopes_pre_b = np.empty(n_boot)
     slopes_post_b = np.empty(n_boot)

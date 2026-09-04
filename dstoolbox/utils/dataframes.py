@@ -627,9 +627,6 @@ def percent_agg(df, grpby1, grpby2, sumCol):
         Long-format frame with ``grpby1`` columns plus ``<sumCol>_percent``
         and ``<sumCol>``; rows where the percentage is zero are dropped.
     """
-    agg1 = df.groupby(grpby1)[sumCol].sum().reset_index()
-    agg2 = df.groupby(grpby2)[sumCol].sum().reset_index()
-
     agg1 = df.groupby(grpby1)[sumCol].sum()
     agg1 = agg1.groupby(level=grpby2).apply(lambda x: 100 * x / float(x.sum())).reset_index()
     agg1.rename(columns={sumCol: f"{sumCol}_percent"}, inplace=True)

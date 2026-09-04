@@ -14,7 +14,6 @@ def _sparseLabel(x, splitter="; "):
     """Internal helper for :func:`sparse_label_encoding`."""
     # TODO: how we can apply in two mat in parallel
     try:
-        tmp = x[1].split(splitter)
         x2 = x[2:]
         x2[np.where(x2)] = np.fromstring(x[0], dtype=int, sep=splitter)
     except Exception as err:

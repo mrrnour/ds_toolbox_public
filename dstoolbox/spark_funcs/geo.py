@@ -1,12 +1,12 @@
 """Spark geospatial helpers: Euclidean 2D/3D distance and Haversine great-circle distance."""
 
-from typing import Literal, Union
+from typing import Literal
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-_Coord2 = Union[tuple[str, str], tuple[float, float]]
-_CoordN = Union[tuple[str, ...], tuple[float, ...]]
+_Coord2 = tuple[str, str] | tuple[float, float]
+_CoordN = tuple[str, ...] | tuple[float, ...]
 
 
 def _coord_exprs(coords: _CoordN):

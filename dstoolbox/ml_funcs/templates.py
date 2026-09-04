@@ -117,8 +117,6 @@ def classifiers_template(y, random_state=10, imputer_strategy="mean", pc_n_compo
         # 'bagging':                      BaggingClassifier(estimator=DecisionTreeClassifier(), n_estimators=10, random_state=random_state),
     }
 
-    basic_params = {"random_state": random_state}
-
     classifiers2 = {}
     for name, classifier in classifiers.items():
         ##TODO: find a way to add randomstate here
@@ -243,8 +241,6 @@ def regressors_template(random_state=10):
         "AdaBoost": AdaBoostRegressor(random_state=random_state),
         # 'bagging':                      BaggingRegressor(estimator=DecisionTreeRegressor(), n_estimators=10, random_state=random_state),
     }
-
-    basic_params = {"random_state": random_state}
 
     regressors2 = {}
     for name, Regressor in Regressors.items():

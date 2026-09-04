@@ -964,7 +964,6 @@ def plot_backtest_splits(
         t_start, t_end = ts.iloc[train_idx[0]], ts.iloc[train_idx[-1]]
         v_start, v_end = ts.iloc[val_idx[0]], ts.iloc[val_idx[-1]]
         n_train = len(train_idx)
-        n_val = len(val_idx)
         n_train_per_fold.append(n_train)
         fig.add_trace(
             go.Scatter(

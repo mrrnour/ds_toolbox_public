@@ -198,8 +198,6 @@ def update_db_recursively(
         k: kwargs.pop(k) for k in dict(kwargs) if k not in (spark2del_args + pd2blob_args)
     }
 
-    import datetime as dt
-
     last_save_date = last_date(  ###for  delta_table only
         output_name,
         date_col=date_col,

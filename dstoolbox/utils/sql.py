@@ -201,11 +201,8 @@ def _split_sql_expressions(text):
                 # probably end of comment
                 state = "/**"
         elif state == "/**":
-            if c == "/":
-                state = None
-            else:
-                # not an end
-                state = "/*"
+            # A "/" here closes the comment; anything else means we are still inside it.
+            state = None if c == "/" else "/*"
         elif state[0] in "\"'":
             current += c
             if state.endswith("\\"):

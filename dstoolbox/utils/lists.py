@@ -33,7 +33,7 @@ def regex_filter_list(regLst, LstAll):
      array([False,  True, False,  True,  True]))
     """
     out = []
-    if type(regLst) != list:
+    if not isinstance(regLst, list):
         regLst = [regLst]
     for i in regLst:
         tmp = list(filter(re.compile(i).search, LstAll))

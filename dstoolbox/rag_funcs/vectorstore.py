@@ -191,7 +191,7 @@ class VectorStoreProcessor:
         except Exception as e:
             error_msg = f"Error creating {store_type} vector store: {str(e)}"
             self.logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            raise RuntimeError(error_msg) from e
 
     def get_error_report(
         self, save_to_csv: bool = False, output_path: str | None = None

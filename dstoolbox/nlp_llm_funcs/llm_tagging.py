@@ -120,8 +120,6 @@ def chain_tagger(
     parser = parser_creator(tag_list)
     # parser = CommaSeparatedListOutputParser()
 
-    examples_commaSep_tags = examples_commaSep_tags
-
     ### NOTE: LengthBasedExampleSelector strange behaviour, not sure why?????????:
     ###works with parser_creator                  and examples_commaSep_tags
     ###works with CommaSeparatedListOutputParser  and examples=examples
