@@ -237,8 +237,6 @@ def update_db_recursively(
     for ii in range(len(udates) - 1):
         try:
             ##TODO: what if, there are more than on output, in that case output_name is only for the first output,
-            # FIXME: utils.extract_start_end has never existed in this package, so
-            # reaching this line raises AttributeError. Needs a real implementation.
             start_date, end_date = utils.extract_start_end(udates, ii)
             ouputs_list = df_generator_func(
                 start_date, end_date, output_name, **df_generator_func_args

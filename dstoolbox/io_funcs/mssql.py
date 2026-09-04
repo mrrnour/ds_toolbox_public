@@ -486,9 +486,7 @@ def run_recursively(
 
     try:
         for ii in range(len(run_dates) - 1):
-            # FIXME: utils.extract_start_end has never existed in this package, so
-            # reaching this line raises AttributeError. Needs a real implementation.
-            start_date, end_date = utils.extract_start_end(run_dates, ii)  # type: ignore[attr-defined]
+            start_date, end_date = utils.extract_start_end(run_dates, ii)
             _log_or_print(
                 logger,
                 f"Running {df_generator_func.__name__} for "

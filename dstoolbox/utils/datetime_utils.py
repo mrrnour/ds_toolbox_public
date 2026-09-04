@@ -94,6 +94,39 @@ def seconds_to_dhms(time):
     return (day, hour, minutes, seconds)
 
 
+def extract_start_end(udates, ii):
+    """Return the inclusive ``[start, end]`` bounds of the ``ii``-th window in ``udates``.
+
+    ``udates`` holds the *boundary* dates produced by
+    :func:`monthly_first_dates`, so consecutive windows would overlap on the
+    shared boundary. The end date is therefore the day before ``udates[ii + 1]``,
+    which makes the returned range safe to use with inclusive ``BETWEEN``-style
+    filters.
+
+    Parameters
+    ----------
+    udates : list of str
+        Boundary dates as ``YYYY-MM-DD`` strings, in ascending order.
+    ii : int
+        Index of the window to extract. Must satisfy ``ii + 1 < len(udates)``.
+
+    Returns
+    -------
+    tuple of str
+        ``(start_date, end_date)`` as ``YYYY-MM-DD`` strings, both inclusive.
+
+    Examples
+    --------
+    >>> extract_start_end(["2021-01-01", "2021-02-01", "2021-03-01"], 0)
+    ('2021-01-01', '2021-01-31')
+    """
+    start_date = udates[ii]
+    end_date = (
+        dt.datetime.strptime(udates[ii + 1], "%Y-%m-%d").date() - dt.timedelta(days=1)
+    ).strftime("%Y-%m-%d")
+    return start_date, end_date
+
+
 def monthly_first_dates(year_range=None, firstDate=None, lastDate=None, month_step=1):
     """Generate a list of ``YYYY-MM-01`` dates within a year range, clipped to ``[firstDate, lastDate]``.
 
