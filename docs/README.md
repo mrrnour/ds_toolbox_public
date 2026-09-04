@@ -68,4 +68,3 @@ sequenceDiagram
     NB->>DB: open connection
     DB-->>NB: rows / dataframe
 ```
-

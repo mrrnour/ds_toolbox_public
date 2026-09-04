@@ -1,7 +1,7 @@
 template1:
   db:  azure_synapse
   query: >+
-    (SELECT *                      
+    (SELECT *
     FROM xxx
     ) query
 
@@ -12,4 +12,3 @@ template2:
     from xxx
     where time between 'start___date'
       and 'end___date'
-

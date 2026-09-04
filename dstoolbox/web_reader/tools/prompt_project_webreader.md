@@ -485,5 +485,3 @@ Type hints on all function signatures. No inline comments that restate the code.
 - [ ] `pyproject.toml` has `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`
 - [ ] Re-running after crash resumes from last successful step (checkpoint)
 - [ ] README covers: Setup, Quick Start, Pipeline Steps, Config Reference, Output Files, Troubleshooting, Changelog
-
-
