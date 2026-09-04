@@ -4,8 +4,9 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 from . import params
 
@@ -148,6 +149,4 @@ def write_report(
 def check_input_size(path: str) -> None:
     size_mb = os.path.getsize(path) / (1024 * 1024)
     if size_mb > params.MAX_INPUT_MB:
-        sys.exit(
-            f"Error: input file {size_mb:.1f}MB exceeds limit of {params.MAX_INPUT_MB}MB"
-        )
+        sys.exit(f"Error: input file {size_mb:.1f}MB exceeds limit of {params.MAX_INPUT_MB}MB")

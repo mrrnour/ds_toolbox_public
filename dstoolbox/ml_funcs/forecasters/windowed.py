@@ -73,7 +73,7 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
         self.date_col = date_col
 
     # ------------------------------------------------------------------ fit
-    def fit(self, X: pd.DataFrame, y) -> "WindowedForecaster":
+    def fit(self, X: pd.DataFrame, y) -> WindowedForecaster:
         self.base_model.fit(X, y)
         self._fitted_ = True
         return self
@@ -161,11 +161,7 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
             )
         p = p.dropna(subset=["y_pred"]).sort_values([model_col, ts_col]).reset_index(drop=True)
 
-        w_source = (
-            pd.Series(weight_series).astype(float)
-            if weight_series is not None
-            else None
-        )
+        w_source = pd.Series(weight_series).astype(float) if weight_series is not None else None
         if w_source is not None:
             w_source.index = pd.to_datetime(w_source.index)
 
@@ -277,9 +273,7 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
         if window < 1:
             raise ValueError("window must be >= 1")
         if label not in {"start", "end", "center"}:
-            raise ValueError(
-                f"label must be one of 'start', 'end', 'center'; got {label!r}"
-            )
+            raise ValueError(f"label must be one of 'start', 'end', 'center'; got {label!r}")
 
         p = preds.copy()
         p[ts_col] = pd.to_datetime(p[ts_col])
@@ -288,9 +282,18 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
         p = p.dropna(subset=["y_pred"]).reset_index(drop=True)
 
         out_split = split if split is not None else "val"
-        cols = [model_col, "fold", "split", ts_col,
-                "window_start", "window_end",
-                "y_true", "y_pred", "y_lo", "y_hi"]
+        cols = [
+            model_col,
+            "fold",
+            "split",
+            ts_col,
+            "window_start",
+            "window_end",
+            "y_true",
+            "y_pred",
+            "y_lo",
+            "y_hi",
+        ]
 
         if p.empty:
             return pd.DataFrame(columns=cols)
@@ -327,18 +330,20 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
                     label_ts = ts[i + window - 1]
                 else:  # center
                     label_ts = ts[i + window // 2]
-                rows.append({
-                    model_col: g[model_col].iloc[0],
-                    "fold": int(g[fold_col].iloc[0]) if has_fold else 0,
-                    "split": out_split,
-                    ts_col: label_ts,
-                    "window_start": ts[i],
-                    "window_end": ts[i + window - 1],
-                    "y_true": float(np.average(y_true[i : i + window], weights=ww)),
-                    "y_pred": float(np.average(y_pred[i : i + window], weights=ww)),
-                    "y_lo": np.nan,
-                    "y_hi": np.nan,
-                })
+                rows.append(
+                    {
+                        model_col: g[model_col].iloc[0],
+                        "fold": int(g[fold_col].iloc[0]) if has_fold else 0,
+                        "split": out_split,
+                        ts_col: label_ts,
+                        "window_start": ts[i],
+                        "window_end": ts[i + window - 1],
+                        "y_true": float(np.average(y_true[i : i + window], weights=ww)),
+                        "y_pred": float(np.average(y_pred[i : i + window], weights=ww)),
+                        "y_lo": np.nan,
+                        "y_hi": np.nan,
+                    }
+                )
             return rows
 
         parts: list[dict] = []
@@ -364,21 +369,19 @@ class WindowedForecaster(BaseEstimator, RegressorMixin, IntervalMixin):
         ``fold`` column (added by :meth:`aggregate_preds` when the source
         preds had one), it flows through so per-fold panels stay meaningful.
         """
-        fold = (
-            rolling["fold"].astype(int).to_numpy()
-            if "fold" in rolling.columns
-            else 0
+        fold = rolling["fold"].astype(int).to_numpy() if "fold" in rolling.columns else 0
+        out = pd.DataFrame(
+            {
+                "model": rolling["model"],
+                "ts": pd.to_datetime(rolling["window_start"]),
+                "fold": fold,
+                "split": "val",
+                "y_true": rolling["obs"].astype(float),
+                "y_pred": rolling["fcst"].astype(float),
+                "y_lo": np.nan,
+                "y_hi": np.nan,
+            }
         )
-        out = pd.DataFrame({
-            "model": rolling["model"],
-            "ts": pd.to_datetime(rolling["window_start"]),
-            "fold": fold,
-            "split": "val",
-            "y_true": rolling["obs"].astype(float),
-            "y_pred": rolling["fcst"].astype(float),
-            "y_lo": np.nan,
-            "y_hi": np.nan,
-        })
         return out.reset_index(drop=True)
 
 

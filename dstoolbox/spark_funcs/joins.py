@@ -1,20 +1,18 @@
-import dstoolbox.io_funcs as io_funcs
-from dstoolbox import utils
-
 import pandas as pd
-import datetime as dt
-
-import pyspark.sql.functions as F
 import pyspark.sql.types as spk_dtp
-from pyspark.sql.window import Window
 
-from pyspark.sql import DataFrame as DataFrame_ps
-from typing import List
-def _asof_join(l, r, left_on, right_on, left_by, right_by,
-              tolerance=pd.Timedelta('600S'),
-               direction='forward',
-              **kwargs
-             ):
+
+def _asof_join(
+    l,
+    r,
+    left_on,
+    right_on,
+    left_by,
+    right_by,
+    tolerance=pd.Timedelta("600S"),
+    direction="forward",
+    **kwargs,
+):
     """Per-group as-of join helper that runs ``pd.merge_asof`` on two pandas frames.
 
     Internal helper wrapped by :func:`asof_join_spark2` and called inside
@@ -43,29 +41,34 @@ def _asof_join(l, r, left_on, right_on, left_by, right_by,
     """
     l[left_on] = pd.to_datetime(l[left_on])
     r[right_on] = pd.to_datetime(r[right_on])
-    
+
     l = l.sort_values(left_on)
     r = r.sort_values(right_on)
     r = r.dropna(subset=[right_on])
-    return pd.merge_asof(l, r,
-                         left_on=left_on,
-                         right_on=right_on,
-                         left_by=left_by,
-                         right_by=right_by,
-                         tolerance=tolerance,
-                         direction=direction,
-                        **kwargs)
-    
-def asof_join_spark2(df_left,
-                    df_right,
-                    left_on,
-                    right_on,
-                    left_by,
-                    right_by,
-                    tolerance=pd.Timedelta('600S'),
-                    direction='forward',
-                    **kwargs
-                ):
+    return pd.merge_asof(
+        l,
+        r,
+        left_on=left_on,
+        right_on=right_on,
+        left_by=left_by,
+        right_by=right_by,
+        tolerance=tolerance,
+        direction=direction,
+        **kwargs,
+    )
+
+
+def asof_join_spark2(
+    df_left,
+    df_right,
+    left_on,
+    right_on,
+    left_by,
+    right_by,
+    tolerance=pd.Timedelta("600S"),
+    direction="forward",
+    **kwargs,
+):
     """As-of join two Spark DataFrames using ``cogroup.applyInPandas``.
 
     Renames any common columns (with ``_left`` / ``_right`` suffixes or a
@@ -98,49 +101,57 @@ def asof_join_spark2(df_left,
     # left_on='event_time'
     # right_on='reading_time'
     # by="asset_id"
-    
+
     common_cols = list(set(df_left.columns).intersection(df_right.columns))
     print(f"Common_cols = {common_cols}")
-    
+
     for col in common_cols:
-      if 'suffixes' in kwargs:
-          df_left = df_left.withColumnRenamed(col, col+kwargs['suffixes'][0])
-          df_right = df_right.withColumnRenamed(col, col+kwargs['suffixes'][1])
-          if col==left_on:
-            left_on = col+kwargs['suffixes'][0]
-          if col==right_on:
-            right_on = col+kwargs['suffixes'][1]
-          if col==left_by:
-            left_by = col+kwargs['suffixes'][0]
-          if col==right_by:
-            right_by = col+kwargs['suffixes'][1]
-      
-      else:
-          df_left = df_left.withColumnRenamed(col, col+'_left')
-          df_right = df_right.withColumnRenamed(col, col+'_right')
-          if col==left_on:
-            left_on = col+'_left'
-          if col==right_on:
-            right_on = col+'_right'
-          if col==left_by:
-            left_by = col+'_left'
-          if col==right_by:
-            right_by = col+'_right'
-            
+        if "suffixes" in kwargs:
+            df_left = df_left.withColumnRenamed(col, col + kwargs["suffixes"][0])
+            df_right = df_right.withColumnRenamed(col, col + kwargs["suffixes"][1])
+            if col == left_on:
+                left_on = col + kwargs["suffixes"][0]
+            if col == right_on:
+                right_on = col + kwargs["suffixes"][1]
+            if col == left_by:
+                left_by = col + kwargs["suffixes"][0]
+            if col == right_by:
+                right_by = col + kwargs["suffixes"][1]
+
+        else:
+            df_left = df_left.withColumnRenamed(col, col + "_left")
+            df_right = df_right.withColumnRenamed(col, col + "_right")
+            if col == left_on:
+                left_on = col + "_left"
+            if col == right_on:
+                right_on = col + "_right"
+            if col == left_by:
+                left_by = col + "_left"
+            if col == right_by:
+                right_by = col + "_right"
+
     schema_left = [i for i in df_left.schema]
     schema_right = [i for i in df_right.schema]
 
-    NewSchema = spk_dtp.StructType(schema_left+schema_right)
-    df_left.sort(left_by,left_on)
-    df_right.sort(right_by,right_on)
+    NewSchema = spk_dtp.StructType(schema_left + schema_right)
+    df_left.sort(left_by, left_on)
+    df_right.sort(right_by, right_on)
 
     def asof_join_wrapped(l, r):
         """Closure passed to ``applyInPandas`` that captures the resolved keys."""
-        return _asof_join(l, r, left_on, right_on, left_by, right_by,
-                         tolerance=tolerance,
-                         direction=direction, **kwargs)
-    
+        return _asof_join(
+            l,
+            r,
+            left_on,
+            right_on,
+            left_by,
+            right_by,
+            tolerance=tolerance,
+            direction=direction,
+            **kwargs,
+        )
+
     left_grp = df_left.groupby(left_by)
     right_grp = df_right.groupby(right_by)
-    df_joined =left_grp.cogroup(right_grp).applyInPandas(asof_join_wrapped, schema=NewSchema)
+    df_joined = left_grp.cogroup(right_grp).applyInPandas(asof_join_wrapped, schema=NewSchema)
     return df_joined

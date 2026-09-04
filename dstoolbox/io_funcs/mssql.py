@@ -134,8 +134,7 @@ def mssql_table_check(tablename: str, target_id: str) -> bool:
         conn.close()
 
 
-def get_last_date_from_mssql_table(table_name: str, target_id: str,
-                                   date_column: str, logger=None):
+def get_last_date_from_mssql_table(table_name: str, target_id: str, date_column: str, logger=None):
     """Return the most recent value of ``date_column`` in an MSSQL table, or None.
 
     Parameters
@@ -216,16 +215,19 @@ def last_date(output_dict: dict, logger=None):
     location = output_dict["output_location"]
     if fmt == "MS_db":
         return get_last_date_from_mssql_table(
-            location, output_dict["target_id"], date_col, logger=logger,
+            location,
+            output_dict["target_id"],
+            date_col,
+            logger=logger,
         )
     if fmt == "parquet":
         return last_date_parquet(location, date_col, logger=logger)
     return None
 
 
-def load_parquet_between_dates(ufile: str, date_col: str,
-                               start_date: str = "2019-01-01",
-                               end_date: str = "2020-01-01") -> pd.DataFrame:
+def load_parquet_between_dates(
+    ufile: str, date_col: str, start_date: str = "2019-01-01", end_date: str = "2020-01-01"
+) -> pd.DataFrame:
     """Read a parquet file and return rows whose ``date_col`` falls in [start, end).
 
     Parameters
@@ -248,8 +250,9 @@ def load_parquet_between_dates(ufile: str, date_col: str,
     return df[(df[date_col] >= start) & (df[date_col] < end)]
 
 
-def update_output_specs(output_specs, year_range=None, month_step: int = 1,
-                        firstDate=None, lastDate=None, logger=None):
+def update_output_specs(
+    output_specs, year_range=None, month_step: int = 1, firstDate=None, lastDate=None, logger=None
+):
     """Annotate output specs with their last saved date and build a run-date list.
 
     For each spec, the helper looks up the most recent date already saved
@@ -311,8 +314,7 @@ def update_output_specs(output_specs, year_range=None, month_step: int = 1,
                     first_resolved = firstDate
             else:
                 first_resolved = (
-                    None if last_saved_date is None
-                    else last_saved_date + dt.timedelta(days=1)
+                    None if last_saved_date is None else last_saved_date + dt.timedelta(days=1)
                 )
 
             if warn_text and last_saved_date is not None:
@@ -390,7 +392,7 @@ def save_outputs(output_dict: dict, output_specs, logger=None) -> int:
             "Match output_list and return values of df_generator_func."
         )
 
-    for key_dfs, df in zip(output_dict["output_df_keys"], output_dict["dfs"]):
+    for key_dfs, df in zip(output_dict["output_df_keys"], output_dict["dfs"], strict=False):
         if df.size == 0:
             _log_or_print(logger, "Dataframe is empty")
             continue
@@ -426,9 +428,16 @@ def save_outputs(output_dict: dict, output_specs, logger=None) -> int:
     return 1
 
 
-def run_recursively(output_specs, df_generator_func, year_range=None,
-                    month_step: int = 1, firstDate=None, lastDate=None,
-                    logger=None, **kwargs):
+def run_recursively(
+    output_specs,
+    df_generator_func,
+    year_range=None,
+    month_step: int = 1,
+    firstDate=None,
+    lastDate=None,
+    logger=None,
+    **kwargs,
+):
     """Run ``df_generator_func`` over each month-slice and persist results.
 
     Parameters
@@ -482,13 +491,10 @@ def run_recursively(output_specs, df_generator_func, year_range=None,
                 f"Running {df_generator_func.__name__} for "
                 f"the period {start_date} to {end_date}...",
             )
-            output_dict = df_generator_func(
-                start_date, end_date, logger=logger, **gen_kwargs
-            )
+            output_dict = df_generator_func(start_date, end_date, logger=logger, **gen_kwargs)
             save_outputs(output_dict, output_specs2, logger=logger)
     except Exception as e:
         _log_or_print(
             logger,
-            f"***Running function {df_generator_func.__name__} failed: "
-            f"\n\t\t {e}",
+            f"***Running function {df_generator_func.__name__} failed: " f"\n\t\t {e}",
         )

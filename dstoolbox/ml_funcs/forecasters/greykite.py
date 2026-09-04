@@ -12,7 +12,9 @@ from ..mixins import ComponentsMixin, IntervalMixin
 from ._base import as_datetime_index, horizon_to_cover, infer_freq, train_series
 
 _gk_fc = optional_import("greykite.framework.templates.forecaster", "SilverkiteSklearn")
-_gk_cfg = optional_import("greykite.framework.templates.autogen.forecast_config", "SilverkiteSklearn")
+_gk_cfg = optional_import(
+    "greykite.framework.templates.autogen.forecast_config", "SilverkiteSklearn"
+)
 _gk_const = optional_import("greykite.common.constants", "SilverkiteSklearn")
 
 
@@ -69,11 +71,13 @@ class SilverkiteSklearn(BaseEstimator, RegressorMixin, IntervalMixin, Components
         if self.holiday_countries:
             # greykite expects ``events`` as a plain dict; there is no typed
             # EventsConfig class in this release.
-            components = _gk_cfg.ModelComponentsParam(events={
-                "holiday_lookup_countries": self.holiday_countries,
-                "holiday_pre_num_days": self.holiday_pre_num_days,
-                "holiday_post_num_days": self.holiday_post_num_days,
-            })
+            components = _gk_cfg.ModelComponentsParam(
+                events={
+                    "holiday_lookup_countries": self.holiday_countries,
+                    "holiday_pre_num_days": self.holiday_pre_num_days,
+                    "holiday_post_num_days": self.holiday_post_num_days,
+                }
+            )
         return _gk_cfg.ForecastConfig(
             model_template="SILVERKITE",
             forecast_horizon=horizon,
@@ -83,14 +87,16 @@ class SilverkiteSklearn(BaseEstimator, RegressorMixin, IntervalMixin, Components
             **self.forecast_config_kwargs,
         )
 
-    def fit(self, X: pd.DataFrame, y) -> "SilverkiteSklearn":
+    def fit(self, X: pd.DataFrame, y) -> SilverkiteSklearn:
         series = train_series(X, y, self.date_col)
         self._freq_ = self.freq or infer_freq(series.index)
         self._last_train_ = series.index.max()
-        self._train_df_ = pd.DataFrame({
-            _gk_const.TIME_COL: series.index,
-            _gk_const.VALUE_COL: series.to_numpy(),
-        })
+        self._train_df_ = pd.DataFrame(
+            {
+                _gk_const.TIME_COL: series.index,
+                _gk_const.VALUE_COL: series.to_numpy(),
+            }
+        )
 
         self._forecaster_ = _gk_fc.Forecaster()
         self._result_ = self._forecaster_.run_forecast_config(

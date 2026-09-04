@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
-
 from dstoolbox.utils.lists import (
     flatten_list,
     regex_filter_list,

@@ -26,10 +26,10 @@ import os
 import re
 import sys
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 
 import requests
@@ -37,7 +37,6 @@ from tqdm import tqdm
 
 from . import params, utils
 from .utils import PipelineRecord, record_to_dict, save_jsonl, setup_logger
-
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -95,7 +94,7 @@ class ScrapeConfig:
 # === input ===
 def items_from_file(path: Path) -> tuple[list[dict], str]:
     """Read URLs from a text file. Blank lines and lines starting with `#` are skipped.
-    
+
     Special metadata comment: `# @folder_path: subfolder/nested` sets folder path for next URL.
     """
     if not path.exists():
@@ -103,7 +102,7 @@ def items_from_file(path: Path) -> tuple[list[dict], str]:
     utils.check_input_size(str(path))
     items: list[dict] = []
     current_folder_path = ""
-    
+
     for raw in path.read_text(encoding="utf-8").splitlines():
         ln = raw.strip()
         if not ln:
@@ -113,12 +112,12 @@ def items_from_file(path: Path) -> tuple[list[dict], str]:
             if ln.startswith("# @folder_path:"):
                 current_folder_path = ln.split("# @folder_path:", 1)[1].strip()
             continue
-        
+
         item = {"url": ln}
         if current_folder_path:
             item["folder_path"] = current_folder_path
         items.append(item)
-    
+
     return items, f"file {path}"
 
 
@@ -149,7 +148,7 @@ def _retry_delay(headers: dict, attempt: int) -> float:
     try:
         return max(1.0, float(ra))
     except (ValueError, TypeError):
-        return 2.0 ** attempt
+        return 2.0**attempt
 
 
 # === fetcher factories — each builds a closure that holds backend-specific state ===
@@ -221,7 +220,7 @@ def process_one(item: dict, cfg: ScrapeConfig, fetcher: Fetcher) -> PipelineReco
     name = item.get("name", "")
     folder_path = item.get("folder_path", "")  # From @folder_path metadata
     ts = dt.datetime.now().isoformat()
-    
+
     # Build base data dict with optional folder_path
     base_data = {"name": name, "depth": 0, "scraped_at": ts}
     if folder_path:
@@ -266,12 +265,14 @@ def process_one(item: dict, cfg: ScrapeConfig, fetcher: Fetcher) -> PipelineReco
     else:
         file_path.write_bytes(res.body)
 
-    base_data.update({
-        "file_path": str(file_path),
-        "status_code": res.status_code,
-        "content_length": len(res.body),
-        "content_type": res.content_type,
-    })
+    base_data.update(
+        {
+            "file_path": str(file_path),
+            "status_code": res.status_code,
+            "content_length": len(res.body),
+            "content_type": res.content_type,
+        }
+    )
     return PipelineRecord.ok(
         id=url,
         data=base_data,
@@ -319,16 +320,20 @@ def run(args: argparse.Namespace, logger: logging.Logger | None = None) -> int:
 
     started = dt.datetime.now().isoformat(timespec="seconds")
     if cfg.fetcher == "requests":
-        fetcher = make_requests_fetcher(RequestsFetcherConfig(
-            timeout_s=args.timeout_s,
-            max_retries=args.max_retries,
-        ))
+        fetcher = make_requests_fetcher(
+            RequestsFetcherConfig(
+                timeout_s=args.timeout_s,
+                max_retries=args.max_retries,
+            )
+        )
     elif cfg.fetcher == "stealthy":
-        fetcher = make_stealthy_fetcher(StealthyFetcherConfig(
-            timeout_ms=args.timeout_ms,
-            headless=args.headless,
-            network_idle=args.network_idle,
-        ))
+        fetcher = make_stealthy_fetcher(
+            StealthyFetcherConfig(
+                timeout_ms=args.timeout_ms,
+                headless=args.headless,
+                network_idle=args.network_idle,
+            )
+        )
     else:
         sys.exit(f"Unknown fetcher: {cfg.fetcher}")
     records: list[PipelineRecord] = []
@@ -380,39 +385,92 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Scrape URLs (one per line in a text file) to raw bytes."
     )
-    p.add_argument("urls_file", nargs="?", default=str(params.URLS_PATH),
-                   help=f"Text file with one URL per line; # comments OK (default: {params.URLS_PATH})")
+    p.add_argument(
+        "urls_file",
+        nargs="?",
+        default=str(params.URLS_PATH),
+        help=f"Text file with one URL per line; # comments OK (default: {params.URLS_PATH})",
+    )
 
     f = p.add_argument_group("fetcher")
-    f.add_argument("--fetcher", choices=list(FETCHERS), default=params.DEFAULT_FETCHER,
-                   help=f"Backend (default: {params.DEFAULT_FETCHER})")
-    f.add_argument("--timeout-s", type=int, default=params.REQUEST_TIMEOUT,
-                   help=f"requests timeout in seconds (default: {params.REQUEST_TIMEOUT})")
-    f.add_argument("--timeout-ms", type=int, default=params.STEALTHY_TIMEOUT_MS,
-                   help=f"stealthy timeout in ms (default: {params.STEALTHY_TIMEOUT_MS})")
-    f.add_argument("--max-workers", type=int, default=params.MAX_WORKERS,
-                   help=f"parallel workers (clamped to 1 for stealthy; default: {params.MAX_WORKERS})")
-    f.add_argument("--max-retries", type=int, default=params.MAX_RETRIES,
-                   help=f"requests 429 retries (default: {params.MAX_RETRIES})")
-    f.add_argument("--delay", type=float, default=params.REQUEST_DELAY,
-                   help="Sleep N seconds before each fetch (default: 0)")
+    f.add_argument(
+        "--fetcher",
+        choices=list(FETCHERS),
+        default=params.DEFAULT_FETCHER,
+        help=f"Backend (default: {params.DEFAULT_FETCHER})",
+    )
+    f.add_argument(
+        "--timeout-s",
+        type=int,
+        default=params.REQUEST_TIMEOUT,
+        help=f"requests timeout in seconds (default: {params.REQUEST_TIMEOUT})",
+    )
+    f.add_argument(
+        "--timeout-ms",
+        type=int,
+        default=params.STEALTHY_TIMEOUT_MS,
+        help=f"stealthy timeout in ms (default: {params.STEALTHY_TIMEOUT_MS})",
+    )
+    f.add_argument(
+        "--max-workers",
+        type=int,
+        default=params.MAX_WORKERS,
+        help=f"parallel workers (clamped to 1 for stealthy; default: {params.MAX_WORKERS})",
+    )
+    f.add_argument(
+        "--max-retries",
+        type=int,
+        default=params.MAX_RETRIES,
+        help=f"requests 429 retries (default: {params.MAX_RETRIES})",
+    )
+    f.add_argument(
+        "--delay",
+        type=float,
+        default=params.REQUEST_DELAY,
+        help="Sleep N seconds before each fetch (default: 0)",
+    )
 
     st = p.add_argument_group("stealthy-only")
-    st.add_argument("--headless",        dest="headless",     action="store_true",  default=params.HEADLESS, help="Run browser headless (default)")
-    st.add_argument("--no-headless",     dest="headless",     action="store_false", help="Show browser window")
-    st.add_argument("--network-idle",    dest="network_idle", action="store_true",  default=params.NETWORK_IDLE, help="Wait for network idle (default)")
-    st.add_argument("--no-network-idle", dest="network_idle", action="store_false", help="Don't wait for network idle")
+    st.add_argument(
+        "--headless",
+        dest="headless",
+        action="store_true",
+        default=params.HEADLESS,
+        help="Run browser headless (default)",
+    )
+    st.add_argument(
+        "--no-headless", dest="headless", action="store_false", help="Show browser window"
+    )
+    st.add_argument(
+        "--network-idle",
+        dest="network_idle",
+        action="store_true",
+        default=params.NETWORK_IDLE,
+        help="Wait for network idle (default)",
+    )
+    st.add_argument(
+        "--no-network-idle",
+        dest="network_idle",
+        action="store_false",
+        help="Don't wait for network idle",
+    )
 
     out = p.add_argument_group("output")
-    out.add_argument("-o", "--output", default=str(params.CRAWLING_SUMMARY_PATH),
-                     help="JSONL summary path")
-    out.add_argument("--html-dir", default=str(params.HTML_DIR),
-                     help="Directory for saved payloads")
+    out.add_argument(
+        "-o", "--output", default=str(params.CRAWLING_SUMMARY_PATH), help="JSONL summary path"
+    )
+    out.add_argument(
+        "--html-dir", default=str(params.HTML_DIR), help="Directory for saved payloads"
+    )
 
     pl = p.add_argument_group("pipeline")
     pl.add_argument("--limit", type=int, default=0, help="Stop after N URLs (0=no limit)")
-    pl.add_argument("--overwrite", action="store_true", default=params.OVERWRITE,
-                    help="Re-fetch even if a file with the same hash exists")
+    pl.add_argument(
+        "--overwrite",
+        action="store_true",
+        default=params.OVERWRITE,
+        help="Re-fetch even if a file with the same hash exists",
+    )
     pl.add_argument("--list-only", action="store_true", help="Print URLs and exit (preview)")
     pl.add_argument("--verbose", action="store_true", help="DEBUG logging")
     return p

@@ -430,7 +430,10 @@ def _studentised_delta(units: _Units, left: np.ndarray, right: np.ndarray, varia
 
 
 def _permutation_p(
-    control: _Arm, treatment: _Arm, spec: _TestSpec, rng: np.random.Generator,
+    control: _Arm,
+    treatment: _Arm,
+    spec: _TestSpec,
+    rng: np.random.Generator,
 ) -> float:
     """Two-sided p-value from permuting whole clusters between arms.
 
@@ -484,9 +487,7 @@ def _bootstrap_t_ci(
         ``(low, high)`` at level ``1 - alpha``.
     """
     delta = treatment.mean - control.mean
-    se = float(
-        np.sqrt(_pick(control, spec.variance)[0] + _pick(treatment, spec.variance)[0])
-    )
+    se = float(np.sqrt(_pick(control, spec.variance)[0] + _pick(treatment, spec.variance)[0]))
     pivots = np.empty(spec.n_boot, dtype=float)
     for draw in range(spec.n_boot):
         mean_c, var_c = _subset_stats(
@@ -541,9 +542,7 @@ def _assemble(
         mean_control=control.mean,
         mean_treatment=treatment.mean,
         delta_mean=delta,
-        delta_rel_pct=(
-            100.0 * delta / control.mean if control.mean != 0.0 else float("nan")
-        ),
+        delta_rel_pct=(100.0 * delta / control.mean if control.mean != 0.0 else float("nan")),
         n_control=control.n,
         n_treatment=treatment.n,
         n_clusters_control=control.n_clusters,
@@ -683,9 +682,7 @@ def delta_method_two_sample(
         mean_control=control.mean,
         mean_treatment=treatment.mean,
         delta_mean=delta,
-        delta_rel_pct=(
-            100.0 * delta / control.mean if control.mean != 0.0 else float("nan")
-        ),
+        delta_rel_pct=(100.0 * delta / control.mean if control.mean != 0.0 else float("nan")),
         n_control=control.n,
         n_treatment=treatment.n,
         n_clusters_control=control.n_clusters,
@@ -739,12 +736,14 @@ def student_t_two_sample(
     control = _prepare_arm(y_control, cluster_control, "control")
     treatment = _prepare_arm(y_treatment, cluster_treatment, "treatment")
     dof = control.n + treatment.n - 2
-    pooled_var = (
-        (control.n - 1) * control.raw_var + (treatment.n - 1) * treatment.raw_var
-    ) / dof
+    pooled_var = ((control.n - 1) * control.raw_var + (treatment.n - 1) * treatment.raw_var) / dof
     se = float(np.sqrt(pooled_var * (1.0 / control.n + 1.0 / treatment.n)))
     return _assemble(
-        control, treatment, spec, se=se, dof=float(dof),
+        control,
+        treatment,
+        spec,
+        se=se,
+        dof=float(dof),
         method="Student t-test (pooled)",
     )
 

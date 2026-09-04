@@ -2,7 +2,7 @@
 
 from importlib import resources as res
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import yaml
 
@@ -10,6 +10,7 @@ import yaml
 def get_spark():
     """Return ``(SparkSession, SQLContext)`` for the active session."""
     import pyspark
+
     spark = pyspark.sql.SparkSession.builder.getOrCreate()
     sql_context = pyspark.SQLContext(spark.sparkContext)
     return spark, sql_context
@@ -18,10 +19,11 @@ def get_spark():
 def get_dbutils():
     """Return the Databricks ``dbutils`` handle from the active IPython kernel."""
     import IPython
+
     return IPython.get_ipython().user_ns["dbutils"]
 
 
-def load_config(custom_config: Optional[Union[Dict[str, Any], str]] = None) -> Dict[str, Any]:
+def load_config(custom_config: dict[str, Any] | str | None = None) -> dict[str, Any]:
     """Load the dstoolbox configuration.
 
     Parameters

@@ -27,17 +27,14 @@ def engine(ds: Any, **engine_kwargs: Any) -> Any:
 
     if isinstance(ds, (MSSQLDataSource, SynapseDataSource)):
         from urllib.parse import quote_plus
+
         params = quote_plus(ds.odbc_connection_string)
-        return create_engine(
-            f"mssql+pyodbc:///?odbc_connect={params}", **engine_kwargs
-        )
+        return create_engine(f"mssql+pyodbc:///?odbc_connect={params}", **engine_kwargs)
 
     if isinstance(ds, PostgresDataSource):
         return create_engine(ds.sqlalchemy_url, **engine_kwargs)
 
-    raise TypeError(
-        f"db.engine: no SQLAlchemy engine path for {type(ds).__name__}"
-    )
+    raise TypeError(f"db.engine: no SQLAlchemy engine path for {type(ds).__name__}")
 
 
 def pyodbc_connection(ds: Any) -> Any:
@@ -47,10 +44,10 @@ def pyodbc_connection(ds: Any) -> Any:
     """
     if not isinstance(ds, (MSSQLDataSource, SynapseDataSource)):
         raise TypeError(
-            f"db.pyodbc_connection: expected MSSQL/Synapse DataSource, "
-            f"got {type(ds).__name__}"
+            f"db.pyodbc_connection: expected MSSQL/Synapse DataSource, " f"got {type(ds).__name__}"
         )
     import pyodbc
+
     return pyodbc.connect(ds.odbc_connection_string)
 
 
@@ -58,10 +55,10 @@ def psycopg2_connection(ds: Any) -> Any:
     """Open a psycopg2 connection from a ``PostgresDataSource``."""
     if not isinstance(ds, PostgresDataSource):
         raise TypeError(
-            f"db.psycopg2_connection: expected PostgresDataSource, "
-            f"got {type(ds).__name__}"
+            f"db.psycopg2_connection: expected PostgresDataSource, " f"got {type(ds).__name__}"
         )
     import psycopg2
+
     kwargs = dict(
         host=ds.host,
         port=ds.port,

@@ -151,16 +151,21 @@ def plot_series(
             sd = s[value_col].rolling(window, min_periods=max(2, window // 2)).std(ddof=0)
             fig.add_trace(
                 go.Scatter(
-                    x=s[date_col], y=mu + coef * sd, mode="lines",
+                    x=s[date_col],
+                    y=mu + coef * sd,
+                    mode="lines",
                     line={"color": "black", "width": 1, "dash": "dot"},
                     name=f"UCL (rolling, {coef}σ, w={window})",
                 )
             )
             fig.add_trace(
                 go.Scatter(
-                    x=s[date_col], y=mu - coef * sd, mode="lines",
+                    x=s[date_col],
+                    y=mu - coef * sd,
+                    mode="lines",
                     line={"color": "black", "width": 1, "dash": "dot"},
-                    fill="tonexty", fillcolor="rgba(0,0,0,0.06)",
+                    fill="tonexty",
+                    fillcolor="rgba(0,0,0,0.06)",
                     name=f"LCL (rolling, {coef}σ, w={window})",
                 )
             )
@@ -168,8 +173,10 @@ def plot_series(
             base = _baseline_series(df_ts, date_col, value_col, baseline, intervention_date)
             lcl, mu, ucl = _fit_control_limits(base, method=method, coef=coef)
             label = "I-MR" if method == "imr" else f"{coef}σ"
-            base_tag = " (baseline=pre)" if baseline == "pre" else (
-                " (baseline=window)" if baseline else ""
+            base_tag = (
+                " (baseline=pre)"
+                if baseline == "pre"
+                else (" (baseline=window)" if baseline else "")
             )
             for y, name, color in [
                 (ucl, f"UCL {label}{base_tag}", "black"),
@@ -177,14 +184,18 @@ def plot_series(
                 (lcl, f"LCL {label}{base_tag}", "black"),
             ]:
                 fig.add_hline(
-                    y=y, line_dash="dash", line_color=color,
-                    annotation_text=name, annotation_position="top right",
+                    y=y,
+                    line_dash="dash",
+                    line_color=color,
+                    annotation_text=name,
+                    annotation_position="top right",
                 )
     if intervention_date is not None:
         intervention_colors = ("blue", "red", "black", "green", "purple", "darkorange")
         for i, ev in enumerate(_as_intervention_list(intervention_date)):
             fig.add_vline(
-                x=ev, line_dash="dash",
+                x=ev,
+                line_dash="dash",
                 line_color=intervention_colors[i % len(intervention_colors)],
             )
     anomaly_colors = ("orange", "purple", "teal", "brown", "magenta", "olive")
@@ -278,10 +289,20 @@ def plot_paired_acf(
     fig = go.Figure()
     fig.add_trace(go.Bar(x=lags, y=y_a, name=labels[0], marker_color=colors[0], opacity=0.7))
     fig.add_trace(go.Bar(x=lags, y=y_b, name=labels[1], marker_color=colors[1], opacity=0.7))
-    fig.add_hline(y=ci, line_dash="dot", line_color="grey",
-                  annotation_text=f"+{ci:.2f}", annotation_position="right")
-    fig.add_hline(y=-ci, line_dash="dot", line_color="grey",
-                  annotation_text=f"-{ci:.2f}", annotation_position="right")
+    fig.add_hline(
+        y=ci,
+        line_dash="dot",
+        line_color="grey",
+        annotation_text=f"+{ci:.2f}",
+        annotation_position="right",
+    )
+    fig.add_hline(
+        y=-ci,
+        line_dash="dot",
+        line_color="grey",
+        annotation_text=f"-{ci:.2f}",
+        annotation_position="right",
+    )
     fig.add_hline(y=0, line_color="black", line_width=0.5)
     fig.update_layout(
         title=dict(text=title, font=dict(size=15)),
@@ -323,17 +344,25 @@ def plot_prewhitening_diagnostic(
     x_whit = np.arange(orig.size - whit.size, orig.size)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=x_orig, y=orig.tolist(), mode="lines",
-        name=f"{label} (original)",
-        line=dict(color=color, width=1.5),
-    ))
-    fig.add_trace(go.Scatter(
-        x=x_whit, y=whit.tolist(), mode="lines",
-        name=f"{label} (whitened)",
-        line=dict(color=color, width=1.5, dash="dot"),
-        opacity=0.7,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=x_orig,
+            y=orig.tolist(),
+            mode="lines",
+            name=f"{label} (original)",
+            line=dict(color=color, width=1.5),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x_whit,
+            y=whit.tolist(),
+            mode="lines",
+            name=f"{label} (whitened)",
+            line=dict(color=color, width=1.5, dash="dot"),
+            opacity=0.7,
+        )
+    )
     fig.update_layout(
         title=dict(text=title, font=dict(size=14)),
         xaxis_title="index",
@@ -361,7 +390,9 @@ def plot_per_day_delta_bar(
     is applied; slope already implies per-step.
     """
     fig = px.bar(
-        per_day_df, x=x_col, y=y_col,
+        per_day_df,
+        x=x_col,
+        y=y_col,
         title=title,
         labels={x_col: x_label, y_col: y_label},
     )
@@ -417,21 +448,27 @@ def plot_vbh_per_season(
 
     n_arms = len(arms)
     fig = make_subplots(
-        rows=n_arms, cols=1,
-        shared_xaxes=True, vertical_spacing=0.22,
+        rows=n_arms,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.22,
         subplot_titles=subplot_titles,
     )
     for row, (_, d) in enumerate(arms, start=1):
         df = d.per_season
         colors = [positive_color if s >= 0 else negative_color for s in df["S"]]
-        text = [f"S={s:+.0f}<br>Z={z:+.2f}" for s, z in zip(df["S"], df["Z"])]
+        text = [f"S={s:+.0f}<br>Z={z:+.2f}" for s, z in zip(df["S"], df["Z"], strict=False)]
         fig.add_trace(
             go.Bar(
-                x=df["label"], y=df["S"],
-                text=text, textposition="outside",
-                marker_color=colors, showlegend=False,
+                x=df["label"],
+                y=df["S"],
+                text=text,
+                textposition="outside",
+                marker_color=colors,
+                showlegend=False,
             ),
-            row=row, col=1,
+            row=row,
+            col=1,
         )
         fig.add_hline(y=0, line_dash="dot", line_color="grey", row=row, col=1)
         fig.update_yaxes(title_text="per-season MK statistic S_g", row=row, col=1)
@@ -493,7 +530,10 @@ def plot_stl_decomposition(
     x = df.index
 
     fig = make_subplots(
-        rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.04,
+        rows=4,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.04,
         subplot_titles=("observed", "trend", "seasonal", "residual"),
     )
     fig.add_trace(go.Scatter(x=x, y=df["observed"], mode="lines", name="observed"), row=1, col=1)
@@ -502,7 +542,8 @@ def plot_stl_decomposition(
     fig.add_trace(go.Bar(x=x, y=df["resid"], name="residual"), row=4, col=1)
     fig.add_hline(y=0, row=4, col=1, line_color="grey", line_width=1)
     fig.update_layout(
-        height=700, showlegend=False,
+        height=700,
+        showlegend=False,
         title=title or f"STL decomposition (period={period})",
         template="plotly_white",
     )
@@ -538,7 +579,8 @@ def plot_residual_diagnostics(
         lags = min(40, max(5, n // 3))
 
     fig = make_subplots(
-        rows=2, cols=2,
+        rows=2,
+        cols=2,
         subplot_titles=(
             "Standardized residuals",
             "Histogram + KDE + N(0,1)",
@@ -548,46 +590,57 @@ def plot_residual_diagnostics(
     )
     fig.add_trace(
         go.Scatter(
-            y=r_std, mode="lines+markers", name="resid_std",
+            y=r_std,
+            mode="lines+markers",
+            name="resid_std",
             marker={"size": 4, "color": "#4C78A8"},
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
     fig.add_hline(y=0, row=1, col=1, line_color="grey", line_width=1)
 
     fig.add_trace(
-        go.Histogram(x=r_std, histnorm="probability density",
-                     name="hist", opacity=0.6),
-        row=1, col=2,
+        go.Histogram(x=r_std, histnorm="probability density", name="hist", opacity=0.6),
+        row=1,
+        col=2,
     )
     try:
         kde = stats.gaussian_kde(r_std)
         grid = np.linspace(float(r_std.min()), float(r_std.max()), 200)
         fig.add_trace(
-            go.Scatter(x=grid, y=kde(grid), mode="lines", name="KDE",
-                       line={"color": "#F58518"}),
-            row=1, col=2,
+            go.Scatter(x=grid, y=kde(grid), mode="lines", name="KDE", line={"color": "#F58518"}),
+            row=1,
+            col=2,
         )
     except Exception:
         pass
     xg = np.linspace(-4, 4, 200)
     fig.add_trace(
-        go.Scatter(x=xg, y=stats.norm.pdf(xg), mode="lines", name="N(0,1)",
-                   line={"color": "grey", "dash": "dot"}),
-        row=1, col=2,
+        go.Scatter(
+            x=xg,
+            y=stats.norm.pdf(xg),
+            mode="lines",
+            name="N(0,1)",
+            line={"color": "grey", "dash": "dot"},
+        ),
+        row=1,
+        col=2,
     )
 
     osm, osr = stats.probplot(r_std, dist="norm", fit=False)
     fig.add_trace(
-        go.Scatter(x=osm, y=osr, mode="markers", name="qq",
-                   marker={"size": 5, "color": "#4C78A8"}),
-        row=2, col=1,
+        go.Scatter(x=osm, y=osr, mode="markers", name="qq", marker={"size": 5, "color": "#4C78A8"}),
+        row=2,
+        col=1,
     )
     lo, hi = float(osm.min()), float(osm.max())
     fig.add_trace(
-        go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines", name="ref",
-                   line={"color": "grey", "dash": "dot"}),
-        row=2, col=1,
+        go.Scatter(
+            x=[lo, hi], y=[lo, hi], mode="lines", name="ref", line={"color": "grey", "dash": "dot"}
+        ),
+        row=2,
+        col=1,
     )
 
     # Skip lag 0 (always == 1 by definition, carries no information and
@@ -599,8 +652,7 @@ def plot_residual_diagnostics(
     fig.add_hline(y=ci, row=2, col=2, line_dash="dot", line_color="grey")
     fig.add_hline(y=-ci, row=2, col=2, line_dash="dot", line_color="grey")
 
-    fig.update_layout(height=700, showlegend=False, title=title,
-                      template="plotly_white")
+    fig.update_layout(height=700, showlegend=False, title=title, template="plotly_white")
     return fig
 
 
@@ -609,6 +661,7 @@ def plot_residual_diagnostics(
 # Not part of the trend_analysis vendor slice; retained so downstream users
 # that import `plot_eda_overview` / `plot_ccf` / `lag_plot` don't break.
 # ---------------------------------------------------------------------------
+
 
 def plot_eda_overview(
     df: pd.DataFrame, date_col: str, value_col: str, rolling: int = 14
@@ -645,20 +698,19 @@ def plot_ccf(x, y, lags: int = 40, title: str = "Cross-correlation") -> go.Figur
     ks = np.arange(rho.size)
 
     fig = go.Figure()
-    for k, r in zip(ks, rho):
+    for k, r in zip(ks, rho, strict=False):
         fig.add_trace(
-            go.Scatter(x=[k, k], y=[0, r], mode="lines",
-                       line={"color": "#6F43D6"}, showlegend=False)
+            go.Scatter(
+                x=[k, k], y=[0, r], mode="lines", line={"color": "#6F43D6"}, showlegend=False
+            )
         )
     fig.add_trace(
-        go.Scatter(x=ks, y=rho, mode="markers",
-                   marker={"color": "#6F43D6", "size": 6}, name="CCF")
+        go.Scatter(x=ks, y=rho, mode="markers", marker={"color": "#6F43D6", "size": 6}, name="CCF")
     )
     fig.add_hline(y=ci, line_dash="dot", line_color="grey")
     fig.add_hline(y=-ci, line_dash="dot", line_color="grey")
     fig.add_hline(y=0, line_color="grey", line_width=1)
-    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="CCF",
-                      template="plotly_white")
+    fig.update_layout(title=title, xaxis_title="lag", yaxis_title="CCF", template="plotly_white")
     return fig
 
 

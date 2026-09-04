@@ -6,8 +6,8 @@ import pytest
 
 import dstoolbox.web_reader.tools.bookmarks_to_urls as b2u
 
-
 # === pure tree helpers ===
+
 
 def test_collect_urls_recursion_level():
     folder = {
@@ -16,11 +16,15 @@ def test_collect_urls_recursion_level():
         "children": [
             {"type": "url", "url": "https://a.example/1", "name": "1"},
             {
-                "type": "folder", "id": "2", "name": "sub",
+                "type": "folder",
+                "id": "2",
+                "name": "sub",
                 "children": [
                     {"type": "url", "url": "https://a.example/sub1", "name": "sub1"},
                     {
-                        "type": "folder", "id": "3", "name": "subsub",
+                        "type": "folder",
+                        "id": "3",
+                        "name": "subsub",
                         "children": [
                             {"type": "url", "url": "https://a.example/ss1", "name": "ss1"},
                         ],
@@ -81,6 +85,7 @@ def test_load_folder_by_name_duplicate_exits(tmp_path):
 
 # === render ===
 
+
 def test_render_writes_name_comment_above_url():
     items = [
         {"url": "https://a/1", "name": "First post"},
@@ -116,6 +121,7 @@ def test_render_empty_folder():
 
 # === scraper integration: the rendered file must round-trip through items_from_file ===
 
+
 def test_rendered_file_feeds_into_scraper(tmp_path):
     from dstoolbox.web_reader import scraper
 
@@ -133,6 +139,7 @@ def test_rendered_file_feeds_into_scraper(tmp_path):
 
 
 # === CLI ===
+
 
 def test_cli_requires_folder_selector_or_list():
     parser = b2u.build_parser()

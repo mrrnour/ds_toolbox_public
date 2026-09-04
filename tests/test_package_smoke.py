@@ -62,10 +62,11 @@ def test_ml_funcs_exceptions_importable():
 
 
 def test_custom_print_emits_deprecation_warning():
+    import warnings
+
+    import dstoolbox.utils.logging_utils as lu
     from dstoolbox.utils import custom_print
     from dstoolbox.utils.logging_utils import _DEPRECATION_EMITTED  # noqa: F401
-    import warnings
-    import dstoolbox.utils.logging_utils as lu
 
     # Reset the module-level guard so this test is order-independent.
     lu._DEPRECATION_EMITTED = False

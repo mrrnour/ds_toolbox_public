@@ -47,86 +47,86 @@ def strip_sql_comments(text, *, drop_blank_lines=True):
     state = None  # None | '-' | '--' | '/' | '/*' | '/**' | '"' | "'" | '"\\' | "'\\"
     for c in text:
         if state is None:
-            if c in '"\'':
+            if c in "\"'":
                 out.append(c)
                 state = c
-            elif c == '-':
+            elif c == "-":
                 # Might be the first '-' of '--'. Buffer decision until next char.
-                state = '-'
-            elif c == '/':
+                state = "-"
+            elif c == "/":
                 # Might be the first '/' of '/*'. Buffer decision until next char.
-                state = '/'
+                state = "/"
             else:
                 out.append(c)
-        elif state == '-':
-            if c == '-':
+        elif state == "-":
+            if c == "-":
                 # Confirmed '--' line comment; do not emit either dash.
-                state = '--'
+                state = "--"
             else:
                 # Not a comment after all; emit the buffered dash then handle c.
-                out.append('-')
+                out.append("-")
                 state = None
                 # Re-dispatch this char through the default branch.
-                if c in '"\'':
+                if c in "\"'":
                     out.append(c)
                     state = c
-                elif c == '-':
-                    state = '-'
-                elif c == '/':
-                    state = '/'
+                elif c == "-":
+                    state = "-"
+                elif c == "/":
+                    state = "/"
                 else:
                     out.append(c)
-        elif state == '--':
+        elif state == "--":
             # Inside line comment: drop chars until newline (emit the newline).
-            if c == '\n':
+            if c == "\n":
                 out.append(c)
                 state = None
-        elif state == '/':
-            if c == '*':
+        elif state == "/":
+            if c == "*":
                 # Confirmed '/*' block comment; do not emit the slash or star.
-                state = '/*'
+                state = "/*"
             else:
-                out.append('/')
+                out.append("/")
                 state = None
-                if c in '"\'':
+                if c in "\"'":
                     out.append(c)
                     state = c
-                elif c == '-':
-                    state = '-'
-                elif c == '/':
-                    state = '/'
+                elif c == "-":
+                    state = "-"
+                elif c == "/":
+                    state = "/"
                 else:
                     out.append(c)
-        elif state == '/*':
-            if c == '*':
-                state = '/**'
-        elif state == '/**':
-            if c == '/':
+        elif state == "/*":
+            if c == "*":
+                state = "/**"
+        elif state == "/**":
+            if c == "/":
                 state = None
-            elif c != '*':
-                state = '/*'
-        elif state[0] in '"\'':
+            elif c != "*":
+                state = "/*"
+        elif state[0] in "\"'":
             # Inside a string literal — always emit, watch for terminator.
             out.append(c)
-            if state.endswith('\\'):
+            if state.endswith("\\"):
                 # Previous char was a backslash; consume this char literally.
                 state = state[0]
-            elif c == '\\':
-                state = state[0] + '\\'
+            elif c == "\\":
+                state = state[0] + "\\"
             elif c == state[0]:
                 state = None
         else:
             raise ValueError(f"Illegal state {state!r} while stripping SQL comments")
 
     # Flush any trailing buffered single char (unmatched leading '-' or '/').
-    if state == '-':
-        out.append('-')
-    elif state == '/':
-        out.append('/')
+    if state == "-":
+        out.append("-")
+    elif state == "/":
+        out.append("/")
 
-    result = ''.join(out)
+    result = "".join(out)
     if drop_blank_lines:
-        result = '\n'.join(line for line in result.splitlines() if line.strip())
+        result = "\n".join(line for line in result.splitlines() if line.strip())
     return result
 
 
@@ -149,29 +149,29 @@ def _split_sql_expressions(text):
     """
     # from riskmodelPipeline.py
     results = []
-    current = ''
+    current = ""
     state = None
     for c in text:
         if state is None:  # default state, outside of special entity
             current += c
-            if c in '"\'':
+            if c in "\"'":
                 # quoted string
                 state = c
-            elif c == '-':
+            elif c == "-":
                 # probably "--" comment
-                state = '-'
-            elif c == '/':
+                state = "-"
+            elif c == "/":
                 # probably '/*' comment
-                state = '/'
-            elif c == ';':
+                state = "/"
+            elif c == ";":
                 # remove it from the statement
                 current = current[:-1].strip()
                 # and save current stmt unless empty
                 if current:
                     results.append(current)
-                current = ''
-        elif state == '-':
-            if c != '-':
+                current = ""
+        elif state == "-":
+            if c != "-":
                 # not a comment
                 state = None
                 current += c
@@ -179,52 +179,52 @@ def _split_sql_expressions(text):
             # remove first minus
             current = current[:-1]
             # comment until end of line
-            state = '--'
-        elif state == '--':
-            if c == '\n':
+            state = "--"
+        elif state == "--":
+            if c == "\n":
                 # end of comment
                 # and we do include this newline
                 current += c
                 state = None
             # else just ignore
-        elif state == '/':
-            if c != '*':
+        elif state == "/":
+            if c != "*":
                 state = None
                 current += c
                 continue
             # remove starting slash
             current = current[:-1]
             # multiline comment
-            state = '/*'
-        elif state == '/*':
-            if c == '*':
+            state = "/*"
+        elif state == "/*":
+            if c == "*":
                 # probably end of comment
-                state = '/**'
-        elif state == '/**':
-            if c == '/':
+                state = "/**"
+        elif state == "/**":
+            if c == "/":
                 state = None
             else:
                 # not an end
-                state = '/*'
-        elif state[0] in '"\'':
+                state = "/*"
+        elif state[0] in "\"'":
             current += c
-            if state.endswith('\\'):
+            if state.endswith("\\"):
                 # prev was backslash, don't check for ender
                 # just revert to regular state
                 state = state[0]
                 continue
-            elif c == '\\':
+            elif c == "\\":
                 # don't check next char
-                state += '\\'
+                state += "\\"
                 continue
             elif c == state[0]:
                 # end of quoted string
                 state = None
         else:
-            raise Exception('Illegal state %s' % state)
+            raise Exception("Illegal state %s" % state)
 
     if current:
-        current = current.rstrip(';').strip()
+        current = current.rstrip(";").strip()
         if current:
             results.append(current)
     return results
@@ -254,7 +254,7 @@ def parse_sql_file(file_name):
     # from riskmodelPipeline.py
     check_path(file_name)
     sql_statements = []
-    with open(file_name, 'r') as f:
+    with open(file_name) as f:
         for sql_statement in _split_sql_expressions(f.read()):
             sql_statements.append(sql_statement)
-    return(sql_statements)
+    return sql_statements

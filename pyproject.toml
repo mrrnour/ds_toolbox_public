@@ -7,13 +7,12 @@ name = "dstoolbox"
 version = "0.4.0"
 description = "Data-science utilities: I/O (Azure/MSSQL/Synapse/Delta/PI), ML training/scoring, NLP/LLM tagging, RAG pipelines, Spark ETL, SPC, plotting."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Mohammadreza Nourzadeh" }]
 keywords = ["data-science", "machine-learning", "azure", "spark", "rag"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -107,7 +106,6 @@ ml = [
 dev = [
     "pre-commit>=3.5",
     "ruff>=0.4",
-    "black>=24.0",
     "mypy>=1.8",
     "types-PyYAML",
     "types-requests",
@@ -152,7 +150,7 @@ dsbayes-group = "dstoolbox.ml_funcs.stat_bayes_group_cli:main"
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 extend-exclude = [
     "docs",
     "build",
@@ -190,12 +188,8 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["dstoolbox"]
 
-[tool.black]
-line-length = 100
-target-version = ["py39", "py310", "py311"]
-
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 ignore_missing_imports = true
 warn_unused_configs = true
 warn_redundant_casts = true

@@ -75,6 +75,7 @@ def _mock_requests_session(monkeypatch, side_effect):
 
 # === items_from_file ===
 
+
 def test_items_from_file_strips_comments_and_blanks(urls_file):
     items, _ = scraper.items_from_file(Path(urls_file))
     urls = [it["url"] for it in items]
@@ -87,6 +88,7 @@ def test_items_from_file_missing_exits(tmp_path):
 
 
 # === slug_for ===
+
 
 def test_slug_for_deterministic():
     s1 = scraper.slug_for("https://example.com/a")
@@ -102,6 +104,7 @@ def test_slug_for_uses_ext_arg():
 
 # === ext_for_response ===
 
+
 def test_ext_for_response_picks_html():
     assert scraper.ext_for_response("https://x/y", "text/html; charset=utf-8") == ".html"
 
@@ -116,6 +119,7 @@ def test_ext_for_response_unknown_is_bin():
 
 # === backend dispatch ===
 
+
 def test_fetchers_dispatch_table():
     assert scraper.FETCHERS["requests"] is scraper.make_requests_fetcher
     assert scraper.FETCHERS["stealthy"] is scraper.make_stealthy_fetcher
@@ -123,6 +127,7 @@ def test_fetchers_dispatch_table():
 
 
 # === run() with requests backend (mocked) ===
+
 
 def test_happy_path_requests_writes_html_and_jsonl(tmp_path, urls_file, monkeypatch):
     html_dir = tmp_path / "html"
@@ -134,8 +139,11 @@ def test_happy_path_requests_writes_html_and_jsonl(tmp_path, urls_file, monkeypa
     _mock_requests_session(monkeypatch, fake_get)
 
     args = make_args(
-        urls_file=str(urls_file), html_dir=str(html_dir), output=str(out),
-        fetcher="requests", max_workers=2,
+        urls_file=str(urls_file),
+        html_dir=str(html_dir),
+        output=str(out),
+        fetcher="requests",
+        max_workers=2,
     )
     rc = scraper.run(args)
     assert rc == 0
@@ -165,8 +173,11 @@ def test_pdf_is_saved_with_pdf_extension(tmp_path, monkeypatch):
     _mock_requests_session(monkeypatch, fake_get)
 
     args = make_args(
-        urls_file=str(urls), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="requests", max_workers=1,
+        urls_file=str(urls),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="requests",
+        max_workers=1,
     )
     scraper.run(args)
 
@@ -191,8 +202,11 @@ def test_empty_body_is_skipped(tmp_path, monkeypatch):
     _mock_requests_session(monkeypatch, fake_get)
 
     args = make_args(
-        urls_file=str(urls), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="requests", max_workers=1,
+        urls_file=str(urls),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="requests",
+        max_workers=1,
     )
     scraper.run(args)
 
@@ -214,8 +228,11 @@ def test_http_error_is_failed_and_run_continues(tmp_path, monkeypatch):
     _mock_requests_session(monkeypatch, fake_get)
 
     args = make_args(
-        urls_file=str(urls), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="requests", max_workers=1,
+        urls_file=str(urls),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="requests",
+        max_workers=1,
     )
     scraper.run(args)
 
@@ -236,8 +253,11 @@ def test_list_only_writes_nothing(tmp_path, urls_file, monkeypatch):
     monkeypatch.setattr(scraper.requests, "Session", lambda: fake_session)
 
     args = make_args(
-        urls_file=str(urls_file), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="requests", list_only=True,
+        urls_file=str(urls_file),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="requests",
+        list_only=True,
     )
     scraper.run(args)
     assert not out.exists()
@@ -256,6 +276,7 @@ def test_missing_input_exits(tmp_path):
 
 
 # === run() with stealthy backend (mocked) ===
+
 
 def _patch_stealthy(monkeypatch, page):
     fake_fetcher = MagicMock()
@@ -277,8 +298,11 @@ def test_run_stealthy_backend_mocked(tmp_path, monkeypatch):
     fake_fetcher = _patch_stealthy(monkeypatch, page)
 
     args = make_args(
-        urls_file=str(urls), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="stealthy", max_workers=1,
+        urls_file=str(urls),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="stealthy",
+        max_workers=1,
     )
     rc = scraper.run(args)
     assert rc == 0
@@ -299,8 +323,11 @@ def test_stealthy_clamps_max_workers_to_one(tmp_path, monkeypatch, caplog):
     _patch_stealthy(monkeypatch, page)
 
     args = make_args(
-        urls_file=str(urls), html_dir=str(tmp_path / "html"), output=str(out),
-        fetcher="stealthy", max_workers=8,
+        urls_file=str(urls),
+        html_dir=str(tmp_path / "html"),
+        output=str(out),
+        fetcher="stealthy",
+        max_workers=8,
     )
     with caplog.at_level(logging.INFO, logger="web_reader"):
         scraper.run(args)

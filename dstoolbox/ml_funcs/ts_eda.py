@@ -108,8 +108,18 @@ def seasonal_table(
     elif period == "month":
         out["bucket"] = ts.month_name()
         order = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December",
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
         out["bucket"] = pd.Categorical(out["bucket"], categories=order, ordered=True)
     elif period == "weekofyear":

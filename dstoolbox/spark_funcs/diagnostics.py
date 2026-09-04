@@ -1,7 +1,5 @@
 """Spark data-quality diagnostics: missing-value profiling, duplicate detection, anti-join lookups."""
 
-from typing import List, Optional, Tuple, Union
-
 import pandas as pd
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
@@ -25,7 +23,9 @@ def percent_missing(df: DataFrame) -> DataFrame:
     exprs = []
     for c, t in df.dtypes:
         if t in ("double", "float"):
-            expr = (F.count(F.when(F.col(c).isNull() | F.isnan(F.col(c)), c)) / F.count(F.lit(1))).alias(c)
+            expr = (
+                F.count(F.when(F.col(c).isNull() | F.isnan(F.col(c)), c)) / F.count(F.lit(1))
+            ).alias(c)
         else:
             expr = (F.count(F.when(F.col(c).isNull(), c)) / F.count(F.lit(1))).alias(c)
         exprs.append(expr)
@@ -34,9 +34,9 @@ def percent_missing(df: DataFrame) -> DataFrame:
 
 def find_duplicates(
     df: DataFrame,
-    duplicate_cols: List[str],
+    duplicate_cols: list[str],
     add_row_number: bool = False,
-    order_by_cols: Optional[List[str]] = None,
+    order_by_cols: list[str] | None = None,
 ) -> DataFrame:
     """Return all rows that share a value on ``duplicate_cols`` with at least one other row.
 
@@ -88,11 +88,11 @@ def find_duplicates(
 def find_lost_records(
     df1: DataFrame,
     df2: DataFrame,
-    key_columns: Union[str, List[str]],
+    key_columns: str | list[str],
     limit: int = 10,
     display_first: bool = True,
     verbose: bool = True,
-) -> Tuple[pd.DataFrame, Optional[DataFrame]]:
+) -> tuple[pd.DataFrame, DataFrame | None]:
     """Return keys present in ``df1`` but missing from ``df2`` (left-anti join preview).
 
     Parameters:
@@ -126,7 +126,9 @@ def find_lost_records(
 
     if lost_keys_df.empty:
         if verbose:
-            print(f"No lost records - all key combinations from df1 exist in df2 (keys: {', '.join(key_columns)}).")
+            print(
+                f"No lost records - all key combinations from df1 exist in df2 (keys: {', '.join(key_columns)})."
+            )
         return lost_keys_df, None
 
     if verbose:
@@ -145,7 +147,9 @@ def find_lost_records(
         if hasattr(value, "item"):
             value = value.item()
         col_condition = F.col(col) == value
-        filter_condition = col_condition if filter_condition is None else filter_condition & col_condition
+        filter_condition = (
+            col_condition if filter_condition is None else filter_condition & col_condition
+        )
 
     result_df = df1.filter(filter_condition)
     if verbose:

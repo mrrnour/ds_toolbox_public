@@ -39,20 +39,24 @@ def _make_metrics(n_folds: int = 3) -> pd.DataFrame:
     rng = np.random.default_rng(1)
     rows: list[dict[str, float | int | str]] = []
     for fold in range(n_folds):
-        rows.append({
-            "model": "m_a",
-            "CV": f"CV_{fold + 1}",
-            "mase": 0.4 + rng.normal(scale=0.05),
-            "R2":   0.85 + rng.normal(scale=0.03),
-            "mae":  0.24 + rng.normal(scale=0.03),
-        })
-        rows.append({
-            "model": "m_b",
-            "CV": f"CV_{fold + 1}",
-            "mase": 1.1 + rng.normal(scale=0.05),
-            "R2":   0.35 + rng.normal(scale=0.05),
-            "mae":  0.72 + rng.normal(scale=0.05),
-        })
+        rows.append(
+            {
+                "model": "m_a",
+                "CV": f"CV_{fold + 1}",
+                "mase": 0.4 + rng.normal(scale=0.05),
+                "R2": 0.85 + rng.normal(scale=0.03),
+                "mae": 0.24 + rng.normal(scale=0.03),
+            }
+        )
+        rows.append(
+            {
+                "model": "m_b",
+                "CV": f"CV_{fold + 1}",
+                "mase": 1.1 + rng.normal(scale=0.05),
+                "R2": 0.35 + rng.normal(scale=0.05),
+                "mae": 0.72 + rng.normal(scale=0.05),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -61,7 +65,8 @@ def test_basic_layout_and_ordering():
     metrics = _make_metrics()
 
     fig, diag = plot_metrics_and_residuals(
-        preds, metrics,
+        preds,
+        metrics,
         metric_cols=["mase", "R2", "mae"],
         higher_is_better=["R2"],
         log_summary=False,
@@ -82,7 +87,8 @@ def test_higher_is_better_flips_order():
     metrics = _make_metrics()
 
     _, diag = plot_metrics_and_residuals(
-        preds, metrics,
+        preds,
+        metrics,
         metric_cols=["R2", "mase"],
         higher_is_better=["R2"],
         log_summary=False,
@@ -91,7 +97,8 @@ def test_higher_is_better_flips_order():
     assert diag["model_order"][0] == "m_a"
 
     _, diag_flip = plot_metrics_and_residuals(
-        preds, metrics,
+        preds,
+        metrics,
         metric_cols=["R2", "mase"],
         higher_is_better=[],  # treat R² as lower-is-better
         log_summary=False,
@@ -104,7 +111,8 @@ def test_diagnostics_returns_train_overlap():
     metrics = _make_metrics()
 
     _, diag = plot_metrics_and_residuals(
-        preds, metrics,
+        preds,
+        metrics,
         metric_cols=["mase"],
         diagnostics=True,
         log_summary=False,
@@ -119,7 +127,10 @@ def test_empty_val_returns_none():
     metrics = _make_metrics()
 
     fig, diag = plot_metrics_and_residuals(
-        preds, metrics, metric_cols=["mase"], log_summary=False,
+        preds,
+        metrics,
+        metric_cols=["mase"],
+        log_summary=False,
     )
     assert fig is None
     assert diag == {}
@@ -130,7 +141,10 @@ def test_empty_metrics_returns_none():
     metrics = _make_metrics().iloc[0:0]
 
     fig, diag = plot_metrics_and_residuals(
-        preds, metrics, metric_cols=["mase"], log_summary=False,
+        preds,
+        metrics,
+        metric_cols=["mase"],
+        log_summary=False,
     )
     assert fig is None
     assert diag == {}
@@ -142,7 +156,10 @@ def test_missing_metric_col_raises():
 
     with pytest.raises(KeyError):
         plot_metrics_and_residuals(
-            preds, metrics, metric_cols=["not_a_metric"], log_summary=False,
+            preds,
+            metrics,
+            metric_cols=["not_a_metric"],
+            log_summary=False,
         )
 
 

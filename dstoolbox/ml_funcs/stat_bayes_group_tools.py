@@ -100,21 +100,22 @@ def prior_sensitivity_groups(
     reference = primary if primary is not None else names[0]
     if reference not in names:
         raise ValueError(
-            f"primary prior {reference!r} is not among the priors swept; "
-            f"have {names}."
+            f"primary prior {reference!r} is not among the priors swept; " f"have {names}."
         )
 
     rows = []
     for prior in priors:
         effect = fit_prepost(events, window, prior=prior, **fit_kwargs)
-        rows.append({
-            "prior": effect.prior_spec,
-            "mean_delta": effect.estimate,
-            "lcl": effect.lcl,
-            "ucl": effect.ucl,
-            "prob_delta_gt_0": effect.prob_gt_zero,
-            "decision": effect.decision,
-        })
+        rows.append(
+            {
+                "prior": effect.prior_spec,
+                "mean_delta": effect.estimate,
+                "lcl": effect.lcl,
+                "ucl": effect.ucl,
+                "prob_delta_gt_0": effect.prob_gt_zero,
+                "decision": effect.decision,
+            }
+        )
 
     table = pd.DataFrame(rows)
     primary_mean = float(table.loc[names.index(reference), "mean_delta"])
@@ -223,9 +224,7 @@ def sequential_scan(
         raise ValueError("`windows` is empty: nothing to scan.")
 
     effects = [fit_prepost(events, w, **fit_kwargs) for w in windows]
-    table = pd.DataFrame(
-        [{"period": i, **e.to_row()} for i, e in enumerate(effects, start=1)]
-    )
+    table = pd.DataFrame([{"period": i, **e.to_row()} for i, e in enumerate(effects, start=1)])
     return table, effects
 
 
@@ -247,13 +246,18 @@ def prior_shape_table(priors) -> pd.DataFrame:
         Columns ``prior``, ``alpha``, ``beta``, ``prior_weight``,
         ``prior_mean``. Merge onto a sensitivity table on ``prior``.
     """
-    return pd.DataFrame([{
-        "prior": p.name,
-        "alpha": p.alpha,
-        "beta": p.beta,
-        "prior_weight": p.weight,
-        "prior_mean": p.mean,
-    } for p in priors])
+    return pd.DataFrame(
+        [
+            {
+                "prior": p.name,
+                "alpha": p.alpha,
+                "beta": p.beta,
+                "prior_weight": p.weight,
+                "prior_mean": p.mean,
+            }
+            for p in priors
+        ]
+    )
 
 
 def prior_forest_rows(per_group: dict[str, pd.DataFrame]) -> pd.DataFrame:

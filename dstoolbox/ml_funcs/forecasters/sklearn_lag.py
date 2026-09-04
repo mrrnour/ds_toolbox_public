@@ -8,7 +8,7 @@ prediction back as the next lag.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -22,9 +22,7 @@ def _build_lag_matrix(series: pd.Series, lags: Sequence[int]) -> tuple[pd.DataFr
     """Build ``(X_lag, y_aligned)`` from a univariate series + lag specification."""
     max_lag = max(lags)
     if len(series) <= max_lag:
-        raise ValueError(
-            f"series length {len(series)} too short for max lag {max_lag}"
-        )
+        raise ValueError(f"series length {len(series)} too short for max lag {max_lag}")
     feats = {f"lag_{k}": series.shift(k) for k in lags}
     X = pd.DataFrame(feats).iloc[max_lag:].reset_index(drop=True)
     y_aligned = series.iloc[max_lag:].reset_index(drop=True)
@@ -69,7 +67,7 @@ class LagRegressor(BaseEstimator, RegressorMixin):
         self.date_col = date_col
         self.freq = freq
 
-    def fit(self, X: pd.DataFrame, y) -> "LagRegressor":
+    def fit(self, X: pd.DataFrame, y) -> LagRegressor:
         series = train_series(X, y, self.date_col)
         X_lag, y_aligned = _build_lag_matrix(series, list(self.lags))
         self._estimator_ = clone(self.estimator).fit(X_lag, y_aligned)
@@ -83,9 +81,7 @@ class LagRegressor(BaseEstimator, RegressorMixin):
         target = as_datetime_index(X, self.date_col)
         lags = list(self.lags)
         max_lag = max(lags)
-        max_steps = max(
-            horizon_to_cover(self._last_train_, t, self._freq_) for t in target
-        )
+        max_steps = max(horizon_to_cover(self._last_train_, t, self._freq_) for t in target)
 
         history = list(self._history_)
         for _ in range(max_steps):
@@ -94,7 +90,5 @@ class LagRegressor(BaseEstimator, RegressorMixin):
 
         future = np.array(history[-max_steps:])
         offset = pd.tseries.frequencies.to_offset(self._freq_)
-        future_idx = pd.date_range(
-            self._last_train_ + offset, periods=max_steps, freq=self._freq_
-        )
+        future_idx = pd.date_range(self._last_train_ + offset, periods=max_steps, freq=self._freq_)
         return pd.Series(future, index=future_idx).reindex(target).to_numpy()

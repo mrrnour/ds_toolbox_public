@@ -4,8 +4,7 @@ from . import data_sources
 from .bootstrap import get_dbutils, get_spark
 
 
-def query_delta_table_db(query: str, target_id: str = "deltaTable",
-                        verbose: bool = True):
+def query_delta_table_db(query: str, target_id: str = "deltaTable", verbose: bool = True):
     """Run a query against a Delta table; returns a Spark DataFrame."""
     if verbose:
         print("pulling data from Delta table:\n", query)
@@ -34,8 +33,14 @@ def dbfs2blob(ufile: str, blob_dict: dict):
     print(f"{ufile} saved in {uri}")
 
 
-def spark2delta_table(df, table_name: str, schema: str = "xxx_analytics",
-                     write_mode: str = "append", partitionby=None, **options):
+def spark2delta_table(
+    df,
+    table_name: str,
+    schema: str = "xxx_analytics",
+    write_mode: str = "append",
+    partitionby=None,
+    **options,
+):
     """Write a Spark DataFrame to a Delta table."""
     spark, _ = get_spark()
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {schema}")

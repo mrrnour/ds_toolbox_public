@@ -44,18 +44,20 @@ def make_crawl_summary(tmp_path, pages):
             else:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(p["html"])
-        records.append({
-            "id": p["url"],
-            "status": p.get("status", "ok"),
-            "data": {
-                "file_path": file_path,
-                "depth": p.get("depth", 0),
-                "status_code": 200,
-                "content_length": len(p.get("html", p.get("bytes", b""))),
-                "scraped_at": p.get("scraped_at", "2026-04-16T12:00:00"),
-            },
-            "error": None,
-        })
+        records.append(
+            {
+                "id": p["url"],
+                "status": p.get("status", "ok"),
+                "data": {
+                    "file_path": file_path,
+                    "depth": p.get("depth", 0),
+                    "status_code": 200,
+                    "content_length": len(p.get("html", p.get("bytes", b""))),
+                    "scraped_at": p.get("scraped_at", "2026-04-16T12:00:00"),
+                },
+                "error": None,
+            }
+        )
     with open(summary, "w", encoding="utf-8") as f:
         for r in records:
             f.write(json.dumps(r) + "\n")
@@ -74,16 +76,24 @@ def test_happy_path_produces_md_with_frontmatter(tmp_path, logger):
       <footer>FOOTER</footer>
     </body></html>
     """
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/a", "html": html, "depth": 0,
-         "scraped_at": "2026-04-16T12:00:00"},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/a",
+                "html": html,
+                "depth": 0,
+                "scraped_at": "2026-04-16T12:00:00",
+            },
+        ],
+    )
     out_dir = tmp_path / "md"
     out = tmp_path / "conversion_summary.jsonl"
 
     args = make_args(
         input_path=str(summary),
-        output_dir=str(out_dir), output_path=str(out),
+        output_dir=str(out_dir),
+        output_path=str(out),
         min_length=20,
     )
     convert.run(args, logger)
@@ -107,10 +117,16 @@ def test_happy_path_produces_md_with_frontmatter(tmp_path, logger):
 
 
 def test_short_content_skipped_not_halted(tmp_path, logger):
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/short",
-         "html": "<html><body><p>hi</p></body></html>", "depth": 0},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/short",
+                "html": "<html><body><p>hi</p></body></html>",
+                "depth": 0,
+            },
+        ],
+    )
     args = make_args(
         input_path=str(summary),
         output_dir=str(tmp_path / "md"),
@@ -124,13 +140,22 @@ def test_short_content_skipped_not_halted(tmp_path, logger):
 
 
 def test_missing_html_file_is_failed_not_halted(tmp_path, logger):
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/good",
-         "html": "<html><body><p>" + ("x" * 300) + "</p></body></html>",
-         "depth": 0},
-        {"url": "https://example.com/missing", "html": "ignored",
-         "depth": 0, "write_html": False},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/good",
+                "html": "<html><body><p>" + ("x" * 300) + "</p></body></html>",
+                "depth": 0,
+            },
+            {
+                "url": "https://example.com/missing",
+                "html": "ignored",
+                "depth": 0,
+                "write_html": False,
+            },
+        ],
+    )
     args = make_args(
         input_path=str(summary),
         output_dir=str(tmp_path / "md"),
@@ -145,10 +170,17 @@ def test_missing_html_file_is_failed_not_halted(tmp_path, logger):
 
 
 def test_skipped_crawl_records_are_passed_through_as_skipped(tmp_path, logger):
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/pdf",
-         "html": "%PDF fake", "depth": 0, "status": "skipped"},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/pdf",
+                "html": "%PDF fake",
+                "depth": 0,
+                "status": "skipped",
+            },
+        ],
+    )
     args = make_args(
         input_path=str(summary),
         output_dir=str(tmp_path / "md"),
@@ -161,15 +193,22 @@ def test_skipped_crawl_records_are_passed_through_as_skipped(tmp_path, logger):
 
 
 def test_dry_run_writes_nothing(tmp_path, logger):
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/a",
-         "html": "<html><body>" + ("x" * 300) + "</body></html>", "depth": 0},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/a",
+                "html": "<html><body>" + ("x" * 300) + "</body></html>",
+                "depth": 0,
+            },
+        ],
+    )
     out_dir = tmp_path / "md"
     out = tmp_path / "out.jsonl"
     args = make_args(
         input_path=str(summary),
-        output_dir=str(out_dir), output_path=str(out),
+        output_dir=str(out_dir),
+        output_path=str(out),
         dry_run=True,
     )
     convert.run(args, logger)
@@ -189,28 +228,37 @@ def test_missing_input_exits(tmp_path, logger):
 
 def _minimal_pdf_bytes(text: str = "Hello PDF world") -> bytes:
     """Build a tiny single-page PDF from scratch so tests don't need a real file."""
+    import io
+
     from pypdf import PdfWriter
     from pypdf.generic import (
-        ArrayObject, DictionaryObject, FloatObject, NameObject, NumberObject, TextStringObject,
+        DictionaryObject,
+        NameObject,
+        NumberObject,
     )
-    import io
+
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
     page = writer.pages[0]
     content = f"BT /F1 12 Tf 50 100 Td ({text}) Tj ET".encode()
-    from pypdf.generic import ByteStringObject, StreamObject
+    from pypdf.generic import StreamObject
+
     stream = StreamObject()
     stream._data = content
     stream.update({NameObject("/Length"): NumberObject(len(content))})
     page[NameObject("/Contents")] = stream
-    font = DictionaryObject({
-        NameObject("/Type"): NameObject("/Font"),
-        NameObject("/Subtype"): NameObject("/Type1"),
-        NameObject("/BaseFont"): NameObject("/Helvetica"),
-    })
-    resources = DictionaryObject({
-        NameObject("/Font"): DictionaryObject({NameObject("/F1"): font}),
-    })
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    resources = DictionaryObject(
+        {
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font}),
+        }
+    )
     page[NameObject("/Resources")] = resources
     buf = io.BytesIO()
     writer.write(buf)
@@ -219,16 +267,25 @@ def _minimal_pdf_bytes(text: str = "Hello PDF world") -> bytes:
 
 def test_pdf_converted_to_markdown(tmp_path, logger):
     pdf_bytes = _minimal_pdf_bytes("Hello from PDF")
-    summary, html_dir, _ = make_crawl_summary(tmp_path, [
-        {"url": "https://example.com/doc.pdf", "ext": ".pdf", "bytes": pdf_bytes,
-         "depth": 0, "scraped_at": "2026-04-16T12:00:00"},
-    ])
+    summary, html_dir, _ = make_crawl_summary(
+        tmp_path,
+        [
+            {
+                "url": "https://example.com/doc.pdf",
+                "ext": ".pdf",
+                "bytes": pdf_bytes,
+                "depth": 0,
+                "scraped_at": "2026-04-16T12:00:00",
+            },
+        ],
+    )
     out_dir = tmp_path / "md"
     out = tmp_path / "out.jsonl"
 
     args = make_args(
         input_path=str(summary),
-        output_dir=str(out_dir), output_path=str(out),
+        output_dir=str(out_dir),
+        output_path=str(out),
         min_length=1,
     )
     convert.run(args, logger)
@@ -245,6 +302,7 @@ def test_pdf_converted_to_markdown(tmp_path, logger):
 
 def test_strip_boilerplate_removes_tags():
     from bs4 import BeautifulSoup
+
     html = "<html><body><script>x</script><nav>n</nav><p>keep</p></body></html>"
     soup = convert.strip_boilerplate(BeautifulSoup(html, "html.parser"))
     text = str(soup)

@@ -1,6 +1,7 @@
 """PI Web API ingestion: WebID lookup, interpolated/raw/per-second time-series fetch."""
 
 import datetime as dt
+
 import pandas as pd
 
 from .. import default_values as par
@@ -13,8 +14,12 @@ DEFAULT_PI_DATA_SERVER = "<PI-DATA-SERVER>"
 DEFAULT_TZ = "UTC"
 
 
-def get_web_ids(access_token: str, tags, webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
-                data_server: str = DEFAULT_PI_DATA_SERVER):
+def get_web_ids(
+    access_token: str,
+    tags,
+    webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
+    data_server: str = DEFAULT_PI_DATA_SERVER,
+):
     """Resolve a list of PI tags to their persistent WebIDs.
 
     Parameters
@@ -35,6 +40,7 @@ def get_web_ids(access_token: str, tags, webapi_base: str = DEFAULT_PI_WEBAPI_BA
         ``{tag: WebID}``. Tags that could not be resolved map to ``None``.
     """
     import json
+
     import requests
 
     web_ids = {}
@@ -58,12 +64,17 @@ def _parse_date(d):
     return d
 
 
-def pi2pd_interpolate(tags, start_date=par.start_date, end_date=par.end_date,
-                      interval: str = "1h", target_id: str = "webapi",
-                      runtime: str = "databricks",
-                      webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
-                      data_server: str = DEFAULT_PI_DATA_SERVER,
-                      timezone: str = DEFAULT_TZ) -> pd.DataFrame:
+def pi2pd_interpolate(
+    tags,
+    start_date=par.start_date,
+    end_date=par.end_date,
+    interval: str = "1h",
+    target_id: str = "webapi",
+    runtime: str = "databricks",
+    webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
+    data_server: str = DEFAULT_PI_DATA_SERVER,
+    timezone: str = DEFAULT_TZ,
+) -> pd.DataFrame:
     """Fetch PI tag data resampled at ``interval`` between two dates.
 
     Parameters
@@ -93,6 +104,7 @@ def pi2pd_interpolate(tags, start_date=par.start_date, end_date=par.end_date,
     """
     import json
     import urllib
+
     import requests
 
     start_date = _parse_date(start_date)
@@ -112,8 +124,10 @@ def pi2pd_interpolate(tags, start_date=par.start_date, end_date=par.end_date,
         if web_id is None:
             continue
         print(
-            "tag=", tag,
-            ",webID=", f"{web_id[:5]}...{web_id[20:25]}...{web_id[-5:]}",
+            "tag=",
+            tag,
+            ",webID=",
+            f"{web_id[:5]}...{web_id[20:25]}...{web_id[-5:]}",
         )
         params = {"startTime": start_date, "endTime": end_date, "interval": interval}
         url = f"{webapi_base}/streams/{web_id}/interpolated?{urllib.parse.urlencode(params)}"
@@ -135,12 +149,16 @@ def pi2pd_interpolate(tags, start_date=par.start_date, end_date=par.end_date,
     return df
 
 
-def pi2pd_raw_data(tags, start_date=par.start_date, end_date=par.end_date,
-                  target_id: str = "webapi",
-                  runtime: str = "databricks",
-                  webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
-                  data_server: str = DEFAULT_PI_DATA_SERVER,
-                  timezone: str = DEFAULT_TZ) -> pd.DataFrame:
+def pi2pd_raw_data(
+    tags,
+    start_date=par.start_date,
+    end_date=par.end_date,
+    target_id: str = "webapi",
+    runtime: str = "databricks",
+    webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
+    data_server: str = DEFAULT_PI_DATA_SERVER,
+    timezone: str = DEFAULT_TZ,
+) -> pd.DataFrame:
     """Fetch PI tag data at the original recording frequency (unsampled).
 
     Uses the ``/recorded`` endpoint; skips tags whose HTTP response is not
@@ -163,6 +181,7 @@ def pi2pd_raw_data(tags, start_date=par.start_date, end_date=par.end_date,
     """
     import json
     import urllib
+
     import requests
 
     start_date = _parse_date(start_date)
@@ -182,8 +201,10 @@ def pi2pd_raw_data(tags, start_date=par.start_date, end_date=par.end_date,
         if web_id is None:
             continue
         print(
-            "tag=", tag,
-            ",webID=", f"{web_id[:5]}...{web_id[20:25]}...{web_id[-5:]}",
+            "tag=",
+            tag,
+            ",webID=",
+            f"{web_id[:5]}...{web_id[20:25]}...{web_id[-5:]}",
         )
         params = {"startTime": start_date, "endTime": end_date}
         url = f"{webapi_base}/streams/{web_id}/recorded?{urllib.parse.urlencode(params)}"
@@ -202,12 +223,16 @@ def pi2pd_raw_data(tags, start_date=par.start_date, end_date=par.end_date,
     return df
 
 
-def pi2pd_seconds(tags, start_date=par.start_date, end_date=par.end_date,
-                  target_id: str = "webapi",
-                  runtime: str = "databricks",
-                  webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
-                  data_server: str = DEFAULT_PI_DATA_SERVER,
-                  timezone: str = DEFAULT_TZ) -> pd.DataFrame:
+def pi2pd_seconds(
+    tags,
+    start_date=par.start_date,
+    end_date=par.end_date,
+    target_id: str = "webapi",
+    runtime: str = "databricks",
+    webapi_base: str = DEFAULT_PI_WEBAPI_BASE,
+    data_server: str = DEFAULT_PI_DATA_SERVER,
+    timezone: str = DEFAULT_TZ,
+) -> pd.DataFrame:
     """Fetch PI tag data at one-second resolution, iterating day-by-day.
 
     Wraps :func:`pi2pd_interpolate` with ``interval='1s'`` and stitches
@@ -238,9 +263,15 @@ def pi2pd_seconds(tags, start_date=par.start_date, end_date=par.end_date,
         print(f"getting data between {cursor} and {window_end}")
         try:
             chunk = pi2pd_interpolate(
-                tags, start_date=cursor, end_date=window_end,
-                interval="1s", target_id=target_id, runtime=runtime,
-                webapi_base=webapi_base, data_server=data_server, timezone=timezone,
+                tags,
+                start_date=cursor,
+                end_date=window_end,
+                interval="1s",
+                target_id=target_id,
+                runtime=runtime,
+                webapi_base=webapi_base,
+                data_server=data_server,
+                timezone=timezone,
             )
             print("Done")
             out = pd.concat([out, chunk], ignore_index=True)

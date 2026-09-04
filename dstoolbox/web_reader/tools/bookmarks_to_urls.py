@@ -52,7 +52,7 @@ def find_folders_by_name(node: dict, target_name: str, out: list[dict]) -> None:
 
 def collect_urls(folder: dict, max_level: int, _current: int = 0, _path: str = "") -> list[dict]:
     """0=selected folder only, 1=+immediate subfolders, N=descend N, -1=unlimited.
-    
+
     Returns list of dicts with 'url', 'name', and 'folder_path' keys.
     folder_path is the hierarchy path like 'subfolder/nested'.
     """
@@ -62,11 +62,9 @@ def collect_urls(folder: dict, max_level: int, _current: int = 0, _path: str = "
         ctype = child.get("type")
         child_name = str(child.get("name", "")).strip()
         if ctype == "url":
-            out.append({
-                "url": child.get("url", ""),
-                "name": child.get("name", ""),
-                "folder_path": _path
-            })
+            out.append(
+                {"url": child.get("url", ""), "name": child.get("name", ""), "folder_path": _path}
+            )
         elif ctype == "folder" and can_recurse:
             safe_child_name = normalize_folder_component(child_name)
             child_path = f"{_path}/{safe_child_name}" if _path else safe_child_name
@@ -139,8 +137,7 @@ def run(args: argparse.Namespace) -> int:
 
     items = collect_urls(folder, max_level=args.level)
     header = (
-        f"folder {folder.get('name', '')!r}  {selected}  "
-        f"level={args.level}  count={len(items)}"
+        f"folder {folder.get('name', '')!r}  {selected}  " f"level={args.level}  count={len(items)}"
     )
     output = render(items, header)
     if args.output and args.output != "-":
@@ -156,16 +153,25 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Extract a Chrome bookmark folder to a urls.txt-compatible file."
     )
-    p.add_argument("--folder-name",
-                   help='Bookmark folder name (case-insensitive), e.g. "Statistical Tests"')
-    p.add_argument("--list-folders", action="store_true",
-                   help="List folder names from the bookmarks file, then exit")
-    p.add_argument("--bookmarks", default=str(params.BOOKMARKS_FILE),
-                   help="Path to Chrome Bookmarks JSON")
-    p.add_argument("--level", type=int, default=params.BOOKMARK_LEVEL, metavar="N",
-                   help="Subfolder recursion: 0=selected only (default), 1=+immediate, N=descend N, -1=unlimited")
-    p.add_argument("-o", "--output", default="-",
-                   help="Output file ('-' = stdout, default)")
+    p.add_argument(
+        "--folder-name", help='Bookmark folder name (case-insensitive), e.g. "Statistical Tests"'
+    )
+    p.add_argument(
+        "--list-folders",
+        action="store_true",
+        help="List folder names from the bookmarks file, then exit",
+    )
+    p.add_argument(
+        "--bookmarks", default=str(params.BOOKMARKS_FILE), help="Path to Chrome Bookmarks JSON"
+    )
+    p.add_argument(
+        "--level",
+        type=int,
+        default=params.BOOKMARK_LEVEL,
+        metavar="N",
+        help="Subfolder recursion: 0=selected only (default), 1=+immediate, N=descend N, -1=unlimited",
+    )
+    p.add_argument("-o", "--output", default="-", help="Output file ('-' = stdout, default)")
     return p
 
 

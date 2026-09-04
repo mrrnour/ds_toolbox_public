@@ -55,20 +55,24 @@ def _fit_predict_one(
     # y_lower/y_upper naming) as ml_comparison. `_fit_one_fold` here degrades
     # to a plain .fit() — no early stopping, no eval_set.
     _fit_one_fold(model, X_train, y_train, X_post, y_post, None, None)
-    preds = _collect_predictions(model, X_post, y_post, classifier=False, interval_level=interval_level)
+    preds = _collect_predictions(
+        model, X_post, y_post, classifier=False, interval_level=interval_level
+    )
 
     n = len(X_post)
     y_lo = preds["y_lower"].to_numpy(dtype=float) if "y_lower" in preds else np.full(n, np.nan)
     y_hi = preds["y_upper"].to_numpy(dtype=float) if "y_upper" in preds else np.full(n, np.nan)
 
-    frame = pd.DataFrame({
-        "ts": pd.to_datetime(X_post["ts"].to_numpy()),
-        "y_true": preds["y_true"].to_numpy(dtype=float),
-        "y_pred": preds["y_pred"].to_numpy(dtype=float),
-        "y_lo": y_lo,
-        "y_hi": y_hi,
-        "model": model_name,
-    })
+    frame = pd.DataFrame(
+        {
+            "ts": pd.to_datetime(X_post["ts"].to_numpy()),
+            "y_true": preds["y_true"].to_numpy(dtype=float),
+            "y_pred": preds["y_pred"].to_numpy(dtype=float),
+            "y_lo": y_lo,
+            "y_hi": y_hi,
+            "model": model_name,
+        }
+    )
     frame["effect"] = frame["y_true"] - frame["y_pred"]
     frame["outside_band"] = (frame["y_true"] < frame["y_lo"]) | (frame["y_true"] > frame["y_hi"])
 
@@ -122,16 +126,18 @@ def estimate_intervention_effect(
 
 def effect_summary(results: dict[str, InterventionResult]) -> pd.DataFrame:
     """Side-by-side daily / cumulative / relative effects per model."""
-    return pd.DataFrame([
-        {
-            "model": name,
-            "daily_effect": r.daily_effect,
-            "cumulative_effect": r.cumulative_effect,
-            "relative_lift": r.relative_lift,
-            "n_outside_band": int(r.frame["outside_band"].sum()),
-        }
-        for name, r in results.items()
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "model": name,
+                "daily_effect": r.daily_effect,
+                "cumulative_effect": r.cumulative_effect,
+                "relative_lift": r.relative_lift,
+                "n_outside_band": int(r.frame["outside_band"].sum()),
+            }
+            for name, r in results.items()
+        ]
+    )
 
 
 def effect_from_preds(
@@ -161,17 +167,17 @@ def effect_from_preds(
     """
     post = preds[preds[split_col] == split_value].copy()
     post["effect"] = post["y_true"] - post["y_pred"]
-    post["outside_band"] = (
-        (post["y_true"] < post["y_lo"]) | (post["y_true"] > post["y_hi"])
-    )
+    post["outside_band"] = (post["y_true"] < post["y_lo"]) | (post["y_true"] > post["y_hi"])
 
     grp = post.groupby(model_col)
-    summary = pd.DataFrame({
-        "daily_effect":      grp["effect"].mean(),
-        "cumulative_effect": grp["effect"].sum(),
-        "relative_lift":     grp["effect"].sum() / grp["y_pred"].sum(),
-        "n_outside_band":    grp["outside_band"].sum().astype(int),
-    }).reset_index()
+    summary = pd.DataFrame(
+        {
+            "daily_effect": grp["effect"].mean(),
+            "cumulative_effect": grp["effect"].sum(),
+            "relative_lift": grp["effect"].sum() / grp["y_pred"].sum(),
+            "n_outside_band": grp["outside_band"].sum().astype(int),
+        }
+    ).reset_index()
     return post, summary
 
 
@@ -312,25 +318,35 @@ def sc_results_to_backtest_preds(
     rows: list[pd.DataFrame] = []
     for name, sc in results.items():
         f = sc.frame
-        rows.append(pd.DataFrame({
-            "model": name,
-            "ts": pd.to_datetime(f["ts"]),
-            "fold": 0,
-            "split": "val",
-            "y_true": f["y_true"].to_numpy(dtype=float),
-            "y_pred": f["y_pred"].to_numpy(dtype=float),
-            "y_lo": f["y_lo"].to_numpy(dtype=float),
-            "y_hi": f["y_hi"].to_numpy(dtype=float),
-        }))
+        rows.append(
+            pd.DataFrame(
+                {
+                    "model": name,
+                    "ts": pd.to_datetime(f["ts"]),
+                    "fold": 0,
+                    "split": "val",
+                    "y_true": f["y_true"].to_numpy(dtype=float),
+                    "y_pred": f["y_pred"].to_numpy(dtype=float),
+                    "y_lo": f["y_lo"].to_numpy(dtype=float),
+                    "y_hi": f["y_hi"].to_numpy(dtype=float),
+                }
+            )
+        )
         if df_pre is not None and len(df_pre):
-            rows.append(pd.DataFrame({
-                "model": name,
-                "ts": pd.to_datetime(df_pre[date_col]),
-                "fold": 0,
-                "split": "train",
-                "y_true": pd.to_numeric(df_pre[value_col], errors="coerce").to_numpy(dtype=float),
-                "y_pred": np.nan,
-                "y_lo": np.nan,
-                "y_hi": np.nan,
-            }))
+            rows.append(
+                pd.DataFrame(
+                    {
+                        "model": name,
+                        "ts": pd.to_datetime(df_pre[date_col]),
+                        "fold": 0,
+                        "split": "train",
+                        "y_true": pd.to_numeric(df_pre[value_col], errors="coerce").to_numpy(
+                            dtype=float
+                        ),
+                        "y_pred": np.nan,
+                        "y_lo": np.nan,
+                        "y_hi": np.nan,
+                    }
+                )
+            )
     return pd.concat(rows, ignore_index=True)

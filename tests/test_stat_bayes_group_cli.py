@@ -30,15 +30,14 @@ def events_csv(tmp_path):
             for day in rng.choice(days, size=rng.integers(1, 4), replace=False):
                 rows.append((user, str(day)[:10], int(rng.random() < rate)))
     path = tmp_path / "events.csv"
-    pd.DataFrame(rows, columns=["user_id", "datepart", "convert"]).to_csv(
-        path, index=False
-    )
+    pd.DataFrame(rows, columns=["user_id", "datepart", "convert"]).to_csv(path, index=False)
     return str(path)
 
 
 # --------------------------------------------------------------------------- #
 # Argument parsing — no fitting
 # --------------------------------------------------------------------------- #
+
 
 def test_window_arg_splits_on_the_colon():
     assert _window_arg("2026-01-01:2026-01-10") == ("2026-01-01", "2026-01-10")
@@ -77,6 +76,7 @@ def test_group_col_and_dates_are_two_different_splits(capsys):
 # Failures exit 1 with a message, never a traceback
 # --------------------------------------------------------------------------- #
 
+
 def test_missing_file_exits_nonzero(capsys):
     code = main(["nope.csv", "--pre", PRE, "--post", POST, *SMALL])
     assert code == 1
@@ -84,8 +84,7 @@ def test_missing_file_exits_nonzero(capsys):
 
 
 def test_wrong_column_name_exits_nonzero(events_csv, capsys):
-    code = main([events_csv, "--pre", PRE, "--post", POST,
-                 "--metric-col", "clicked", *SMALL])
+    code = main([events_csv, "--pre", PRE, "--post", POST, "--metric-col", "clicked", *SMALL])
     assert code == 1
     assert capsys.readouterr().err.strip()
 
@@ -94,10 +93,10 @@ def test_wrong_column_name_exits_nonzero(events_csv, capsys):
 # End to end
 # --------------------------------------------------------------------------- #
 
+
 def test_quiet_prints_only_the_verdict(events_csv, capsys):
     pytest.importorskip("pymc")
-    code = main([events_csv, "--pre", PRE, "--post", POST,
-                 "--rope-pct", "0.10", *SMALL])
+    code = main([events_csv, "--pre", PRE, "--post", POST, "--rope-pct", "0.10", *SMALL])
     out = capsys.readouterr().out.strip()
     assert code == 0
     assert out == "positive"
@@ -106,10 +105,22 @@ def test_quiet_prints_only_the_verdict(events_csv, capsys):
 def test_writes_csv_and_plot(events_csv, tmp_path, capsys):
     pytest.importorskip("pymc")
     csv_out, png_out = tmp_path / "row.csv", tmp_path / "fig.png"
-    code = main([
-        events_csv, "--pre", PRE, "--post", POST, "--rope-pct", "0.10",
-        "--csv", str(csv_out), "--plot", str(png_out), *SMALL,
-    ])
+    code = main(
+        [
+            events_csv,
+            "--pre",
+            PRE,
+            "--post",
+            POST,
+            "--rope-pct",
+            "0.10",
+            "--csv",
+            str(csv_out),
+            "--plot",
+            str(png_out),
+            *SMALL,
+        ]
+    )
     capsys.readouterr()
 
     assert code == 0

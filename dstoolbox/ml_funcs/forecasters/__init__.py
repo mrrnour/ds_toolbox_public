@@ -56,7 +56,7 @@ else:
     _greykite_err = None
 
 try:
-    from .darts import DartsThetaSklearn, DartsNBEATSSklearn  # noqa: F401
+    from .darts import DartsNBEATSSklearn, DartsThetaSklearn  # noqa: F401
 except Exception as _e:  # pragma: no cover - defensive
     DartsThetaSklearn = None  # type: ignore[assignment]
     DartsNBEATSSklearn = None  # type: ignore[assignment]
@@ -95,7 +95,7 @@ def available_backends() -> dict[str, bool]:
 # ===== public-only extensions (preserved on vendor merge) =====
 
 from ._base import DropColumns, align_forecast  # noqa: F401
-from .sklearn_lag import LagRegressor  # noqa: F401
 from .factory import build_forecaster  # noqa: F401
+from .sklearn_lag import LagRegressor  # noqa: F401
 
 __all__ += ["DropColumns", "align_forecast", "LagRegressor", "build_forecaster"]

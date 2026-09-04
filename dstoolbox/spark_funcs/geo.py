@@ -1,12 +1,12 @@
 """Spark geospatial helpers: Euclidean 2D/3D distance and Haversine great-circle distance."""
 
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Union
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-_Coord2 = Union[Tuple[str, str], Tuple[float, float]]
-_CoordN = Union[Tuple[str, ...], Tuple[float, ...]]
+_Coord2 = Union[tuple[str, str], tuple[float, float]]
+_CoordN = Union[tuple[str, ...], tuple[float, ...]]
 
 
 def _coord_exprs(coords: _CoordN):
@@ -32,7 +32,7 @@ def calculate_distance(
     point2_coords: _CoordN,
     distance_col_name: str = "distance",
     null_strategy: Literal["skip", "zero"] = "skip",
-    precision: Optional[int] = None,
+    precision: int | None = None,
 ) -> DataFrame:
     """Add a Euclidean-distance column between two 2D or 3D points to a Spark DataFrame.
 
@@ -60,7 +60,7 @@ def calculate_distance(
 
     squared_diffs = []
     null_conditions = []
-    for a, b in zip(p1, p2):
+    for a, b in zip(p1, p2, strict=False):
         squared_diffs.append(F.pow(b - a, 2))
         null_conditions.extend([a.isNull(), b.isNull()])
 
@@ -78,7 +78,7 @@ def calculate_haversine_distance(
     distance_col_name: str = "distance_km",
     unit: Literal["km", "miles", "meters"] = "meters",
     null_strategy: Literal["skip", "zero"] = "skip",
-    precision: Optional[int] = None,
+    precision: int | None = None,
 ) -> DataFrame:
     """Add a Haversine great-circle distance column for two ``(lat, lon)`` points.
 

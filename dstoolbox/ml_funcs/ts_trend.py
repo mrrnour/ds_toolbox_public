@@ -57,13 +57,13 @@ summary.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2, norm, theilslopes
-
 
 # ---------------------------------------------------------------------------
 # Result containers
@@ -88,8 +88,11 @@ class TrendResult:
     tau: float
 
     def summary(self) -> str:
-        ci = (f"CI [{self.slope_ci[0]:+.4f}, {self.slope_ci[1]:+.4f}]"
-              if self.slope_ci is not None else "CI n/a")
+        ci = (
+            f"CI [{self.slope_ci[0]:+.4f}, {self.slope_ci[1]:+.4f}]"
+            if self.slope_ci is not None
+            else "CI n/a"
+        )
         return (
             f"[{self.method}] n={self.n}  slope={self.slope:+.4f}  {ci}  "
             f"z={self.z:+.3f}  tau={self.tau:+.3f}  p={self.p:.4f}"
@@ -272,7 +275,11 @@ class MKAdaptiveCoreResult:
         def _verdict(p: float) -> str:
             if not np.isfinite(p):
                 return "n/a"
-            return "reject H₀ (trend detected)" if p < 0.05 else "fail to reject H₀ (no evidence of trend)"
+            return (
+                "reject H₀ (trend detected)"
+                if p < 0.05
+                else "fail to reject H₀ (no evidence of trend)"
+            )
 
         return (
             f"[HEADLINE — adaptive MK per arm]\n"
@@ -434,7 +441,11 @@ class RegionalHomogeneityResult:
 
     def summary(self) -> str:
         if self.n_seasons <= 1:
-            verdict = "homogeneous — pooling OK" if self.p_homogeneity > self.alpha else "HETEROGENEOUS — do not pool"
+            verdict = (
+                "homogeneous — pooling OK"
+                if self.p_homogeneity > self.alpha
+                else "HETEROGENEOUS — do not pool"
+            )
             return (
                 f"1-way homogeneity across {self.n_sites} sites\n"
                 f"  chi_homogeneity = {self.chi_homogeneity:.2f}   "
@@ -543,8 +554,9 @@ def _compute_delta_interpretation(
         sd_delta = float(finite.std(ddof=1)) if finite.size >= 2 else 0.0
     else:
         delta_pval = _wald_tail_area(delta_slope, half_delta, confidence_level)
-        sd_delta = (half_delta / float(norm.ppf(0.5 * (1.0 + confidence_level)))
-                    if half_delta > 0 else 0.0)
+        sd_delta = (
+            half_delta / float(norm.ppf(0.5 * (1.0 + confidence_level))) if half_delta > 0 else 0.0
+        )
 
     if sd_delta > 0 and np.isfinite(sd_delta):
         effect = abs(float(delta_slope) / sd_delta)
@@ -565,7 +577,9 @@ def _compute_delta_interpretation(
     if delta_sig:
         meaning = f"Estimated post-vs-pre trend changed significantly ({direction})."
     else:
-        meaning = "Estimated post-vs-pre trend change is not statistically distinguishable from zero."
+        meaning = (
+            "Estimated post-vs-pre trend change is not statistically distinguishable from zero."
+        )
 
     return dict(
         alpha=alpha,
@@ -602,42 +616,66 @@ def pre_post_sen_figure(
 
     sig_flag = "significant" if result.delta_significant else "not significant"
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=y_pre, mode="markers", name="pre points",
-        marker=dict(color="#1f77b4", size=5, opacity=0.6),
-        hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
-        connectgaps=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=y_post, mode="markers", name="post points",
-        marker=dict(color="#d62728", size=5, opacity=0.6),
-        hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
-        connectgaps=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=sen_fit_line(y_pre, result.slope_pre),
-        mode="lines", name=f"Sen pre ({result.slope_pre:+.4g}/day)",
-        line=dict(color="#1f77b4", width=3),
-        hovertemplate="date=%{x}<br>Sen pre=%{y:.4g}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=sen_fit_line(y_post, result.slope_post),
-        mode="lines", name=f"Sen post ({result.slope_post:+.4g}/day)",
-        line=dict(color="#d62728", width=3),
-        hovertemplate="date=%{x}<br>Sen post=%{y:.4g}<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=y_pre,
+            mode="markers",
+            name="pre points",
+            marker=dict(color="#1f77b4", size=5, opacity=0.6),
+            hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
+            connectgaps=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=y_post,
+            mode="markers",
+            name="post points",
+            marker=dict(color="#d62728", size=5, opacity=0.6),
+            hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
+            connectgaps=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=sen_fit_line(y_pre, result.slope_pre),
+            mode="lines",
+            name=f"Sen pre ({result.slope_pre:+.4g}/day)",
+            line=dict(color="#1f77b4", width=3),
+            hovertemplate="date=%{x}<br>Sen pre=%{y:.4g}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=sen_fit_line(y_post, result.slope_post),
+            mode="lines",
+            name=f"Sen post ({result.slope_post:+.4g}/day)",
+            line=dict(color="#d62728", width=3),
+            hovertemplate="date=%{x}<br>Sen post=%{y:.4g}<extra></extra>",
+        )
+    )
     _sig_sym = "✓" if result.delta_significant else "✗"
-    _dir_arrow = "↑" if result.direction == "increase" else "↓" if result.direction == "decrease" else "→"
+    _dir_arrow = (
+        "↑" if result.direction == "increase" else "↓" if result.direction == "decrease" else "→"
+    )
     _footer = (
         f"Mann-Kendall ({result.method})  ·  "
         f"95% CI [{result.delta_ci[0]:+.4g}, {result.delta_ci[1]:+.4g}]  ·  "
         f"p-value = {result.delta_pvalue_text}  {_sig_sym} {sig_flag}"
     )
-    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_vline(
+        x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black"
+    )
     fig.add_annotation(
         text=_footer,
-        xref="paper", yref="paper",
-        x=0.5, y=-0.18,
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=-0.18,
         showarrow=False,
         font=dict(size=11, color="#555555"),
         xanchor="center",
@@ -657,7 +695,7 @@ def pre_post_sen_figure(
 
 
 def mk_result_line(
-    result: "TrendResult | SeasonalTrendResult",
+    result: TrendResult | SeasonalTrendResult,
     arm_label: str,
     alpha: float = 0.05,
 ) -> str:
@@ -695,8 +733,8 @@ def mk_figure(
     value_col: str,
     y_pre: Sequence[float],
     y_post: Sequence[float],
-    mk_pre: "TrendResult | SeasonalTrendResult",
-    mk_post: "TrendResult | SeasonalTrendResult",
+    mk_pre: TrendResult | SeasonalTrendResult,
+    mk_post: TrendResult | SeasonalTrendResult,
     intervention_date: str | pd.Timestamp,
     experiment: str,
     alpha: float = 0.05,
@@ -741,36 +779,61 @@ def mk_figure(
     dir_delta = "↑" if delta_slope > 0 else "↓" if delta_slope < 0 else "→"
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=y_pre, mode="markers", name="pre",
-        marker=dict(color="#1f77b4", size=5, opacity=0.6),
-        hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
-        connectgaps=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=y_post, mode="markers", name="post",
-        marker=dict(color="#d62728", size=5, opacity=0.6),
-        hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
-        connectgaps=False,
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=sen_fit_line(y_pre, mk_pre.slope),
-        mode="lines", name=f"{method_label} pre",
-        line=dict(color="#1f77b4", width=3),
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=sen_fit_line(y_post, mk_post.slope),
-        mode="lines", name=f"{method_label} post",
-        line=dict(color="#d62728", width=3),
-    ))
-    fig.add_vline(x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black")
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=y_pre,
+            mode="markers",
+            name="pre",
+            marker=dict(color="#1f77b4", size=5, opacity=0.6),
+            hovertemplate="date=%{x}<br>pre=%{y:.4g}<extra></extra>",
+            connectgaps=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=y_post,
+            mode="markers",
+            name="post",
+            marker=dict(color="#d62728", size=5, opacity=0.6),
+            hovertemplate="date=%{x}<br>post=%{y:.4g}<extra></extra>",
+            connectgaps=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=sen_fit_line(y_pre, mk_pre.slope),
+            mode="lines",
+            name=f"{method_label} pre",
+            line=dict(color="#1f77b4", width=3),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=sen_fit_line(y_post, mk_post.slope),
+            mode="lines",
+            name=f"{method_label} post",
+            line=dict(color="#d62728", width=3),
+        )
+    )
+    fig.add_vline(
+        x=pd.Timestamp(intervention_date).isoformat(), line_dash="dash", line_color="black"
+    )
     fig.add_annotation(
         text=(
             f"pre slope={mk_pre.slope:+.4g} {dir_pre} (p={mk_pre.p:.3g} {sig_pre})  ·  "
             f"post slope={mk_post.slope:+.4g} {dir_post} (p={mk_post.p:.3g} {sig_post})"
         ),
-        xref="paper", yref="paper", x=0.5, y=-0.18,
-        showarrow=False, font=dict(size=11, color="#555555"), xanchor="center",
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=-0.18,
+        showarrow=False,
+        font=dict(size=11, color="#555555"),
+        xanchor="center",
     )
     fig.update_layout(
         title=dict(
@@ -780,7 +843,9 @@ def mk_figure(
             ),
             font=dict(size=15),
         ),
-        xaxis_title="date", yaxis_title=value_col, hovermode="x unified",
+        xaxis_title="date",
+        yaxis_title=value_col,
+        hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         margin=dict(l=40, r=20, t=80, b=80),
     )
@@ -846,7 +911,7 @@ def mk_adaptive_sen_figure(
     value_col: str,
     y_pre: Sequence[float],
     y_post: Sequence[float],
-    result: "MKAdaptiveCoreResult | MbbDeltaResult",
+    result: MKAdaptiveCoreResult | MbbDeltaResult,
     intervention_date: str | pd.Timestamp,
     experiment: str,
     *,
@@ -908,8 +973,9 @@ def mk_adaptive_sen_figure(
         bug that internally does ``sum([x0, x1])`` on the timestamp inputs,
         which fails when ``intervention_date`` is a ``pandas.Timestamp``.
     """
-    import plotly.graph_objects as go
     import re as _re
+
+    import plotly.graph_objects as go
 
     # Route on the result flavour. Track 2 (MBB) view carries CIs and a Δ
     # p-value; Track 1 (core) is point-only. Both flavours have identical
@@ -939,14 +1005,24 @@ def mk_adaptive_sen_figure(
     y_post_arr = np.asarray(y_post, dtype=float)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=y_pre_arr, mode="markers", name="pre (raw)",
-        marker=dict(color="#1f77b4", size=5, opacity=0.35),
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=y_post_arr, mode="markers", name="post (raw)",
-        marker=dict(color="#d62728", size=5, opacity=0.35),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=y_pre_arr,
+            mode="markers",
+            name="pre (raw)",
+            marker=dict(color="#1f77b4", size=5, opacity=0.35),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=y_post_arr,
+            mode="markers",
+            name="post (raw)",
+            marker=dict(color="#d62728", size=5, opacity=0.35),
+        )
+    )
 
     if show_deseasoned:
         if period is None:
@@ -955,70 +1031,108 @@ def mk_adaptive_sen_figure(
         # markers sit alongside the raw scatter rather than at y ≈ 0.
         y_pre_ds = deseason(y_pre_arr, period=period) + float(np.nanmean(y_pre_arr))
         y_post_ds = deseason(y_post_arr, period=period) + float(np.nanmean(y_post_arr))
-        fig.add_trace(go.Scatter(
-            x=df_pre[date_col], y=y_pre_ds, mode="markers", name="pre (deseasoned)",
-            marker=dict(color="#1f77b4", size=6, symbol="x", opacity=0.9),
-        ))
-        fig.add_trace(go.Scatter(
-            x=df_post[date_col], y=y_post_ds, mode="markers", name="post (deseasoned)",
-            marker=dict(color="#d62728", size=6, symbol="x", opacity=0.9),
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=df_pre[date_col],
+                y=y_pre_ds,
+                mode="markers",
+                name="pre (deseasoned)",
+                marker=dict(color="#1f77b4", size=6, symbol="x", opacity=0.9),
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_post[date_col],
+                y=y_post_ds,
+                mode="markers",
+                name="post (deseasoned)",
+                marker=dict(color="#d62728", size=6, symbol="x", opacity=0.9),
+            )
+        )
 
     # Optional slope-CI ribbons (drawn under the Sen lines so the point
     # fit stays visually on top). Uses fill='tonexty' between the low- and
     # high-slope median-anchored lines from mbb.slope_ci_pre / _post.
     if _mbb is not None:
         for x_dates, y_arm, ci, colour in (
-            (df_pre[date_col], y_pre_arr, _mbb.slope_ci_pre, "31, 119, 180"),   # pre
+            (df_pre[date_col], y_pre_arr, _mbb.slope_ci_pre, "31, 119, 180"),  # pre
             (df_post[date_col], y_post_arr, _mbb.slope_ci_post, "214, 39, 40"),  # post
         ):
             lo_line = sen_fit_line(y_arm, float(ci[0]))
             hi_line = sen_fit_line(y_arm, float(ci[1]))
-            fig.add_trace(go.Scatter(
-                x=x_dates, y=lo_line, mode="lines",
-                line=dict(color=f"rgba({colour},0)"),
-                hoverinfo="skip", showlegend=False,
-            ))
-            fig.add_trace(go.Scatter(
-                x=x_dates, y=hi_line, mode="lines", fill="tonexty",
-                line=dict(color=f"rgba({colour},0)"),
-                fillcolor=f"rgba({colour},0.18)",
-                name=f"slope CI [{ci[0]:+.3g}, {ci[1]:+.3g}]",
-                hoverinfo="skip",
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=x_dates,
+                    y=lo_line,
+                    mode="lines",
+                    line=dict(color=f"rgba({colour},0)"),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=x_dates,
+                    y=hi_line,
+                    mode="lines",
+                    fill="tonexty",
+                    line=dict(color=f"rgba({colour},0)"),
+                    fillcolor=f"rgba({colour},0.18)",
+                    name=f"slope CI [{ci[0]:+.3g}, {ci[1]:+.3g}]",
+                    hoverinfo="skip",
+                )
+            )
 
     star_pre = _significance_stars(pval_pre_val)
     star_post = _significance_stars(pval_post_val)
     # Legend/subtitle labels lead with the word "slope" (not just "Sen:").
     # We do NOT append a '/day' unit — slope already implies per-step, and
     # the redundant '/day' invites confusion with a per-day *level*.
-    fig.add_trace(go.Scatter(
-        x=df_pre[date_col], y=sen_fit_line(y_pre_arr, slope_pre_val), mode="lines",
-        name=(
-            f"pre  Sen slope: {slope_pre_val:+.4g}  "
-            f"p={pval_pre_val:.3g} {star_pre}  [{mk_label_pre}]"
-        ),
-        line=dict(color="#1f77b4", width=3),
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_post[date_col], y=sen_fit_line(y_post_arr, slope_post_val), mode="lines",
-        name=(
-            f"post Sen slope: {slope_post_val:+.4g}  "
-            f"p={pval_post_val:.3g} {star_post}  [{mk_label_post}]"
-        ),
-        line=dict(color="#d62728", width=3),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=df_pre[date_col],
+            y=sen_fit_line(y_pre_arr, slope_pre_val),
+            mode="lines",
+            name=(
+                f"pre  Sen slope: {slope_pre_val:+.4g}  "
+                f"p={pval_pre_val:.3g} {star_pre}  [{mk_label_pre}]"
+            ),
+            line=dict(color="#1f77b4", width=3),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df_post[date_col],
+            y=sen_fit_line(y_post_arr, slope_post_val),
+            mode="lines",
+            name=(
+                f"post Sen slope: {slope_post_val:+.4g}  "
+                f"p={pval_post_val:.3g} {star_post}  [{mk_label_post}]"
+            ),
+            line=dict(color="#d62728", width=3),
+        )
+    )
 
     # Intervention line — see docstring: `add_vline(annotation_text=...)` breaks on
     # pandas Timestamp inputs, so use add_shape + add_annotation.
     fig.add_shape(
-        type="line", xref="x", yref="paper",
-        x0=intervention_date, x1=intervention_date, y0=0, y1=1,
+        type="line",
+        xref="x",
+        yref="paper",
+        x0=intervention_date,
+        x1=intervention_date,
+        y0=0,
+        y1=1,
         line=dict(color="black", dash="dash"),
     )
     fig.add_annotation(
-        x=intervention_date, y=1.0, xref="x", yref="paper",
-        text="intervention", showarrow=False, yanchor="bottom",
+        x=intervention_date,
+        y=1.0,
+        xref="x",
+        yref="paper",
+        text="intervention",
+        showarrow=False,
+        yanchor="bottom",
     )
 
     if _mbb is not None:
@@ -1179,41 +1293,61 @@ def mk_power_curve_figure(
     highlight_ns = {int(curve.n_obs)}
     if curve.n_needed is not None:
         highlight_ns.add(int(curve.n_needed))
-    marker_ns = sorted({int(n) for n in sample_ns if n_min <= n <= n_max}
-                       - highlight_ns)
+    marker_ns = sorted({int(n) for n in sample_ns if n_min <= n <= n_max} - highlight_ns)
     marker_ps = [mk_asymptotic_pvalue(curve.tau_obs, n) for n in marker_ns]
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=curve.n_grid, y=curve.p_grid, mode="lines",
-        name=f"MK p(n) at fixed τ = {curve.tau_obs:+.3f}",
-        line=dict(color="#1f77b4", width=2),
-    ))
-    fig.add_trace(go.Scatter(
-        x=marker_ns, y=marker_ps, mode="markers",
-        marker=dict(color="#1f77b4", size=7, symbol="circle"),
-        name="sample n → p", showlegend=False,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=curve.n_grid,
+            y=curve.p_grid,
+            mode="lines",
+            name=f"MK p(n) at fixed τ = {curve.tau_obs:+.3f}",
+            line=dict(color="#1f77b4", width=2),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=marker_ns,
+            y=marker_ps,
+            mode="markers",
+            marker=dict(color="#1f77b4", size=7, symbol="circle"),
+            name="sample n → p",
+            showlegend=False,
+        )
+    )
     fig.add_hline(
-        y=alpha, line=dict(color="#d62728", dash="dash"),
-        annotation_text=f"α = {alpha:g}", annotation_position="top right",
+        y=alpha,
+        line=dict(color="#d62728", dash="dash"),
+        annotation_text=f"α = {alpha:g}",
+        annotation_position="top right",
         annotation_font_size=10,
     )
-    fig.add_trace(go.Scatter(
-        x=[curve.n_obs], y=[curve.p_obs], mode="markers+text",
-        marker=dict(color="#d62728", size=13, symbol="x"),
-        text=[f"n={curve.n_obs}<br>p={curve.p_obs:.3f}"],
-        textposition="top right", textfont=dict(size=10, color="#d62728"),
-        name=f"you are here (n={curve.n_obs}, p={curve.p_obs:.3f})",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[curve.n_obs],
+            y=[curve.p_obs],
+            mode="markers+text",
+            marker=dict(color="#d62728", size=13, symbol="x"),
+            text=[f"n={curve.n_obs}<br>p={curve.p_obs:.3f}"],
+            textposition="top right",
+            textfont=dict(size=10, color="#d62728"),
+            name=f"you are here (n={curve.n_obs}, p={curve.p_obs:.3f})",
+        )
+    )
     if curve.n_needed is not None:
-        fig.add_trace(go.Scatter(
-            x=[curve.n_needed], y=[alpha], mode="markers+text",
-            marker=dict(color="#2ca02c", size=13, symbol="star"),
-            text=[f"n={curve.n_needed}<br>p={alpha:g}"],
-            textposition="top right", textfont=dict(size=10, color="#2ca02c"),
-            name=f"n needed to reject α={alpha:g} (n≈{curve.n_needed})",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[curve.n_needed],
+                y=[alpha],
+                mode="markers+text",
+                marker=dict(color="#2ca02c", size=13, symbol="star"),
+                text=[f"n={curve.n_needed}<br>p={alpha:g}"],
+                textposition="top right",
+                textfont=dict(size=10, color="#2ca02c"),
+                name=f"n needed to reject α={alpha:g} (n≈{curve.n_needed})",
+            )
+        )
 
     p_max_finite = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
     y_top = min(1.0, max(0.5, p_max_finite * 1.05))
@@ -1231,8 +1365,9 @@ def mk_power_curve_figure(
         yaxis_title="MK two-sided p-value",
         yaxis=dict(range=[0, y_top]),
         font=dict(size=11),
-        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
-                    font=dict(size=10)),
+        legend=dict(
+            yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
     return fig, curve
 
@@ -1301,8 +1436,7 @@ def mk_power_of_test(
             (0.80 is the conventional target).
     """
     power_grid = np.array(
-        [mk_asymptotic_power(curve.tau_obs, int(n), alpha=curve.alpha)
-         for n in curve.n_grid]
+        [mk_asymptotic_power(curve.tau_obs, int(n), alpha=curve.alpha) for n in curve.n_grid]
     )
     power_now = mk_asymptotic_power(curve.tau_obs, curve.n_obs, alpha=curve.alpha)
     hit = np.isfinite(power_grid) & (power_grid >= target_power)
@@ -1354,38 +1488,55 @@ def mk_power_of_test_figure(
     power = mk_power_of_test(curve, target_power=target_power)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=power.n_grid, y=power.power_grid, mode="lines",
-        name=f"power(n) at fixed τ = {power.tau_obs:+.3f}",
-        line=dict(color="#1f77b4", width=2),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=power.n_grid,
+            y=power.power_grid,
+            mode="lines",
+            name=f"power(n) at fixed τ = {power.tau_obs:+.3f}",
+            line=dict(color="#1f77b4", width=2),
+        )
+    )
     fig.add_hline(
-        y=power.alpha, line=dict(color="grey", dash="dot"),
+        y=power.alpha,
+        line=dict(color="grey", dash="dot"),
         annotation_text=f"α = {power.alpha:g} (chance)",
-        annotation_position="bottom right", annotation_font_size=10,
+        annotation_position="bottom right",
+        annotation_font_size=10,
     )
     fig.add_hline(
-        y=power.target_power, line=dict(color="#d62728", dash="dash"),
+        y=power.target_power,
+        line=dict(color="#d62728", dash="dash"),
         annotation_text=f"target = {power.target_power:.2f}",
-        annotation_position="top right", annotation_font_size=10,
+        annotation_position="top right",
+        annotation_font_size=10,
     )
-    fig.add_trace(go.Scatter(
-        x=[power.n_obs], y=[power.power_now], mode="markers+text",
-        marker=dict(color="#d62728", size=13, symbol="x"),
-        text=[f"n={power.n_obs}<br>power={power.power_now:.2f}"],
-        textposition="top right", textfont=dict(size=10, color="#d62728"),
-        name=f"you are here (n={power.n_obs}, power={power.power_now:.2f})",
-    ))
-    if power.n_needed_power is not None:
-        fig.add_trace(go.Scatter(
-            x=[power.n_needed_power], y=[power.target_power],
+    fig.add_trace(
+        go.Scatter(
+            x=[power.n_obs],
+            y=[power.power_now],
             mode="markers+text",
-            marker=dict(color="#2ca02c", size=13, symbol="star"),
-            text=[f"n={power.n_needed_power}<br>power={power.target_power:.2f}"],
-            textposition="top left", textfont=dict(size=10, color="#2ca02c"),
-            name=f"n needed for power ≥ {power.target_power:.2f} "
-                 f"(n≈{power.n_needed_power})",
-        ))
+            marker=dict(color="#d62728", size=13, symbol="x"),
+            text=[f"n={power.n_obs}<br>power={power.power_now:.2f}"],
+            textposition="top right",
+            textfont=dict(size=10, color="#d62728"),
+            name=f"you are here (n={power.n_obs}, power={power.power_now:.2f})",
+        )
+    )
+    if power.n_needed_power is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[power.n_needed_power],
+                y=[power.target_power],
+                mode="markers+text",
+                marker=dict(color="#2ca02c", size=13, symbol="star"),
+                text=[f"n={power.n_needed_power}<br>power={power.target_power:.2f}"],
+                textposition="top left",
+                textfont=dict(size=10, color="#2ca02c"),
+                name=f"n needed for power ≥ {power.target_power:.2f} "
+                f"(n≈{power.n_needed_power})",
+            )
+        )
 
     need_txt = (
         f"need ~{power.n_needed_power} points for power ≥ {power.target_power:.2f}."
@@ -1404,8 +1555,9 @@ def mk_power_of_test_figure(
         xaxis=dict(title="hypothetical sample size n"),
         yaxis=dict(title="MK two-sided power", range=[0, 1.02]),
         font=dict(size=11),
-        legend=dict(yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h",
-                    font=dict(size=10)),
+        legend=dict(
+            yanchor="top", y=-0.20, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
     return fig, power
 
@@ -1417,12 +1569,15 @@ def mk_power_of_test_figure(
 # Palette convention within a family: distinct shades per ROLE (line /
 # observed marker / n-needed marker) so a shared legend disambiguates
 # axis AND role even when several traces sit on the same axis.
-_MK_P_PALETTE = {"line": "#1f77b4", "obs": "#0d3d66", "n_needed": "#17becf"}      # blues
+_MK_P_PALETTE = {"line": "#1f77b4", "obs": "#0d3d66", "n_needed": "#17becf"}  # blues
 _MK_POWER_PALETTE = {"line": "#ff7f0e", "obs": "#8c3d00", "n_needed": "#ffbb78"}  # oranges
 
 
 def _add_pvalue_traces(
-    fig, curve: MKPowerCurve, *, secondary_y: bool | None = None,
+    fig,
+    curve: MKPowerCurve,
+    *,
+    secondary_y: bool | None = None,
 ) -> None:
     """Add MK p(n) line + observed X + optional n-needed star (blue family).
 
@@ -1431,34 +1586,56 @@ def _add_pvalue_traces(
     a secondary y-axis and on a plain :class:`plotly.graph_objects.Figure`.
     """
     import plotly.graph_objects as go
+
     pal = _MK_P_PALETTE
     kw = {} if secondary_y is None else {"secondary_y": secondary_y}
-    fig.add_trace(go.Scatter(
-        x=curve.n_grid, y=curve.p_grid, mode="lines",
-        name=f"[p] MK p(n) at τ = {curve.tau_obs:+.3f}",
-        line=dict(color=pal["line"], width=2), legendgroup="mk_p",
-    ), **kw)
-    fig.add_trace(go.Scatter(
-        x=[curve.n_obs], y=[curve.p_obs], mode="markers+text",
-        marker=dict(color=pal["obs"], size=13, symbol="x"),
-        text=[f"obs<br>n={curve.n_obs}, p={curve.p_obs:.3f}"],
-        textposition="top right", textfont=dict(size=10, color=pal["obs"]),
-        name=f"[p] observed (n={curve.n_obs}, p={curve.p_obs:.3f})",
-        legendgroup="mk_p",
-    ), **kw)
-    if curve.n_needed is not None:
-        fig.add_trace(go.Scatter(
-            x=[curve.n_needed], y=[curve.alpha], mode="markers+text",
-            marker=dict(color=pal["n_needed"], size=13, symbol="star"),
-            text=[f"n≈{curve.n_needed}"],
-            textposition="top left", textfont=dict(size=10, color=pal["n_needed"]),
-            name=f"[p] n needed for α ≤ {curve.alpha:g} (n≈{curve.n_needed})",
+    fig.add_trace(
+        go.Scatter(
+            x=curve.n_grid,
+            y=curve.p_grid,
+            mode="lines",
+            name=f"[p] MK p(n) at τ = {curve.tau_obs:+.3f}",
+            line=dict(color=pal["line"], width=2),
             legendgroup="mk_p",
-        ), **kw)
+        ),
+        **kw,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[curve.n_obs],
+            y=[curve.p_obs],
+            mode="markers+text",
+            marker=dict(color=pal["obs"], size=13, symbol="x"),
+            text=[f"obs<br>n={curve.n_obs}, p={curve.p_obs:.3f}"],
+            textposition="top right",
+            textfont=dict(size=10, color=pal["obs"]),
+            name=f"[p] observed (n={curve.n_obs}, p={curve.p_obs:.3f})",
+            legendgroup="mk_p",
+        ),
+        **kw,
+    )
+    if curve.n_needed is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[curve.n_needed],
+                y=[curve.alpha],
+                mode="markers+text",
+                marker=dict(color=pal["n_needed"], size=13, symbol="star"),
+                text=[f"n≈{curve.n_needed}"],
+                textposition="top left",
+                textfont=dict(size=10, color=pal["n_needed"]),
+                name=f"[p] n needed for α ≤ {curve.alpha:g} (n≈{curve.n_needed})",
+                legendgroup="mk_p",
+            ),
+            **kw,
+        )
 
 
 def _add_power_traces(
-    fig, power: MKPowerOfTest, *, secondary_y: bool | None = None,
+    fig,
+    power: MKPowerOfTest,
+    *,
+    secondary_y: bool | None = None,
 ) -> None:
     """Add MK power(n) line + observed X + optional n-needed star (orange family).
 
@@ -1467,59 +1644,91 @@ def _add_power_traces(
     a secondary y-axis and on a plain :class:`plotly.graph_objects.Figure`.
     """
     import plotly.graph_objects as go
+
     pal = _MK_POWER_PALETTE
     kw = {} if secondary_y is None else {"secondary_y": secondary_y}
-    fig.add_trace(go.Scatter(
-        x=power.n_grid, y=power.power_grid, mode="lines",
-        name=f"[power] MK power(n) at τ = {power.tau_obs:+.3f}",
-        line=dict(color=pal["line"], width=2), legendgroup="mk_power",
-    ), **kw)
-    fig.add_trace(go.Scatter(
-        x=[power.n_obs], y=[power.power_now], mode="markers+text",
-        marker=dict(color=pal["obs"], size=13, symbol="x"),
-        text=[f"obs<br>n={power.n_obs}, power={power.power_now:.2f}"],
-        textposition="bottom right", textfont=dict(size=10, color=pal["obs"]),
-        name=f"[power] observed (n={power.n_obs}, power={power.power_now:.2f})",
-        legendgroup="mk_power",
-    ), **kw)
-    if power.n_needed_power is not None:
-        fig.add_trace(go.Scatter(
-            x=[power.n_needed_power], y=[power.target_power], mode="markers+text",
-            marker=dict(color=pal["n_needed"], size=13, symbol="star"),
-            text=[f"n≈{power.n_needed_power}"],
-            textposition="top left", textfont=dict(size=10, color=pal["n_needed"]),
-            name=(f"[power] n needed for power ≥ {power.target_power:.2f} "
-                  f"(n≈{power.n_needed_power})"),
+    fig.add_trace(
+        go.Scatter(
+            x=power.n_grid,
+            y=power.power_grid,
+            mode="lines",
+            name=f"[power] MK power(n) at τ = {power.tau_obs:+.3f}",
+            line=dict(color=pal["line"], width=2),
             legendgroup="mk_power",
-        ), **kw)
+        ),
+        **kw,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[power.n_obs],
+            y=[power.power_now],
+            mode="markers+text",
+            marker=dict(color=pal["obs"], size=13, symbol="x"),
+            text=[f"obs<br>n={power.n_obs}, power={power.power_now:.2f}"],
+            textposition="bottom right",
+            textfont=dict(size=10, color=pal["obs"]),
+            name=f"[power] observed (n={power.n_obs}, power={power.power_now:.2f})",
+            legendgroup="mk_power",
+        ),
+        **kw,
+    )
+    if power.n_needed_power is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[power.n_needed_power],
+                y=[power.target_power],
+                mode="markers+text",
+                marker=dict(color=pal["n_needed"], size=13, symbol="star"),
+                text=[f"n≈{power.n_needed_power}"],
+                textposition="top left",
+                textfont=dict(size=10, color=pal["n_needed"]),
+                name=(
+                    f"[power] n needed for power ≥ {power.target_power:.2f} "
+                    f"(n≈{power.n_needed_power})"
+                ),
+                legendgroup="mk_power",
+            ),
+            **kw,
+        )
 
 
 def _apply_dual_axis_layout(
-    fig, curve: MKPowerCurve, power: MKPowerOfTest, arm_label: str,
+    fig,
+    curve: MKPowerCurve,
+    power: MKPowerOfTest,
+    arm_label: str,
 ) -> None:
     """Axis titles/ranges/colours + top-level layout for the dual-axis figure."""
     p_max = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
     y_top = min(1.0, max(0.5, p_max * 1.05))
     fig.add_hline(
-        y=curve.alpha, line=dict(color="#d62728", dash="dash"),
+        y=curve.alpha,
+        line=dict(color="#d62728", dash="dash"),
         annotation_text=f"α = {curve.alpha:g} (p)",
-        annotation_position="top left", annotation_font_size=10,
+        annotation_position="top left",
+        annotation_font_size=10,
         secondary_y=False,
     )
     fig.add_hline(
-        y=power.target_power, line=dict(color="#2ca02c", dash="dash"),
+        y=power.target_power,
+        line=dict(color="#2ca02c", dash="dash"),
         annotation_text=f"target power = {power.target_power:.2f}",
-        annotation_position="top right", annotation_font_size=10,
+        annotation_position="top right",
+        annotation_font_size=10,
         secondary_y=True,
     )
     fig.update_xaxes(title_text="hypothetical sample size n")
     fig.update_yaxes(
-        title_text="MK two-sided p-value", range=[0, y_top],
-        color=_MK_P_PALETTE["line"], secondary_y=False,
+        title_text="MK two-sided p-value",
+        range=[0, y_top],
+        color=_MK_P_PALETTE["line"],
+        secondary_y=False,
     )
     fig.update_yaxes(
-        title_text="MK two-sided power", range=[0, 1.02],
-        color=_MK_POWER_PALETTE["line"], secondary_y=True,
+        title_text="MK two-sided power",
+        range=[0, 1.02],
+        color=_MK_POWER_PALETTE["line"],
+        secondary_y=True,
     )
     fig.update_layout(
         title=dict(
@@ -1531,26 +1740,33 @@ def _apply_dual_axis_layout(
             ),
             font=dict(size=13),
         ),
-        font=dict(size=11), height=560,
-        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
-                    orientation="h", font=dict(size=10)),
+        font=dict(size=11),
+        height=560,
+        legend=dict(
+            yanchor="top", y=-0.18, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
 
 
 def _apply_pvalue_only_layout(
-    fig, curve: MKPowerCurve, arm_label: str,
+    fig,
+    curve: MKPowerCurve,
+    arm_label: str,
 ) -> None:
     """Single-axis layout for the p-value-only variant of the dual figure."""
     p_max = float(np.nanmax(curve.p_grid)) if np.isfinite(curve.p_grid).any() else 1.0
     y_top = min(1.0, max(0.5, p_max * 1.05))
     fig.add_hline(
-        y=curve.alpha, line=dict(color="#d62728", dash="dash"),
+        y=curve.alpha,
+        line=dict(color="#d62728", dash="dash"),
         annotation_text=f"α = {curve.alpha:g}",
-        annotation_position="top left", annotation_font_size=10,
+        annotation_position="top left",
+        annotation_font_size=10,
     )
     fig.update_xaxes(title_text="hypothetical sample size n")
     fig.update_yaxes(
-        title_text="MK two-sided p-value", range=[0, y_top],
+        title_text="MK two-sided p-value",
+        range=[0, y_top],
         color=_MK_P_PALETTE["line"],
     )
     fig.update_layout(
@@ -1562,29 +1778,39 @@ def _apply_pvalue_only_layout(
             ),
             font=dict(size=13),
         ),
-        font=dict(size=11), height=560,
-        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
-                    orientation="h", font=dict(size=10)),
+        font=dict(size=11),
+        height=560,
+        legend=dict(
+            yanchor="top", y=-0.18, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
 
 
 def _apply_power_only_layout(
-    fig, curve: MKPowerCurve, power: MKPowerOfTest, arm_label: str,
+    fig,
+    curve: MKPowerCurve,
+    power: MKPowerOfTest,
+    arm_label: str,
 ) -> None:
     """Single-axis layout for the power-only variant of the dual figure."""
     fig.add_hline(
-        y=curve.alpha, line=dict(color="grey", dash="dot"),
+        y=curve.alpha,
+        line=dict(color="grey", dash="dot"),
         annotation_text=f"α = {curve.alpha:g} (chance)",
-        annotation_position="bottom right", annotation_font_size=10,
+        annotation_position="bottom right",
+        annotation_font_size=10,
     )
     fig.add_hline(
-        y=power.target_power, line=dict(color="#2ca02c", dash="dash"),
+        y=power.target_power,
+        line=dict(color="#2ca02c", dash="dash"),
         annotation_text=f"target power = {power.target_power:.2f}",
-        annotation_position="top right", annotation_font_size=10,
+        annotation_position="top right",
+        annotation_font_size=10,
     )
     fig.update_xaxes(title_text="hypothetical sample size n")
     fig.update_yaxes(
-        title_text="MK two-sided power", range=[0, 1.02],
+        title_text="MK two-sided power",
+        range=[0, 1.02],
         color=_MK_POWER_PALETTE["line"],
     )
     fig.update_layout(
@@ -1596,9 +1822,11 @@ def _apply_power_only_layout(
             ),
             font=dict(size=13),
         ),
-        font=dict(size=11), height=560,
-        legend=dict(yanchor="top", y=-0.18, xanchor="left", x=0,
-                    orientation="h", font=dict(size=10)),
+        font=dict(size=11),
+        height=560,
+        legend=dict(
+            yanchor="top", y=-0.18, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
 
 
@@ -1643,9 +1871,7 @@ def mk_pvalue_power_dual_axis_figure(
     from plotly.subplots import make_subplots
 
     if show not in ("both", "pvalue", "power"):
-        raise ValueError(
-            f"show must be one of 'both', 'pvalue', 'power'; got {show!r}"
-        )
+        raise ValueError(f"show must be one of 'both', 'pvalue', 'power'; got {show!r}")
 
     power = mk_power_of_test(curve, target_power=target_power)
     if show == "both":
@@ -1701,8 +1927,8 @@ class MkVsTTestFigures:
     the figures AND print a headline table without a second call.
     """
 
-    fig_pvalue: object   # plotly.graph_objects.Figure
-    fig_power: object    # plotly.graph_objects.Figure
+    fig_pvalue: object  # plotly.graph_objects.Figure
+    fig_power: object  # plotly.graph_objects.Figure
     ab: AbTTestSweep
 
 
@@ -1723,29 +1949,41 @@ def _cohens_d(pre: np.ndarray, post: np.ndarray, pooled_sd: float) -> float:
 def _ttest_pvalue_sweep(abs_d: float, n_grid: np.ndarray) -> np.ndarray:
     """Two-sided balanced-t p-values across ``n``: t = d·√(n/2), df = 2n−2."""
     from scipy.stats import t as student_t
+
     if not np.isfinite(abs_d) or abs_d <= 0:
         return np.full(n_grid.shape, float("nan"))
     t_vals = abs_d * np.sqrt(n_grid / 2.0)
     df_vals = 2 * n_grid - 2
-    return np.array([
-        float(2.0 * (1.0 - student_t.cdf(t, df=df)))
-        for t, df in zip(t_vals, df_vals)
-    ])
+    return np.array(
+        [
+            float(2.0 * (1.0 - student_t.cdf(t, df=df)))
+            for t, df in zip(t_vals, df_vals, strict=False)
+        ]
+    )
 
 
 def _ttest_power_at(abs_d: float, n: int, *, alpha: float) -> float:
     """Two-sided balanced-t power at a single ``n`` via TTestIndPower."""
     from statsmodels.stats.power import TTestIndPower
+
     if not np.isfinite(abs_d) or abs_d <= 0 or n < 2:
         return float("nan")
-    return float(TTestIndPower().solve_power(
-        effect_size=abs_d, nobs1=int(n), alpha=alpha, ratio=1.0,
-        alternative="two-sided",
-    ))
+    return float(
+        TTestIndPower().solve_power(
+            effect_size=abs_d,
+            nobs1=int(n),
+            alpha=alpha,
+            ratio=1.0,
+            alternative="two-sided",
+        )
+    )
 
 
 def _ttest_power_sweep(
-    abs_d: float, n_grid: np.ndarray, *, alpha: float,
+    abs_d: float,
+    n_grid: np.ndarray,
+    *,
+    alpha: float,
 ) -> np.ndarray:
     """Analytic two-sided balanced-t power across ``n`` via TTestIndPower."""
     if not np.isfinite(abs_d) or abs_d <= 0:
@@ -1754,7 +1992,11 @@ def _ttest_power_sweep(
 
 
 def _first_crossing(
-    grid: np.ndarray, values: np.ndarray, threshold: float, *, mode: str,
+    grid: np.ndarray,
+    values: np.ndarray,
+    threshold: float,
+    *,
+    mode: str,
 ) -> int | None:
     """Smallest grid point where ``values`` cross ``threshold``.
 
@@ -1824,43 +2066,72 @@ def ab_ttest_sweep(
     power_now = _ttest_power_at(abs_d, n_obs, alpha=alpha)
 
     return AbTTestSweep(
-        d_obs=d_obs, n_obs=n_obs, p_obs=float(p_obs), power_now=power_now,
-        n_grid=grid, p_grid=p_grid, power_grid=power_grid,
-        alpha=float(alpha), target_power=float(target_power),
+        d_obs=d_obs,
+        n_obs=n_obs,
+        p_obs=float(p_obs),
+        power_now=power_now,
+        n_grid=grid,
+        p_grid=p_grid,
+        power_grid=power_grid,
+        alpha=float(alpha),
+        target_power=float(target_power),
         n_needed_alpha=_first_crossing(grid, p_grid, alpha, mode="le"),
         n_needed_power=_first_crossing(grid, power_grid, target_power, mode="ge"),
-        n_pre=n_pre, n_post=n_post,
+        n_pre=n_pre,
+        n_post=n_post,
     )
 
 
 def _add_observed_marker(
-    fig, x: float, y: float, *,
-    color: str, label: str, position: str = "top right",
+    fig,
+    x: float,
+    y: float,
+    *,
+    color: str,
+    label: str,
+    position: str = "top right",
 ) -> None:
     """Add an X marker with text at (x, y) — 'you are here' style."""
     import plotly.graph_objects as go
-    fig.add_trace(go.Scatter(
-        x=[x], y=[y], mode="markers+text",
-        marker=dict(color=color, size=13, symbol="x"),
-        text=[label], textposition=position,
-        textfont=dict(size=10, color=color),
-        showlegend=False,
-    ))
+
+    fig.add_trace(
+        go.Scatter(
+            x=[x],
+            y=[y],
+            mode="markers+text",
+            marker=dict(color=color, size=13, symbol="x"),
+            text=[label],
+            textposition=position,
+            textfont=dict(size=10, color=color),
+            showlegend=False,
+        )
+    )
 
 
 def _add_n_needed_marker(
-    fig, x: float, y: float, *,
-    color: str, label: str, position: str = "top left",
+    fig,
+    x: float,
+    y: float,
+    *,
+    color: str,
+    label: str,
+    position: str = "top left",
 ) -> None:
     """Add a star marker with text at the (n_needed, threshold) crossing."""
     import plotly.graph_objects as go
-    fig.add_trace(go.Scatter(
-        x=[x], y=[y], mode="markers+text",
-        marker=dict(color=color, size=12, symbol="star"),
-        text=[label], textposition=position,
-        textfont=dict(size=10, color=color),
-        showlegend=False,
-    ))
+
+    fig.add_trace(
+        go.Scatter(
+            x=[x],
+            y=[y],
+            mode="markers+text",
+            marker=dict(color=color, size=12, symbol="star"),
+            text=[label],
+            textposition=position,
+            textfont=dict(size=10, color=color),
+            showlegend=False,
+        )
+    )
 
 
 def _apply_overlay_layout(fig, *, title: str, y_title: str, y_range) -> None:
@@ -1870,52 +2141,80 @@ def _apply_overlay_layout(fig, *, title: str, y_title: str, y_range) -> None:
         xaxis=dict(title="hypothetical sample size n"),
         yaxis=dict(title=y_title, range=list(y_range)),
         font=dict(size=11),
-        legend=dict(yanchor="top", y=-0.15, xanchor="left", x=0,
-                    orientation="h", font=dict(size=10)),
+        legend=dict(
+            yanchor="top", y=-0.15, xanchor="left", x=0, orientation="h", font=dict(size=10)
+        ),
     )
 
 
 def _ab_vs_mk_pvalue_figure(
-    ab: AbTTestSweep, curve: MKPowerCurve, *, experiment: str,
+    ab: AbTTestSweep,
+    curve: MKPowerCurve,
+    *,
+    experiment: str,
 ):
     """Shared-axis p-value overlay (A/B blue, MK orange)."""
     import plotly.graph_objects as go
+
     ab_pal = _MK_P_PALETTE
     mk_pal = _MK_POWER_PALETTE
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=ab.n_grid, y=ab.p_grid, mode="lines",
-        name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
-        line=dict(color=ab_pal["line"], width=2),
-    ))
-    fig.add_trace(go.Scatter(
-        x=curve.n_grid, y=curve.p_grid, mode="lines",
-        name=f"Mann–Kendall  (τ = {curve.tau_obs:+.3f})",
-        line=dict(color=mk_pal["line"], width=2),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=ab.n_grid,
+            y=ab.p_grid,
+            mode="lines",
+            name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
+            line=dict(color=ab_pal["line"], width=2),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=curve.n_grid,
+            y=curve.p_grid,
+            mode="lines",
+            name=f"Mann–Kendall  (τ = {curve.tau_obs:+.3f})",
+            line=dict(color=mk_pal["line"], width=2),
+        )
+    )
     fig.add_hline(
-        y=ab.alpha, line=dict(color="#d62728", dash="dash"),
+        y=ab.alpha,
+        line=dict(color="#d62728", dash="dash"),
         annotation_text=f"α = {ab.alpha:g}",
-        annotation_position="top right", annotation_font_size=10,
+        annotation_position="top right",
+        annotation_font_size=10,
     )
     _add_observed_marker(
-        fig, ab.n_obs, ab.p_obs, color=ab_pal["obs"],
+        fig,
+        ab.n_obs,
+        ab.p_obs,
+        color=ab_pal["obs"],
         label=f"A/B obs<br>n={ab.n_obs}, p={ab.p_obs:.3f}",
     )
     _add_observed_marker(
-        fig, curve.n_obs, curve.p_obs, color=mk_pal["obs"],
+        fig,
+        curve.n_obs,
+        curve.p_obs,
+        color=mk_pal["obs"],
         label=f"MK obs<br>n={curve.n_obs}, p={curve.p_obs:.3f}",
         position="bottom right",
     )
     if ab.n_needed_alpha is not None:
         _add_n_needed_marker(
-            fig, ab.n_needed_alpha, ab.alpha, color=ab_pal["n_needed"],
+            fig,
+            ab.n_needed_alpha,
+            ab.alpha,
+            color=ab_pal["n_needed"],
             label=f"A/B n≈{ab.n_needed_alpha}",
         )
     if curve.n_needed is not None:
         _add_n_needed_marker(
-            fig, curve.n_needed, ab.alpha, color=mk_pal["n_needed"],
-            label=f"MK n≈{curve.n_needed}", position="top right",
+            fig,
+            curve.n_needed,
+            ab.alpha,
+            color=mk_pal["n_needed"],
+            label=f"MK n≈{curve.n_needed}",
+            position="top right",
         )
     p_max = float(np.nanmax(np.concatenate([ab.p_grid, curve.p_grid])))
     y_top = min(1.0, max(0.5, p_max * 1.05))
@@ -1926,57 +2225,87 @@ def _ab_vs_mk_pvalue_figure(
             f"<sub>fix observed effect size (d = {ab.d_obs:+.3f}, "
             f"τ = {curve.tau_obs:+.3f}), sweep n → shared axes, two curves.</sub>"
         ),
-        y_title="two-sided p-value", y_range=(0, y_top),
+        y_title="two-sided p-value",
+        y_range=(0, y_top),
     )
     return fig
 
 
 def _ab_vs_mk_power_figure(
-    ab: AbTTestSweep, power: MKPowerOfTest, *, experiment: str,
+    ab: AbTTestSweep,
+    power: MKPowerOfTest,
+    *,
+    experiment: str,
 ):
     """Shared-axis power overlay (A/B blue, MK orange)."""
     import plotly.graph_objects as go
+
     ab_pal = _MK_P_PALETTE
     mk_pal = _MK_POWER_PALETTE
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=ab.n_grid, y=ab.power_grid, mode="lines",
-        name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
-        line=dict(color=ab_pal["line"], width=2),
-    ))
-    fig.add_trace(go.Scatter(
-        x=power.n_grid, y=power.power_grid, mode="lines",
-        name=f"Mann–Kendall  (τ = {power.tau_obs:+.3f})",
-        line=dict(color=mk_pal["line"], width=2),
-    ))
-    fig.add_hline(
-        y=ab.alpha, line=dict(color="grey", dash="dot"),
-        annotation_text=f"α = {ab.alpha:g} (chance)",
-        annotation_position="bottom right", annotation_font_size=10,
+    fig.add_trace(
+        go.Scatter(
+            x=ab.n_grid,
+            y=ab.power_grid,
+            mode="lines",
+            name=f"A/B t-test  (d = {ab.d_obs:+.3f})",
+            line=dict(color=ab_pal["line"], width=2),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=power.n_grid,
+            y=power.power_grid,
+            mode="lines",
+            name=f"Mann–Kendall  (τ = {power.tau_obs:+.3f})",
+            line=dict(color=mk_pal["line"], width=2),
+        )
     )
     fig.add_hline(
-        y=ab.target_power, line=dict(color="#d62728", dash="dash"),
+        y=ab.alpha,
+        line=dict(color="grey", dash="dot"),
+        annotation_text=f"α = {ab.alpha:g} (chance)",
+        annotation_position="bottom right",
+        annotation_font_size=10,
+    )
+    fig.add_hline(
+        y=ab.target_power,
+        line=dict(color="#d62728", dash="dash"),
         annotation_text=f"target = {ab.target_power:.2f}",
-        annotation_position="top right", annotation_font_size=10,
+        annotation_position="top right",
+        annotation_font_size=10,
     )
     _add_observed_marker(
-        fig, ab.n_obs, ab.power_now, color=ab_pal["obs"],
+        fig,
+        ab.n_obs,
+        ab.power_now,
+        color=ab_pal["obs"],
         label=f"A/B obs<br>n={ab.n_obs}, power={ab.power_now:.2f}",
     )
     _add_observed_marker(
-        fig, power.n_obs, power.power_now, color=mk_pal["obs"],
+        fig,
+        power.n_obs,
+        power.power_now,
+        color=mk_pal["obs"],
         label=f"MK obs<br>n={power.n_obs}, power={power.power_now:.2f}",
         position="bottom right",
     )
     if ab.n_needed_power is not None:
         _add_n_needed_marker(
-            fig, ab.n_needed_power, ab.target_power, color=ab_pal["n_needed"],
+            fig,
+            ab.n_needed_power,
+            ab.target_power,
+            color=ab_pal["n_needed"],
             label=f"A/B n≈{ab.n_needed_power}",
         )
     if power.n_needed_power is not None:
         _add_n_needed_marker(
-            fig, power.n_needed_power, ab.target_power, color=mk_pal["n_needed"],
-            label=f"MK n≈{power.n_needed_power}", position="top right",
+            fig,
+            power.n_needed_power,
+            ab.target_power,
+            color=mk_pal["n_needed"],
+            label=f"MK n≈{power.n_needed_power}",
+            position="top right",
         )
     _apply_overlay_layout(
         fig,
@@ -1985,7 +2314,8 @@ def _ab_vs_mk_power_figure(
             f"<sub>fix observed effect size (d = {ab.d_obs:+.3f}, "
             f"τ = {power.tau_obs:+.3f}), sweep n → shared axes, two curves.</sub>"
         ),
-        y_title="two-sided power", y_range=(0, 1.02),
+        y_title="two-sided power",
+        y_range=(0, 1.02),
     )
     return fig
 
@@ -2031,8 +2361,11 @@ def mk_vs_ttest_figures(
     """
     power = mk_power_of_test(curve, target_power=target_power)
     ab = ab_ttest_sweep(
-        y_pre, y_post, curve.n_grid,
-        alpha=curve.alpha, target_power=target_power,
+        y_pre,
+        y_post,
+        curve.n_grid,
+        alpha=curve.alpha,
+        target_power=target_power,
     )
     fig_pvalue = _ab_vs_mk_pvalue_figure(ab, curve, experiment=experiment)
     fig_power = _ab_vs_mk_power_figure(ab, power, experiment=experiment)
@@ -2133,6 +2466,7 @@ def mk_original(y: Sequence[float], alpha: float = 0.05) -> TrendResult:
     Delegates to ``pymannkendall.original_test``.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     return _to_trend_result(pmk.original_test(y, alpha=alpha), "original", len(y))
 
@@ -2146,10 +2480,12 @@ def mk_hamed_rao(y: Sequence[float], alpha: float = 0.05, lag: int | None = 1) -
     the package default when the series is long and stationary.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     return _to_trend_result(
         pmk.hamed_rao_modification_test(y, alpha=alpha, lag=lag),
-        "hamed_rao", len(y),
+        "hamed_rao",
+        len(y),
     )
 
 
@@ -2159,10 +2495,12 @@ def mk_yue_wang(y: Sequence[float], alpha: float = 0.05, lag: int | None = 1) ->
     Delegates to ``pymannkendall.yue_wang_modification_test``.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     return _to_trend_result(
         pmk.yue_wang_modification_test(y, alpha=alpha, lag=lag),
-        "yue_wang", len(y),
+        "yue_wang",
+        len(y),
     )
 
 
@@ -2172,10 +2510,12 @@ def mk_tfpw(y: Sequence[float], alpha: float = 0.05) -> TrendResult:
     Delegates to ``pymannkendall.trend_free_pre_whitening_modification_test``.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     return _to_trend_result(
         pmk.trend_free_pre_whitening_modification_test(y, alpha=alpha),
-        "tfpw", len(y),
+        "tfpw",
+        len(y),
     )
 
 
@@ -2185,10 +2525,12 @@ def mk_pw(y: Sequence[float], alpha: float = 0.05) -> TrendResult:
     Delegates to ``pymannkendall.pre_whitening_modification_test``.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     return _to_trend_result(
         pmk.pre_whitening_modification_test(y, alpha=alpha),
-        "pw", len(y),
+        "pw",
+        len(y),
     )
 
 
@@ -2251,8 +2593,9 @@ def mk_3pw(
             "mk_delta_mbb(mk_method='hamed_rao') instead."
         )
 
-    out = _mk.mk_temp_aggr([dts_native], [arr], resolution=float(resolution),
-                           alpha_mk=alpha_mk, alpha_cl=alpha_cl)
+    out = _mk.mk_temp_aggr(
+        [dts_native], [arr], resolution=float(resolution), alpha_mk=alpha_mk, alpha_cl=alpha_cl
+    )
     # Yearly aggregate is the last key; for a single-season call it equals
     # the per-season entry, but reading it uniformly is safer.
     entry = out[max(out.keys())]
@@ -2464,6 +2807,7 @@ def seasonal_mk(
         ``lag`` passed to the per-season HR test.
     """
     import pymannkendall as pmk
+
     y = _clean(y)
     period = int(period)
 
@@ -2476,21 +2820,23 @@ def seasonal_mk(
         if len(y_s) < 4 or np.unique(y_s).size == 1:
             continue
         r = pmk.hamed_rao_modification_test(y_s, alpha=alpha, lag=hr_lag)
-        rows.append({
-            "season": s,
-            "n": len(y_s),
-            "z": float(r.z),
-            "p": float(r.p),
-            "slope": float(r.slope),
-            "tau": float(r.Tau),
-        })
+        rows.append(
+            {
+                "season": s,
+                "n": len(y_s),
+                "z": float(r.z),
+                "p": float(r.p),
+                "slope": float(r.slope),
+                "tau": float(r.Tau),
+            }
+        )
         z_list.append(float(r.z))
 
     z_arr = np.asarray(z_list, dtype=float)
     z_arr = z_arr[np.isfinite(z_arr)]
     k = len(z_arr)
     if k > 1:
-        Q = float((z_arr ** 2).sum() - (z_arr.sum() ** 2) / k)
+        Q = float((z_arr**2).sum() - (z_arr.sum() ** 2) / k)
         Q = max(Q, 0.0)
         homog_p = float(chi2.sf(Q, df=k - 1))
     else:
@@ -2567,45 +2913,48 @@ def vbh_chi2_decomposition(
     if labels is None:
         labels = [f"s{i}" for i in range(period)]
     if len(labels) != period:
-        raise ValueError(
-            f"labels must have length period={period}, got {len(labels)}"
-        )
+        raise ValueError(f"labels must have length period={period}, got {len(labels)}")
 
     rows: list[dict] = []
     for s in range(period):
         S, V, n = _kendall_s_and_var(arr[s::period])
         Z = S / np.sqrt(V) if V > 0 else 0.0
-        rows.append({
-            "season": s,
-            "label": labels[s],
-            "n": n,
-            "S": S,
-            "var_S": V,
-            "Z": Z,
-        })
+        rows.append(
+            {
+                "season": s,
+                "label": labels[s],
+                "n": n,
+                "S": S,
+                "var_S": V,
+                "Z": Z,
+            }
+        )
 
     per_season = pd.DataFrame(rows)
     contributing = per_season["var_S"] > 0
     S_total = float(per_season.loc[contributing, "S"].sum())
     var_total = float(per_season.loc[contributing, "var_S"].sum())
     chi2_total = float(
-        (per_season.loc[contributing, "S"] ** 2
-         / per_season.loc[contributing, "var_S"]).sum()
+        (per_season.loc[contributing, "S"] ** 2 / per_season.loc[contributing, "var_S"]).sum()
     )
-    chi2_trend = (S_total ** 2) / var_total if var_total > 0 else 0.0
+    chi2_trend = (S_total**2) / var_total if var_total > 0 else 0.0
     chi2_het = max(chi2_total - chi2_trend, 0.0)
     k = int(contributing.sum())
     df_trend = 1
     df_het = max(k - 1, 1)
     p_trend = float(chi2.sf(chi2_trend, df=df_trend)) if var_total > 0 else float("nan")
-    p_het   = float(chi2.sf(chi2_het,   df=df_het))   if k > 1 else float("nan")
+    p_het = float(chi2.sf(chi2_het, df=df_het)) if k > 1 else float("nan")
 
     return VbhDecomposition(
         per_season=per_season,
         S_total=S_total,
         var_total=var_total,
-        chi2_trend=chi2_trend, p_trend=p_trend, df_trend=df_trend,
-        chi2_het=chi2_het,     p_het=p_het,     df_het=df_het,
+        chi2_trend=chi2_trend,
+        p_trend=p_trend,
+        df_trend=df_trend,
+        chi2_het=chi2_het,
+        p_het=p_het,
+        df_het=df_het,
         k=k,
     )
 
@@ -2620,6 +2969,7 @@ def correlated_seasonal_mk(y: Sequence[float], period: int, alpha: float = 0.05)
     want the pooled test to account for cross-season covariance.
     """
     import pymannkendall as pmk
+
     arr = _clean(y)
     res = pmk.correlated_seasonal_test(arr, period=int(period), alpha=alpha)
     return TrendResult(
@@ -2642,6 +2992,7 @@ def partial_mk(y: Sequence[float], covariate: Sequence[float], alpha: float = 0.
     trend on ``y``.
     """
     import pymannkendall as pmk
+
     y_arr = np.asarray(y, dtype=float)
     x_arr = np.asarray(covariate, dtype=float)
     mask = np.isfinite(y_arr) & np.isfinite(x_arr)
@@ -2713,13 +3064,19 @@ def _mk_pvalue(
     if mk_method == "original":
         return float(pmk.original_test(y, alpha=alpha).p), None, None
     if mk_method == "hamed_rao":
-        return float(
-            pmk.hamed_rao_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p
-        ), None, None
+        return (
+            float(
+                pmk.hamed_rao_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p
+            ),
+            None,
+            None,
+        )
     if mk_method == "yue_wang":
-        return float(
-            pmk.yue_wang_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p
-        ), None, None
+        return (
+            float(pmk.yue_wang_modification_test(y, alpha=alpha, lag=mk_kwargs.get("hr_lag", 1)).p),
+            None,
+            None,
+        )
     if mk_method == "tfpw":
         return float(pmk.trend_free_pre_whitening_modification_test(y, alpha=alpha).p), None, None
     if mk_method == "pw":
@@ -2728,7 +3085,10 @@ def _mk_pvalue(
         if period is None:
             raise ValueError("mk_method='seasonal' requires period=<int>")
         smk = seasonal_mk(
-            y, period=int(period), alpha=alpha, hr_lag=mk_kwargs.get("hr_lag", 1),
+            y,
+            period=int(period),
+            alpha=alpha,
+            hr_lag=mk_kwargs.get("hr_lag", 1),
         )
         return float(smk.p), float(smk.homogeneity_p), None
     if mk_method == "3pw":
@@ -2739,7 +3099,8 @@ def _mk_pvalue(
         # 3PW is defined on a deseasoned residual (Collaud Coen et al. 2020).
         resid = deseason(y, period=int(period))
         r = mk_3pw(
-            dts, resid,
+            dts,
+            resid,
             resolution=mk_kwargs.get("resolution", 1.0),
             alpha_mk=100.0 * (1.0 - alpha),
             alpha_cl=100.0 * (1.0 - alpha),
@@ -2747,9 +3108,7 @@ def _mk_pvalue(
         # Homogeneity guard runs on raw y — independent of prewhitening.
         smk = seasonal_mk(y, period=int(period), alpha=alpha)
         return float(r.p), float(smk.homogeneity_p), r
-    raise ValueError(
-        f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}"
-    )
+    raise ValueError(f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}")
 
 
 # ---------------------------------------------------------------------------
@@ -2853,15 +3212,21 @@ def mk_adaptive_core_arm(
     dts_arr = None if dts is None else np.asarray(dts)
     if variant == "3pw":
         p, _, _ = _mk_pvalue(
-            y_arr, mk_method=variant, alpha=alpha,
+            y_arr,
+            mk_method=variant,
+            alpha=alpha,
             period=period_int,
-            dts=dts_arr, mk_kwargs=dict(mk_kwargs or {}),
+            dts=dts_arr,
+            mk_kwargs=dict(mk_kwargs or {}),
         )
     else:
         p, _, _ = _mk_pvalue(
-            substrate, mk_method=variant, alpha=alpha,
+            substrate,
+            mk_method=variant,
+            alpha=alpha,
             period=period_int,
-            dts=dts_arr, mk_kwargs=dict(mk_kwargs or {}),
+            dts=dts_arr,
+            mk_kwargs=dict(mk_kwargs or {}),
         )
     return MKAdaptiveCoreArmResult(
         n=n,
@@ -2900,12 +3265,22 @@ def mk_adaptive_core(
     (or :func:`mk_delta_mbb` directly) as the optional add-on.
     """
     pre = mk_adaptive_core_arm(
-        y_pre, period=period, dts=dts_pre, acf_cutoff=acf_cutoff,
-        force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
+        y_pre,
+        period=period,
+        dts=dts_pre,
+        acf_cutoff=acf_cutoff,
+        force_variant=force_variant,
+        alpha=alpha,
+        mk_kwargs=mk_kwargs,
     )
     post = mk_adaptive_core_arm(
-        y_post, period=period, dts=dts_post, acf_cutoff=acf_cutoff,
-        force_variant=force_variant, alpha=alpha, mk_kwargs=mk_kwargs,
+        y_post,
+        period=period,
+        dts=dts_post,
+        acf_cutoff=acf_cutoff,
+        force_variant=force_variant,
+        alpha=alpha,
+        mk_kwargs=mk_kwargs,
     )
     delta = float(post.slope - pre.slope)
     if pre.slope != 0 and np.isfinite(pre.slope) and np.isfinite(post.slope):
@@ -2967,7 +3342,7 @@ def mk_adaptive_mbb(
     seed: int | None = 0,
     mk_kwargs: dict | None = None,
     progress: bool = True,
-) -> "MbbDeltaResult":
+) -> MbbDeltaResult:
     """Optional MBB branch (§6.1) — paired moving-block bootstrap for Δ inference.
 
     Thin alias for :func:`mk_delta_mbb` with ``ci_method='mbb'``. Produces
@@ -2977,7 +3352,8 @@ def mk_adaptive_mbb(
     from :func:`mk_adaptive_core`.
     """
     return mk_delta_mbb(
-        y_pre, y_post,
+        y_pre,
+        y_post,
         mk_method=mk_method,
         ci_method="mbb",
         period=period,
@@ -3091,13 +3467,9 @@ def mk_delta_mbb(
     from tqdm.auto import tqdm
 
     if mk_method not in _MK_METHODS:
-        raise ValueError(
-            f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}"
-        )
+        raise ValueError(f"unknown mk_method={mk_method!r}; expected one of {list(_MK_METHODS)}")
     if ci_method not in ("mbb", "gilbert"):
-        raise ValueError(
-            f"unknown ci_method={ci_method!r}; expected 'mbb' or 'gilbert'"
-        )
+        raise ValueError(f"unknown ci_method={ci_method!r}; expected 'mbb' or 'gilbert'")
     if ci_method == "gilbert" and mk_method != "3pw":
         raise ValueError(
             "ci_method='gilbert' requires mk_method='3pw' — the Gilbert bounds "
@@ -3117,12 +3489,20 @@ def mk_delta_mbb(
     dts_pre_arr = None if dts_pre is None else np.asarray(dts_pre)
     dts_post_arr = None if dts_post is None else np.asarray(dts_post)
     pval_pre, hp_pre, mk3pw_pre = _mk_pvalue(
-        y_pre_arr, mk_method=mk_method, alpha=alpha, period=period,
-        dts=dts_pre_arr, mk_kwargs=mk_kwargs,
+        y_pre_arr,
+        mk_method=mk_method,
+        alpha=alpha,
+        period=period,
+        dts=dts_pre_arr,
+        mk_kwargs=mk_kwargs,
     )
     pval_post, hp_post, mk3pw_post = _mk_pvalue(
-        y_post_arr, mk_method=mk_method, alpha=alpha, period=period,
-        dts=dts_post_arr, mk_kwargs=mk_kwargs,
+        y_post_arr,
+        mk_method=mk_method,
+        alpha=alpha,
+        period=period,
+        dts=dts_post_arr,
+        mk_kwargs=mk_kwargs,
     )
 
     # ── Fast path: Gilbert CI (no bootstrap) ────────────────────────────────
@@ -3130,6 +3510,7 @@ def mk_delta_mbb(
         # _mk_pvalue guarantees mk3pw_* are populated when we reach here
         # (mk_method='3pw' enforced above).
         assert mk3pw_pre is not None and mk3pw_post is not None
+
         # mannkendall.mk_temp_aggr returns slope + Gilbert CI in **per-year**
         # units by convention (independent of the ``resolution`` kwarg, which
         # only controls tie detection). theilslopes on the raw daily arrays
@@ -3237,7 +3618,10 @@ def mk_delta_mbb(
 
     delta_point = float(slope_post - slope_pre)
     interp = _compute_delta_interpretation(
-        delta_point, delta_ci, confidence_level, delta_boot=delta_b,
+        delta_point,
+        delta_ci,
+        confidence_level,
+        delta_boot=delta_b,
     )
     return MbbDeltaResult(
         slope_pre=slope_pre,
@@ -3300,19 +3684,21 @@ def per_day_delta_slopes(
             continue
         sp, (sp_lo, sp_hi) = sen_slope_ci(yp, confidence_level=confidence_level)
         sq, (sq_lo, sq_hi) = sen_slope_ci(yq, confidence_level=confidence_level)
-        rows.append({
-            "phase": k,
-            "label": name,
-            "n_pre": len(yp),
-            "n_post": len(yq),
-            "slope_pre": sp,
-            "slope_pre_ci_lo": sp_lo,
-            "slope_pre_ci_hi": sp_hi,
-            "slope_post": sq,
-            "slope_post_ci_lo": sq_lo,
-            "slope_post_ci_hi": sq_hi,
-            "delta": sq - sp,
-        })
+        rows.append(
+            {
+                "phase": k,
+                "label": name,
+                "n_pre": len(yp),
+                "n_post": len(yq),
+                "slope_pre": sp,
+                "slope_pre_ci_lo": sp_lo,
+                "slope_pre_ci_hi": sp_hi,
+                "slope_post": sq,
+                "slope_post_ci_lo": sq_lo,
+                "slope_post_ci_hi": sq_hi,
+                "delta": sq - sp,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -3341,7 +3727,11 @@ def aggregate_by_period(
     work[date_col] = pd.to_datetime(work[date_col])
     work[value_col] = pd.to_numeric(work[value_col], errors="coerce")
     group_cols = list(group_cols or [])
-    keys = group_cols + [pd.Grouper(key=date_col, freq=period)] if group_cols else [pd.Grouper(key=date_col, freq=period)]
+    keys = (
+        group_cols + [pd.Grouper(key=date_col, freq=period)]
+        if group_cols
+        else [pd.Grouper(key=date_col, freq=period)]
+    )
     out = (
         work.groupby(keys, dropna=False)[value_col]
         .agg([("value", agg), ("n_obs", "count")])
@@ -3390,33 +3780,37 @@ def mk_by_group(
         y = y[np.isfinite(y)]
         if len(y) < min_obs or np.unique(y).size == 1:
             continue
-        key_dict = dict(zip(group_cols, keys if isinstance(keys, tuple) else (keys,)))
+        key_dict = dict(zip(group_cols, keys if isinstance(keys, tuple) else (keys,), strict=False))
         if period is None:
             r = fns[method](y, alpha=alpha)
-            rows.append({
-                **key_dict,
-                "n": len(y),
-                "slope": float(r.slope),
-                "z": float(r.z),
-                "p": float(r.p),
-                "tau": float(r.Tau),
-                "method": method,
-                "verdict": r.trend if r.p <= alpha else "no trend",
-            })
+            rows.append(
+                {
+                    **key_dict,
+                    "n": len(y),
+                    "slope": float(r.slope),
+                    "z": float(r.z),
+                    "p": float(r.p),
+                    "tau": float(r.Tau),
+                    "method": method,
+                    "verdict": r.trend if r.p <= alpha else "no trend",
+                }
+            )
         else:
             r = seasonal_mk(y, period=period, alpha=alpha)
-            rows.append({
-                **key_dict,
-                "n": r.n,
-                "n_seasons": r.n_seasons,
-                "slope": r.slope,
-                "z": r.z,
-                "p": r.p,
-                "tau": r.tau,
-                "homogeneity_p": r.homogeneity_p,
-                "pool_ok": r.pool_ok(alpha=alpha),
-                "method": f"seasonal (period={period})",
-            })
+            rows.append(
+                {
+                    **key_dict,
+                    "n": r.n,
+                    "n_seasons": r.n_seasons,
+                    "slope": r.slope,
+                    "z": r.z,
+                    "p": r.p,
+                    "tau": r.tau,
+                    "homogeneity_p": r.homogeneity_p,
+                    "pool_ok": r.pool_ok(alpha=alpha),
+                    "method": f"seasonal (period={period})",
+                }
+            )
 
     return pd.DataFrame(rows)
 
@@ -3491,9 +3885,23 @@ def regional_homogeneity(
         per_group = pd.DataFrame(cells)
         if per_group.empty:
             return RegionalHomogeneityResult(
-                0, 0, nan, nan, nan, nan, nan, nan,
-                nan, nan, nan, nan, nan, nan,
-                False, alpha, per_group,
+                0,
+                0,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                nan,
+                False,
+                alpha,
+                per_group,
             )
         z_all = per_group["Z"].to_numpy(dtype=float)
         z_site = per_group.groupby("site")["Z"].mean().to_numpy()
@@ -3502,11 +3910,11 @@ def regional_homogeneity(
         M = int(per_group["site"].nunique())
         K = int(per_group["season"].nunique())
 
-        chi_total = float((z_all ** 2).sum())
-        chi_trend = float(M * K * z_grand ** 2)
+        chi_total = float((z_all**2).sum())
+        chi_trend = float(M * K * z_grand**2)
         chi_homog = chi_total - chi_trend
-        chi_season = float(M * (z_season ** 2).sum()) - chi_trend
-        chi_station = float(K * (z_site ** 2).sum()) - chi_trend
+        chi_season = float(M * (z_season**2).sum()) - chi_trend
+        chi_station = float(K * (z_site**2).sum()) - chi_trend
         chi_ss = max(chi_homog - chi_season - chi_station, 0.0)
 
         p_total = float(chi2.sf(max(chi_total, 0.0), df=M * K))
@@ -3522,12 +3930,22 @@ def regional_homogeneity(
         meaningful = not ((season_sig and station_sig) or ss_sig)
 
         return RegionalHomogeneityResult(
-            n_sites=M, n_seasons=K,
-            chi_total=chi_total, chi_trend=chi_trend, chi_homogeneity=chi_homog,
-            chi_season=chi_season, chi_station=chi_station, chi_station_season=chi_ss,
-            p_total=p_total, p_trend=p_trend, p_homogeneity=p_homog,
-            p_season=p_season, p_station=p_station, p_station_season=p_ss,
-            overall_trend_meaningful=bool(meaningful), alpha=alpha,
+            n_sites=M,
+            n_seasons=K,
+            chi_total=chi_total,
+            chi_trend=chi_trend,
+            chi_homogeneity=chi_homog,
+            chi_season=chi_season,
+            chi_station=chi_station,
+            chi_station_season=chi_ss,
+            p_total=p_total,
+            p_trend=p_trend,
+            p_homogeneity=p_homog,
+            p_season=p_season,
+            p_station=p_station,
+            p_station_season=p_ss,
+            overall_trend_meaningful=bool(meaningful),
+            alpha=alpha,
             per_group=per_group,
         )
 
@@ -3542,21 +3960,45 @@ def regional_homogeneity(
     M = len(per_group)
     if M < 2:
         return RegionalHomogeneityResult(
-            M, 1, nan, nan, nan, nan, nan, nan,
-            nan, nan, nan, nan, nan, nan,
-            False, alpha, per_group,
+            M,
+            1,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            nan,
+            False,
+            alpha,
+            per_group,
         )
     z = per_group["Z"].to_numpy(dtype=float)
-    chi_homog = max(float((z ** 2).sum() - M * z.mean() ** 2), 0.0)
+    chi_homog = max(float((z**2).sum() - M * z.mean() ** 2), 0.0)
     p_homog = float(chi2.sf(chi_homog, df=M - 1))
     return RegionalHomogeneityResult(
-        n_sites=M, n_seasons=1,
-        chi_total=nan, chi_trend=nan, chi_homogeneity=chi_homog,
-        chi_season=nan, chi_station=nan, chi_station_season=nan,
-        p_total=nan, p_trend=nan, p_homogeneity=p_homog,
-        p_season=nan, p_station=nan, p_station_season=nan,
+        n_sites=M,
+        n_seasons=1,
+        chi_total=nan,
+        chi_trend=nan,
+        chi_homogeneity=chi_homog,
+        chi_season=nan,
+        chi_station=nan,
+        chi_station_season=nan,
+        p_total=nan,
+        p_trend=nan,
+        p_homogeneity=p_homog,
+        p_season=nan,
+        p_station=nan,
+        p_station_season=nan,
         overall_trend_meaningful=bool(p_homog > alpha),
-        alpha=alpha, per_group=per_group,
+        alpha=alpha,
+        per_group=per_group,
     )
 
 

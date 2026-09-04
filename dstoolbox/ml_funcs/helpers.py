@@ -28,14 +28,18 @@ def compute_class_weights(class_weight, y):
     ``sklearn.utils.class_weight.compute_class_weight``, which is
     required by scikit-learn >= 1.0.
     """
-    if class_weight == 'balanced':
+    if class_weight == "balanced":
         from sklearn.utils import class_weight as _sk_cw
-        tmp = np.round(_sk_cw.compute_class_weight(
-            'balanced',
-            classes=np.unique(y.sort_values()),
-            y=y,
-        ), 2)
-        class_weight_map = dict(zip(y.sort_values().unique().tolist(), tmp))
+
+        tmp = np.round(
+            _sk_cw.compute_class_weight(
+                "balanced",
+                classes=np.unique(y.sort_values()),
+                y=y,
+            ),
+            2,
+        )
+        class_weight_map = dict(zip(y.sort_values().unique().tolist(), tmp, strict=False))
         return y.map(class_weight_map)
     if class_weight is None:
         return pd.Series(np.tile(1, y.size))

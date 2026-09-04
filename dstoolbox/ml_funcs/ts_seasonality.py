@@ -244,9 +244,7 @@ def detect_seasonality(
     ``stl_Fs``, ``friedman_p``, ``rank`` (1 = best).
     """
     s = df[[date_col, value_col]].dropna().sort_values(date_col)[value_col].to_numpy()
-    pg = periodogram_top_periods(
-        s, top_k=top_k, min_period=min_period, max_period=max_period
-    )
+    pg = periodogram_top_periods(s, top_k=top_k, min_period=min_period, max_period=max_period)
     ac = acf_top_periods(s, top_k=top_k, min_lag=min_period)
 
     if candidate_periods is None:
@@ -268,8 +266,8 @@ def detect_seasonality(
             ]
         )
 
-    pg_map = {int(round(p)): r for p, r in zip(pg["period"], pg["power_ratio"])}
-    ac_map = {int(p): v for p, v in zip(ac["period"], ac["acf_value"])}
+    pg_map = {int(round(p)): r for p, r in zip(pg["period"], pg["power_ratio"], strict=False)}
+    ac_map = {int(p): v for p, v in zip(ac["period"], ac["acf_value"], strict=False)}
 
     rows = []
     for m in candidates:

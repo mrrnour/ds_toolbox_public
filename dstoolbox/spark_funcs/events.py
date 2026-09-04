@@ -1,7 +1,5 @@
 """Temporal-event helpers on Spark: LEAD/LAG windowing, overlap analysis, event merging."""
 
-from typing import Dict, List, Optional
-
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -9,7 +7,7 @@ from pyspark.sql.window import Window
 
 def prepare_consecutive_events(
     df: DataFrame,
-    partition_cols: List[str],
+    partition_cols: list[str],
     order_col: str,
     start_time_col: str,
     end_time_col: str,
@@ -47,9 +45,9 @@ def analyze_temporal_overlaps(
     end_time_col: str,
     next_start_col: str,
     next_end_col: str,
-    prev_start_col: Optional[str] = None,
-    prev_end_col: Optional[str] = None,
-    output_columns: Optional[List[str]] = None,
+    prev_start_col: str | None = None,
+    prev_end_col: str | None = None,
+    output_columns: list[str] | None = None,
     time_unit: str = "seconds",
     adjacency_tolerance: int = 0,
 ) -> DataFrame:
@@ -133,11 +131,13 @@ def analyze_temporal_overlaps(
             "Overlap_Duration",
             F.when(
                 F.col("Has_Overlap") & next_start_unix.isNotNull(),
-                (F.least(end_unix, next_end_unix) - F.greatest(start_unix, next_start_unix)) / multiplier,
+                (F.least(end_unix, next_end_unix) - F.greatest(start_unix, next_start_unix))
+                / multiplier,
             )
             .when(
                 F.col("Has_Overlap") & prev_start_unix.isNotNull(),
-                (F.least(end_unix, prev_end_unix) - F.greatest(start_unix, prev_start_unix)) / multiplier,
+                (F.least(end_unix, prev_end_unix) - F.greatest(start_unix, prev_start_unix))
+                / multiplier,
             )
             .otherwise(F.lit(0)),
         )
@@ -146,7 +146,8 @@ def analyze_temporal_overlaps(
             "Overlap_Duration",
             F.when(
                 F.col("Has_Overlap"),
-                (F.least(end_unix, next_end_unix) - F.greatest(start_unix, next_start_unix)) / multiplier,
+                (F.least(end_unix, next_end_unix) - F.greatest(start_unix, next_start_unix))
+                / multiplier,
             ).otherwise(F.lit(0)),
         )
 
@@ -154,22 +155,34 @@ def analyze_temporal_overlaps(
     if consecutive_mode:
         df_result = df_result.withColumn(
             "Overlap_Start",
-            F.when(F.col("Has_Overlap") & next_start_unix.isNotNull(), F.greatest(start_unix, next_start_unix))
-            .when(F.col("Has_Overlap") & prev_start_unix.isNotNull(), F.greatest(start_unix, prev_start_unix))
+            F.when(
+                F.col("Has_Overlap") & next_start_unix.isNotNull(),
+                F.greatest(start_unix, next_start_unix),
+            )
+            .when(
+                F.col("Has_Overlap") & prev_start_unix.isNotNull(),
+                F.greatest(start_unix, prev_start_unix),
+            )
             .otherwise(F.lit(None)),
         )
     else:
         df_result = df_result.withColumn(
             "Overlap_Start",
-            F.when(F.col("Has_Overlap"), F.greatest(start_unix, next_start_unix)).otherwise(F.lit(None)),
+            F.when(F.col("Has_Overlap"), F.greatest(start_unix, next_start_unix)).otherwise(
+                F.lit(None)
+            ),
         )
 
     # Overlap_End
     if consecutive_mode:
         df_result = df_result.withColumn(
             "Overlap_End",
-            F.when(F.col("Has_Overlap") & next_start_unix.isNotNull(), F.least(end_unix, next_end_unix))
-            .when(F.col("Has_Overlap") & prev_start_unix.isNotNull(), F.least(end_unix, prev_end_unix))
+            F.when(
+                F.col("Has_Overlap") & next_start_unix.isNotNull(), F.least(end_unix, next_end_unix)
+            )
+            .when(
+                F.col("Has_Overlap") & prev_start_unix.isNotNull(), F.least(end_unix, prev_end_unix)
+            )
             .otherwise(F.lit(None)),
         )
     else:
@@ -217,11 +230,13 @@ def analyze_temporal_overlaps(
         df_result = df_result.withColumn(
             "Merged_Start",
             F.when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & next_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & next_start_unix.isNotNull(),
                 F.least(start_unix, next_start_unix),
             )
             .when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & prev_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & prev_start_unix.isNotNull(),
                 F.least(start_unix, prev_start_unix),
             )
             .otherwise(F.lit(None)),
@@ -230,7 +245,8 @@ def analyze_temporal_overlaps(
         df_result = df_result.withColumn(
             "Merged_Start",
             F.when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & next_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & next_start_unix.isNotNull(),
                 F.least(start_unix, next_start_unix),
             ).otherwise(F.lit(None)),
         )
@@ -240,11 +256,13 @@ def analyze_temporal_overlaps(
         df_result = df_result.withColumn(
             "Merged_End",
             F.when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & next_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & next_start_unix.isNotNull(),
                 F.greatest(end_unix, next_end_unix),
             )
             .when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & prev_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & prev_start_unix.isNotNull(),
                 F.greatest(end_unix, prev_end_unix),
             )
             .otherwise(F.lit(None)),
@@ -253,7 +271,8 @@ def analyze_temporal_overlaps(
         df_result = df_result.withColumn(
             "Merged_End",
             F.when(
-                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance)) & next_start_unix.isNotNull(),
+                (F.col("Has_Overlap") | (F.col("Time_Gap") <= adjacency_tolerance))
+                & next_start_unix.isNotNull(),
                 F.greatest(end_unix, next_end_unix),
             ).otherwise(F.lit(None)),
         )
@@ -304,8 +323,14 @@ def analyze_temporal_overlaps(
 
     if output_columns:
         calculated_columns = [
-            "Has_Overlap", "Overlap_Duration", "Overlap_Start", "Overlap_End",
-            "Merged_Start", "Merged_End", "Time_Gap", "Event_Relationship",
+            "Has_Overlap",
+            "Overlap_Duration",
+            "Overlap_Start",
+            "Overlap_End",
+            "Merged_Start",
+            "Merged_End",
+            "Time_Gap",
+            "Event_Relationship",
             "Overlap_Percentage",
         ]
         original_columns = [c for c in df.columns if c not in calculated_columns]
@@ -317,14 +342,14 @@ def analyze_temporal_overlaps(
 
 def merge_events(
     df: DataFrame,
-    group_by_cols: List[str],
+    group_by_cols: list[str],
     order_col: str,
     end_col: str,
     event_relationship_col: str = "Event_Relationship",
-    overlap_values: Optional[List[str]] = None,
-    agg_first_cols: Optional[Dict[str, str]] = None,
-    agg_exprs_lst: Optional[list] = None,
-    next_event_columns: Optional[List[str]] = None,
+    overlap_values: list[str] | None = None,
+    agg_first_cols: dict[str, str] | None = None,
+    agg_exprs_lst: list | None = None,
+    next_event_columns: list[str] | None = None,
     ordered_ids: bool = False,
 ) -> DataFrame:
     """Collapse consecutive overlapping / adjacent events into single merged rows.
@@ -421,7 +446,9 @@ def merge_events(
             endtime_condition = None
             for value in overlap_values:
                 cond = F.first(event_relationship_col) == value
-                endtime_condition = cond if endtime_condition is None else (endtime_condition | cond)
+                endtime_condition = (
+                    cond if endtime_condition is None else (endtime_condition | cond)
+                )
 
             agg_exprs.append(
                 F.when(endtime_condition, F.max(end_col)).otherwise(F.first(end_col)).alias(end_col)
@@ -456,12 +483,14 @@ def merge_events(
 
     window_spec = Window.partitionBy(*group_by_cols).orderBy(F.col(order_col))
     next_event_cols = [f"Next_{ucol}" for ucol in next_event_columns]
-    for orig_col, next_col in zip(next_event_columns, next_event_cols):
+    for orig_col, next_col in zip(next_event_columns, next_event_cols, strict=False):
         result_sp = result_sp.withColumn(next_col, F.lead(F.col(orig_col), 1).over(window_spec))
 
     result_sp = result_sp.withColumn(
         "Time_to_next_event_sec",
-        (F.unix_timestamp(F.col(f"Next_{order_col}")) - F.unix_timestamp(F.col(end_col))).cast("int"),
+        (F.unix_timestamp(F.col(f"Next_{order_col}")) - F.unix_timestamp(F.col(end_col))).cast(
+            "int"
+        ),
     )
 
     original_columns = df.columns

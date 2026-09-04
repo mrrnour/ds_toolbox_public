@@ -55,6 +55,7 @@ def _events(
 # Window validation — the guardrail, no fitting involved
 # --------------------------------------------------------------------------- #
 
+
 def test_window_reports_inclusive_day_counts():
     w = _window()
     assert (w.n_days_pre, w.n_days_post) == (10, 10)
@@ -95,11 +96,14 @@ def test_window_boundaries_are_inclusive_and_disjoint():
 # Aggregation and the band
 # --------------------------------------------------------------------------- #
 
+
 def test_aggregate_counts_collapses_to_one_row_per_unit():
-    events = pd.DataFrame({
-        "user_id": [1, 1, 1, 2, 2],
-        "convert": [1, 0, 1, 0, 0],
-    })
+    events = pd.DataFrame(
+        {
+            "user_id": [1, 1, 1, 2, 2],
+            "convert": [1, 0, 1, 0, 0],
+        }
+    )
     counts = aggregate_counts(events, np.ones(5, dtype=bool))
 
     assert len(counts) == 2
@@ -127,13 +131,12 @@ def test_rope_rejects_a_nonpositive_coefficient():
 # End to end
 # --------------------------------------------------------------------------- #
 
+
 @pytest.fixture(scope="module")
 def lift_effect():
     pytest.importorskip("pymc")
     pytest.importorskip("arviz")
-    return fit_prepost(
-        _events(0.10, 0.25), _window(), rope_pct_coef=0.10, **FIT_KW
-    )
+    return fit_prepost(_events(0.10, 0.25), _window(), rope_pct_coef=0.10, **FIT_KW)
 
 
 def test_detects_a_real_lift(lift_effect):
@@ -145,9 +148,7 @@ def test_detects_a_real_lift(lift_effect):
 
 def test_finds_nothing_when_nothing_changed():
     pytest.importorskip("pymc")
-    effect = fit_prepost(
-        _events(0.15, 0.15, seed=7), _window(), rope_pct_coef=0.10, **FIT_KW
-    )
+    effect = fit_prepost(_events(0.15, 0.15, seed=7), _window(), rope_pct_coef=0.10, **FIT_KW)
     assert effect.decision != "positive"
     assert effect.decision != "negative"
 
@@ -156,9 +157,7 @@ def test_records_the_window_and_the_band(lift_effect):
     assert lift_effect.window.n_days_pre == 10
     assert lift_effect.rope is not None
     # Band is ±10% of the pre-period mu, not an absolute percentage point.
-    assert lift_effect.rope.rope_high == pytest.approx(
-        0.10 * lift_effect.mu_control_mean
-    )
+    assert lift_effect.rope.rope_high == pytest.approx(0.10 * lift_effect.mu_control_mean)
     assert lift_effect.rope.rope_low == -lift_effect.rope.rope_high
 
 
@@ -188,6 +187,7 @@ def test_to_row_is_flat_and_serialisable(lift_effect):
 # --------------------------------------------------------------------------- #
 # Every band reported side by side
 # --------------------------------------------------------------------------- #
+
 
 @pytest.fixture(scope="module")
 def all_bands_effect():

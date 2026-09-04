@@ -29,7 +29,7 @@ def _sparseLabel(x, splitter="; "):
     return x2
 
 
-def fast_get_dummies(df, splitter='; '):
+def fast_get_dummies(df, splitter="; "):
     """Fast alternative to ``pandas.get_dummies`` for a delimited-string column.
 
     Explodes ``df`` (a Series of ``splitter``-joined tokens) into a dense
@@ -56,11 +56,7 @@ def fast_get_dummies(df, splitter='; '):
     tmp = df.values.flatten()
     tmp = tmp[~(pd.isnull(tmp))]
     allLabels = np.sort(np.unique(tmp))
-    tmp1 = np.apply_along_axis(
-                                _get_dummies2,
-                                1,
-                                df.values,
-                                allLabels=allLabels)
+    tmp1 = np.apply_along_axis(_get_dummies2, 1, df.values, allLabels=allLabels)
     tmp1 = pd.DataFrame(tmp1, columns=allLabels, index=df.index)
     return tmp1
 
@@ -104,9 +100,5 @@ def sparse_label_encoding(df, prodCol, priceCol, splitter="; "):
     tmp2 = pd.concat([df[priceCol], df[prodCol], tmp1], axis=1)
     out0 = np.apply_along_axis(_sparseLabel, 1, tmp2, splitter=splitter)
 
-    out = pd.DataFrame(
-        out0,
-        dtype=np.int16,
-        columns=tmp1.columns.str.upper(),
-        index=df.index)
+    out = pd.DataFrame(out0, dtype=np.int16, columns=tmp1.columns.str.upper(), index=df.index)
     return out

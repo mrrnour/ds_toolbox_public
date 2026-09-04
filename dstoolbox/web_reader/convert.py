@@ -35,12 +35,25 @@ class ConvertConfig:
     use_docling: bool = False
     use_images: bool = False
 
+
 BOILERPLATE_TAGS = ("script", "style", "nav", "header", "footer", "aside")
 
-DOCLING_EXTENSIONS = frozenset({
-    ".html", ".htm", ".pdf", ".docx", ".pptx", ".xlsx",
-    ".md", ".png", ".jpg", ".jpeg", ".tiff", ".bmp",
-})
+DOCLING_EXTENSIONS = frozenset(
+    {
+        ".html",
+        ".htm",
+        ".pdf",
+        ".docx",
+        ".pptx",
+        ".xlsx",
+        ".md",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".tiff",
+        ".bmp",
+    }
+)
 
 
 def setup_docling(use_images: bool = False):
@@ -49,10 +62,15 @@ def setup_docling(use_images: bool = False):
     try:
         from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
         from docling.datamodel.pipeline_options import (
-            AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions,
+            AcceleratorDevice,
+            AcceleratorOptions,
+            PdfPipelineOptions,
         )
         from docling.document_converter import (
-            DocumentConverter, InputFormat, PdfFormatOption, StandardPdfPipeline,
+            DocumentConverter,
+            InputFormat,
+            PdfFormatOption,
+            StandardPdfPipeline,
         )
     except ImportError:
         sys.exit("docling not installed — run: pip install docling")
@@ -64,8 +82,13 @@ def setup_docling(use_images: bool = False):
 
     return DocumentConverter(
         allowed_formats=[
-            InputFormat.PDF, InputFormat.DOCX, InputFormat.HTML,
-            InputFormat.PPTX, InputFormat.XLSX, InputFormat.MD, InputFormat.IMAGE,
+            InputFormat.PDF,
+            InputFormat.DOCX,
+            InputFormat.HTML,
+            InputFormat.PPTX,
+            InputFormat.XLSX,
+            InputFormat.MD,
+            InputFormat.IMAGE,
         ],
         format_options={
             InputFormat.PDF: PdfFormatOption(
@@ -77,7 +100,9 @@ def setup_docling(use_images: bool = False):
     )
 
 
-def docling_to_markdown(file_path: str, doc_converter, min_length: int) -> tuple[str | None, str | None]:
+def docling_to_markdown(
+    file_path: str, doc_converter, min_length: int
+) -> tuple[str | None, str | None]:
     """Convert any docling-supported file to markdown. Returns (markdown, skip_reason)."""
     try:
         result = doc_converter.convert(file_path)
@@ -135,6 +160,7 @@ def build_frontmatter(url: str, scraped_at: str, depth: int) -> str:
 def slugify(text: str) -> str:
     """Convert text to kebab-case slug (lowercase, hyphens, alphanumeric only)."""
     import re
+
     # Convert to lowercase and replace non-alphanumeric with hyphens
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     # Remove multiple consecutive hyphens
@@ -186,7 +212,7 @@ def normalize_folder_path(path: str) -> str:
 
 def infer_category_from_url(url: str) -> str:
     """Infer content category from URL domain/path.
-    
+
     Examples:
         https://towardsdatascience.com/... → "tutorial"
         https://github.com/... → "code"
@@ -195,11 +221,11 @@ def infer_category_from_url(url: str) -> str:
         https://example.com/docs/... → "docs"
     """
     from urllib.parse import urlparse
-    
+
     parsed = urlparse(url)
     domain = parsed.netloc.lower()
     path = parsed.path.lower()
-    
+
     # Domain-based categorization
     if "arxiv.org" in domain or "researchgate.net" in domain:
         return "paper"
@@ -215,7 +241,7 @@ def infer_category_from_url(url: str) -> str:
         return "qa"
     elif "linkedin.com" in domain:
         return "social"
-    
+
     # Path-based categorization
     if "/blog/" in path or "/news/" in path:
         return "blog"
@@ -225,7 +251,7 @@ def infer_category_from_url(url: str) -> str:
         return "tutorial"
     elif "/api/" in path or "/reference/" in path:
         return "reference"
-    
+
     # Default category based on domain
     if "edu" in domain:
         return "academic"
@@ -237,48 +263,50 @@ def infer_category_from_url(url: str) -> str:
 
 def extract_title_from_html(html: str) -> str:
     """Extract title from HTML <title> tag or first heading.
-    
+
     Returns:
         Title text, or empty string if not found.
     """
     soup = BeautifulSoup(html, "html.parser")
-    
+
     # Try <title> tag first
     title_tag = soup.find("title")
     if title_tag and title_tag.string:
         return title_tag.string.strip()
-    
+
     # Try first <h1>
     h1 = soup.find("h1")
     if h1:
         return h1.get_text(strip=True)
-    
+
     # Try first <h2>
     h2 = soup.find("h2")
     if h2:
         return h2.get_text(strip=True)
-    
+
     # Try meta og:title
     og_title = soup.find("meta", property="og:title")
     if og_title and og_title.get("content"):
         return og_title["content"]
-    
+
     return ""
 
 
-def md_path_for(file_path: str, output_dir: str, url: str = "", html: str = "", folder_name: str = "") -> str:
+def md_path_for(
+    file_path: str, output_dir: str, url: str = "", html: str = "", folder_name: str = ""
+) -> str:
     """Generate markdown filename with category prefix and descriptive name.
-    
+
     Filename format: <category>-<title-slug>.md
     Falls back to URL-based stem (no hash).
-    
+
     Args:
         file_path: Original file path.
         output_dir: Output directory.
         url: Source URL (for category inference).
         html: HTML content (for title extraction).
         folder_name: Optional bookmark folder name for subdirectory organization.
-    
+
     Returns:
         Full path to output markdown file.
     """
@@ -288,7 +316,7 @@ def md_path_for(file_path: str, output_dir: str, url: str = "", html: str = "", 
         normalized_folder = normalize_folder_path(folder_name)
         if normalized_folder:
             final_output_dir = os.path.join(output_dir, *normalized_folder.split("/"))
-    
+
     category = infer_category_from_url(url) if url else "article"
     title = extract_title_from_html(html) if html else ""
     title_slug = slugify(title) if title else ""
@@ -336,7 +364,7 @@ def convert_one(
     ts = dt.datetime.now().isoformat()
     url = crawl_rec.id
     html_content = ""  # Capture HTML for title extraction
-    
+
     # Get folder_path from crawling record if available (from @folder_path metadata)
     # Otherwise use the folder_name parameter as a fallback
     folder_path_from_rec = crawl_rec.data.get("folder_path", "")
@@ -395,7 +423,9 @@ def convert_one(
         )
 
     os.makedirs(output_dir, exist_ok=True)
-    out_path = md_path_for(file_path, output_dir, url=url, html=html_content, folder_name=effective_folder_path)
+    out_path = md_path_for(
+        file_path, output_dir, url=url, html=html_content, folder_name=effective_folder_path
+    )
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     if not overwrite and os.path.exists(out_path):
@@ -422,7 +452,9 @@ def convert_one(
         shutil.copyfile(file_path, mirrored_html_path)
         # Cleanup legacy hashed HTML files so output/html keeps convention names only.
         base_name = os.path.basename(file_path)
-        if re.match(r"^[0-9a-f]{10}_.+\.html?$", base_name) and os.path.abspath(file_path) != os.path.abspath(mirrored_html_path):
+        if re.match(r"^[0-9a-f]{10}_.+\.html?$", base_name) and os.path.abspath(
+            file_path
+        ) != os.path.abspath(mirrored_html_path):
             try:
                 os.remove(file_path)
             except OSError:
@@ -457,7 +489,11 @@ def run(cfg: ConvertConfig, logger: logging.Logger) -> None:
     os.makedirs(cfg.output_dir, exist_ok=True)
     results: list[PipelineRecord] = []
     for cr in tqdm(crawl_records, desc="convert", disable=not sys.stderr.isatty()):
-        results.append(convert_one(cr, cfg.output_dir, cfg.min_length, cfg.overwrite, doc_converter, cfg.folder_name))
+        results.append(
+            convert_one(
+                cr, cfg.output_dir, cfg.min_length, cfg.overwrite, doc_converter, cfg.folder_name
+            )
+        )
 
     utils.save_jsonl([record_to_dict(r) for r in results], cfg.output_path, logger)
     removed_hashed = cleanup_legacy_hashed_html(str(params.HTML_DIR))
@@ -473,26 +509,46 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Convert crawled HTML files to clean Markdown with YAML frontmatter."
     )
-    p.add_argument("input", nargs="?", default=params.CRAWLING_SUMMARY_PATH,
-                   help="crawling_summary.jsonl")
-    p.add_argument("-o", "--output", default=params.CONVERSION_SUMMARY_PATH,
-                   help="output JSONL")
-    p.add_argument("--output-dir", default=params.MARKDOWN_DIR,
-                   help=f"directory for .md files (default: {params.MARKDOWN_DIR})")
-    p.add_argument("--folder", default="",
-                   help="bookmark folder name (creates subdirectory in output-dir)")
-    p.add_argument("--min-length", type=int, default=params.MIN_MARKDOWN_LENGTH,
-                   help="skip pages where extracted text is shorter than N chars")
-    p.add_argument("--no-overwrite", dest="overwrite", action="store_false", default=True,
-                   help="skip .md files that already exist")
+    p.add_argument(
+        "input", nargs="?", default=params.CRAWLING_SUMMARY_PATH, help="crawling_summary.jsonl"
+    )
+    p.add_argument("-o", "--output", default=params.CONVERSION_SUMMARY_PATH, help="output JSONL")
+    p.add_argument(
+        "--output-dir",
+        default=params.MARKDOWN_DIR,
+        help=f"directory for .md files (default: {params.MARKDOWN_DIR})",
+    )
+    p.add_argument(
+        "--folder", default="", help="bookmark folder name (creates subdirectory in output-dir)"
+    )
+    p.add_argument(
+        "--min-length",
+        type=int,
+        default=params.MIN_MARKDOWN_LENGTH,
+        help="skip pages where extracted text is shorter than N chars",
+    )
+    p.add_argument(
+        "--no-overwrite",
+        dest="overwrite",
+        action="store_false",
+        default=True,
+        help="skip .md files that already exist",
+    )
     p.add_argument("--dry-run", action="store_true", help="preview without writing")
     p.add_argument("--verbose", action="store_true", help="enable DEBUG logging")
-    p.add_argument("--use-docling", action="store_true",
-                   help="use docling for conversion (supports HTML, PDF, DOCX, PPTX, XLSX, images)")
-    p.add_argument("--image", action="store_true",
-                   help="enable OCR for images inside PDFs (requires --use-docling)")
-    p.add_argument("--file", default=None,
-                   help="convert a single file directly (skips crawling_summary.jsonl)")
+    p.add_argument(
+        "--use-docling",
+        action="store_true",
+        help="use docling for conversion (supports HTML, PDF, DOCX, PPTX, XLSX, images)",
+    )
+    p.add_argument(
+        "--image",
+        action="store_true",
+        help="enable OCR for images inside PDFs (requires --use-docling)",
+    )
+    p.add_argument(
+        "--file", default=None, help="convert a single file directly (skips crawling_summary.jsonl)"
+    )
     return p
 
 
@@ -524,7 +580,13 @@ def main() -> None:
             status="ok",
             data={"file_path": file_path, "depth": 0, "scraped_at": dt.datetime.now().isoformat()},
         )
-        result = convert_one(crawl_rec, args.output_dir, args.min_length, overwrite=args.overwrite, doc_converter=doc_converter)
+        result = convert_one(
+            crawl_rec,
+            args.output_dir,
+            args.min_length,
+            overwrite=args.overwrite,
+            doc_converter=doc_converter,
+        )
         print(f"status: {result.status}")
         if result.status == "ok":
             print(f"output: {result.data['md_path']}")

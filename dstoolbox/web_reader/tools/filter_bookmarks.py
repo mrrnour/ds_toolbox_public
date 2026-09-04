@@ -19,8 +19,8 @@ import argparse
 import html
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 H3_RE = re.compile(r"<H3\b[^>]*>(.*?)</H3>", re.IGNORECASE)
 
@@ -121,7 +121,9 @@ def parse_args() -> argparse.Namespace:
         description="Keep only selected bookmark folders from a Netscape bookmarks HTML file."
     )
     parser.add_argument("-i", "--input", required=True, type=Path, help="Input bookmarks HTML file")
-    parser.add_argument("-o", "--output", required=True, type=Path, help="Output filtered bookmarks HTML file")
+    parser.add_argument(
+        "-o", "--output", required=True, type=Path, help="Output filtered bookmarks HTML file"
+    )
     parser.add_argument(
         "--keep",
         nargs="+",
@@ -151,7 +153,10 @@ def main() -> int:
         return 0
 
     if not args.keep:
-        print("You must pass at least one folder name with --keep, or use --list-folders.", file=sys.stderr)
+        print(
+            "You must pass at least one folder name with --keep, or use --list-folders.",
+            file=sys.stderr,
+        )
         return 1
 
     keep_set = {normalize_name(name) for name in args.keep}

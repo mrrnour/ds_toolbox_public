@@ -22,7 +22,7 @@ def plot_cumulative_effect_from_preds(
     y_true_col: str = "y_true",
     y_pred_col: str = "y_pred",
     focus_model: str | None = None,
-    intervention_date: "pd.Timestamp | str | None" = None,
+    intervention_date: pd.Timestamp | str | None = None,
     effect_summary: pd.DataFrame | None = None,
     experiment: str | None = None,
     show_decomposition: bool = True,
@@ -74,8 +74,11 @@ def plot_cumulative_effect_from_preds(
             line_kwargs["color"] = "#6f43d6"
             marker_kwargs = {"color": "#6f43d6", "size": 7, "symbol": "circle"}
         scatter_kwargs: dict = {
-            "x": g[date_col], "y": g[effect_col].cumsum(),
-            "mode": mode, "name": trace_name, "line": line_kwargs,
+            "x": g[date_col],
+            "y": g[effect_col].cumsum(),
+            "mode": mode,
+            "name": trace_name,
+            "line": line_kwargs,
         }
         if marker_kwargs is not None:
             scatter_kwargs["marker"] = marker_kwargs
@@ -86,32 +89,50 @@ def plot_cumulative_effect_from_preds(
     if focus_model is not None and not frame.empty:
         focus = frame  # already filtered
         if show_decomposition and {y_true_col, y_pred_col}.issubset(focus.columns):
-            fig.add_trace(go.Scatter(
-                x=focus[date_col], y=focus[y_true_col].cumsum(),
-                mode="lines+markers", name="Σy  observed",
-                line={"color": "#15C089", "dash": "solid"},
-                marker={"color": "#15C089", "size": 7, "symbol": "circle"},
-            ))
-            fig.add_trace(go.Scatter(
-                x=focus[date_col], y=focus[y_pred_col].cumsum(),
-                mode="lines+markers", name="Σŷ  forecast",
-                line={"color": "#F1A340", "dash": "dash"},
-                marker={"color": "#F1A340", "size": 7, "symbol": "diamond"},
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=focus[date_col],
+                    y=focus[y_true_col].cumsum(),
+                    mode="lines+markers",
+                    name="Σy  observed",
+                    line={"color": "#15C089", "dash": "solid"},
+                    marker={"color": "#15C089", "size": 7, "symbol": "circle"},
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=focus[date_col],
+                    y=focus[y_pred_col].cumsum(),
+                    mode="lines+markers",
+                    name="Σŷ  forecast",
+                    line={"color": "#F1A340", "dash": "dash"},
+                    marker={"color": "#F1A340", "size": 7, "symbol": "diamond"},
+                )
+            )
 
     if intervention_date is not None:
         iv = pd.Timestamp(intervention_date)
         # See docstring: add_vline auto-annotation bug on datetime x — use
         # add_shape + add_annotation to avoid the _mean([x, x]) code path.
         fig.add_shape(
-            type="line", xref="x", yref="paper",
-            x0=iv, x1=iv, y0=0, y1=1,
+            type="line",
+            xref="x",
+            yref="paper",
+            x0=iv,
+            x1=iv,
+            y0=0,
+            y1=1,
             line={"color": "red", "dash": "dash"},
         )
         fig.add_annotation(
-            x=iv, y=1, xref="x", yref="paper",
-            text="intervention", showarrow=False,
-            xanchor="left", yanchor="top",
+            x=iv,
+            y=1,
+            xref="x",
+            yref="paper",
+            text="intervention",
+            showarrow=False,
+            xanchor="left",
+            yanchor="top",
         )
 
     layout_updates: dict = {
@@ -129,20 +150,29 @@ def plot_cumulative_effect_from_preds(
 
             if n_days:
                 fig.add_annotation(
-                    x=focus[date_col].iloc[-1], y=final_cum,
+                    x=focus[date_col].iloc[-1],
+                    y=final_cum,
                     text=f"Σ(y − ŷ)={final_cum:.4g}",
-                    showarrow=True, arrowhead=2, ax=-40, ay=-30,
+                    showarrow=True,
+                    arrowhead=2,
+                    ax=-40,
+                    ay=-30,
                 )
 
             fig.add_annotation(
-                x=0, y=-0.22, xref="paper", yref="paper",
+                x=0,
+                y=-0.22,
+                xref="paper",
+                yref="paper",
                 text=(
                     f"cumulative lift = Σ(y − ŷ) over post window "
                     f"= {r['cumulative_effect']:.4g}<br>"
                     f"avg daily lift = {r['daily_effect']:.4g} pct pts/day"
                 ),
                 showarrow=False,
-                xanchor="left", yanchor="top", align="left",
+                xanchor="left",
+                yanchor="top",
+                align="left",
                 font={"size": 10, "color": "gray"},
             )
 
@@ -162,10 +192,10 @@ def plot_cumulative_effect_from_preds(
 
 
 # ===== imports preserved from public (needed by extras below) =====
-from .ts_intervention import InterventionResult
-from .ts_plots import plot_acf
 from plotly.subplots import make_subplots
 
+from .ts_intervention import InterventionResult
+from .ts_plots import plot_acf
 
 # ===== public-only extensions (preserved on vendor merge) =====
 
@@ -199,19 +229,25 @@ def plot_intervention(
         pre_ctx = df_ts[(df_ts[date_col] >= context_start) & (df_ts[date_col] < intervention)]
         fig.add_trace(
             go.Scatter(
-                x=pre_ctx[date_col], y=pre_ctx[value_col],
-                name="pre observed", mode="markers",
+                x=pre_ctx[date_col],
+                y=pre_ctx[value_col],
+                name="pre observed",
+                mode="markers",
             )
         )
 
-    fig.add_trace(go.Scatter(x=frame["ts"], y=frame["y_true"], name="post observed", mode="markers"))
+    fig.add_trace(
+        go.Scatter(x=frame["ts"], y=frame["y_true"], name="post observed", mode="markers")
+    )
     fig.add_trace(go.Scatter(x=frame["ts"], y=frame["y_pred"], name="forecast", mode="lines"))
     fig.add_trace(
         go.Scatter(
             x=list(frame["ts"]) + list(frame["ts"][::-1]),
             y=list(frame["y_hi"]) + list(frame["y_lo"][::-1]),
-            fill="toself", fillcolor=_PI_FILL,
-            line={"width": 0}, name="forecast PI",
+            fill="toself",
+            fillcolor=_PI_FILL,
+            line={"width": 0},
+            name="forecast PI",
         )
     )
     if intervention_date is not None:
@@ -252,39 +288,55 @@ def plot_forecast_faceted(
             go.Scatter(
                 x=list(frame["ts"]) + list(frame["ts"][::-1]),
                 y=list(frame["y_hi"]) + list(frame["y_lo"][::-1]),
-                fill="toself", fillcolor=_PI_FILL,
+                fill="toself",
+                fillcolor=_PI_FILL,
                 line={"width": 0, "color": _PI_LINE},
-                name="PI", showlegend=False, hoverinfo="skip",
+                name="PI",
+                showlegend=False,
+                hoverinfo="skip",
             ),
-            row=r, col=c,
+            row=r,
+            col=c,
         )
         if pre_ctx is not None:
             fig.add_trace(
                 go.Scatter(
-                    x=pre_ctx[date_col], y=pre_ctx[value_col],
-                    mode="markers", name="pre observed",
-                    legendgroup="pre", showlegend=(i == 0),
+                    x=pre_ctx[date_col],
+                    y=pre_ctx[value_col],
+                    mode="markers",
+                    name="pre observed",
+                    legendgroup="pre",
+                    showlegend=(i == 0),
                     marker={"color": "#15C089", "size": 5},
                 ),
-                row=r, col=c,
+                row=r,
+                col=c,
             )
         fig.add_trace(
             go.Scatter(
-                x=frame["ts"], y=frame["y_true"],
-                mode="markers", name="post observed",
-                legendgroup="post", showlegend=(i == 0),
+                x=frame["ts"],
+                y=frame["y_true"],
+                mode="markers",
+                name="post observed",
+                legendgroup="post",
+                showlegend=(i == 0),
                 marker={"color": "#2A2A2A", "size": 5},
             ),
-            row=r, col=c,
+            row=r,
+            col=c,
         )
         fig.add_trace(
             go.Scatter(
-                x=frame["ts"], y=frame["y_pred"],
-                mode="lines", name="forecast",
-                legendgroup="sc", showlegend=(i == 0),
+                x=frame["ts"],
+                y=frame["y_pred"],
+                mode="lines",
+                name="forecast",
+                legendgroup="sc",
+                showlegend=(i == 0),
                 line={"color": "#6F43D6"},
             ),
-            row=r, col=c,
+            row=r,
+            col=c,
         )
         if intervention is not None:
             fig.add_vline(x=intervention, line_dash="dash", line_color="red", row=r, col=c)
@@ -350,22 +402,38 @@ def _plain_add_signed_band(
     """
     upper_env = np.maximum(cum_obs, cum_cf)
     lower_env = np.minimum(cum_obs, cum_cf)
-    base = {"mode": "lines", "line": {"width": 0, "color": _INVISIBLE},
-            "showlegend": False, "hoverinfo": "skip"}
+    base = {
+        "mode": "lines",
+        "line": {"width": 0, "color": _INVISIBLE},
+        "showlegend": False,
+        "hoverinfo": "skip",
+    }
     fig.add_trace(go.Scatter(x=ts, y=cum_cf, **base))
-    fig.add_trace(go.Scatter(
-        x=ts, y=upper_env, mode="lines",
-        line={"width": 0, "color": _INVISIBLE},
-        fill="tonexty", fillcolor=_PLAIN_BAND_GAIN,
-        name="Extra gain from the launch", hoverinfo="skip",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=ts,
+            y=upper_env,
+            mode="lines",
+            line={"width": 0, "color": _INVISIBLE},
+            fill="tonexty",
+            fillcolor=_PLAIN_BAND_GAIN,
+            name="Extra gain from the launch",
+            hoverinfo="skip",
+        )
+    )
     fig.add_trace(go.Scatter(x=ts, y=cum_cf, **base))
-    fig.add_trace(go.Scatter(
-        x=ts, y=lower_env, mode="lines",
-        line={"width": 0, "color": _INVISIBLE},
-        fill="tonexty", fillcolor=_PLAIN_BAND_LOSS,
-        name="Loss from the launch", hoverinfo="skip",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=ts,
+            y=lower_env,
+            mode="lines",
+            line={"width": 0, "color": _INVISIBLE},
+            fill="tonexty",
+            fillcolor=_PLAIN_BAND_LOSS,
+            name="Loss from the launch",
+            hoverinfo="skip",
+        )
+    )
 
 
 def _plain_add_level_traces(
@@ -375,20 +443,28 @@ def _plain_add_level_traces(
     cum_cf: pd.Series,
 ) -> None:
     """Add the two solid-story lines: observed (green) and forecast (orange dashed)."""
-    fig.add_trace(go.Scatter(
-        x=ts, y=cum_obs, mode="lines+markers",
-        name="What actually happened",
-        line={"color": _PLAIN_GREEN, "width": 3},
-        marker={"color": _PLAIN_GREEN, "size": 7, "symbol": "circle"},
-        hovertemplate="%{x|%b %d}<br>cumulative observed = %{y:.3f}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=ts, y=cum_cf, mode="lines+markers",
-        name="What we expected without the launch",
-        line={"color": _PLAIN_ORANGE, "width": 3, "dash": "dash"},
-        marker={"color": _PLAIN_ORANGE, "size": 7, "symbol": "diamond"},
-        hovertemplate="%{x|%b %d}<br>cumulative expected = %{y:.3f}<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=ts,
+            y=cum_obs,
+            mode="lines+markers",
+            name="What actually happened",
+            line={"color": _PLAIN_GREEN, "width": 3},
+            marker={"color": _PLAIN_GREEN, "size": 7, "symbol": "circle"},
+            hovertemplate="%{x|%b %d}<br>cumulative observed = %{y:.3f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=ts,
+            y=cum_cf,
+            mode="lines+markers",
+            name="What we expected without the launch",
+            line={"color": _PLAIN_ORANGE, "width": 3, "dash": "dash"},
+            marker={"color": _PLAIN_ORANGE, "size": 7, "symbol": "diamond"},
+            hovertemplate="%{x|%b %d}<br>cumulative expected = %{y:.3f}<extra></extra>",
+        )
+    )
 
 
 def _plain_add_effect_traces(
@@ -404,29 +480,39 @@ def _plain_add_effect_traces(
     """Add the running-total purple line + straight average-rate reference line
     + a mid-line annotation showing the per-day slope value.
     """
-    fig.add_trace(go.Scatter(
-        x=focus_ts, y=cum_effect, mode="lines+markers",
-        name="Running total of the extra gain",
-        line={"color": _PLAIN_PURPLE, "width": 2, "dash": "dot"},
-        marker={"color": _PLAIN_PURPLE, "size": 6, "symbol": "circle-open"},
-        hovertemplate="%{x|%b %d}<br>running gain = %{y:+.3f}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=[intervention_date, focus_ts.iloc[-1]],
-        y=[0.0, final_gain], mode="lines",
-        name=f"Average rate ({daily_lift:+.3f} pct pts/day)",
-        line={"color": rate_color, "width": 2.5, "dash": "longdash"},
-        hovertemplate=(
-            f"average rate = {daily_lift:+.3f} pct pts/day"
-            f"<br>= total {final_gain:+.3f} pct pts ÷ {n_days} days"
-            "<extra></extra>"
-        ),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=focus_ts,
+            y=cum_effect,
+            mode="lines+markers",
+            name="Running total of the extra gain",
+            line={"color": _PLAIN_PURPLE, "width": 2, "dash": "dot"},
+            marker={"color": _PLAIN_PURPLE, "size": 6, "symbol": "circle-open"},
+            hovertemplate="%{x|%b %d}<br>running gain = %{y:+.3f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[intervention_date, focus_ts.iloc[-1]],
+            y=[0.0, final_gain],
+            mode="lines",
+            name=f"Average rate ({daily_lift:+.3f} pct pts/day)",
+            line={"color": rate_color, "width": 2.5, "dash": "longdash"},
+            hovertemplate=(
+                f"average rate = {daily_lift:+.3f} pct pts/day"
+                f"<br>= total {final_gain:+.3f} pct pts ÷ {n_days} days"
+                "<extra></extra>"
+            ),
+        )
+    )
     mid_idx = n_days // 2
     fig.add_annotation(
-        x=focus_ts.iloc[mid_idx], y=daily_lift * (mid_idx + 1),
+        x=focus_ts.iloc[mid_idx],
+        y=daily_lift * (mid_idx + 1),
         text=f"<b>{daily_lift:+.3f} pct pts/day</b>",
-        showarrow=False, xanchor="center", yanchor="bottom",
+        showarrow=False,
+        xanchor="center",
+        yanchor="bottom",
         font={"size": 10, "color": rate_color},
         bgcolor="rgba(255,255,255,0.85)",
     )
@@ -441,14 +527,24 @@ def _plain_add_intervention_marker(
     bug documented in ``plot_cumulative_effect_from_preds``.
     """
     fig.add_shape(
-        type="line", xref="x", yref="paper",
-        x0=intervention_date, x1=intervention_date, y0=0, y1=1,
+        type="line",
+        xref="x",
+        yref="paper",
+        x0=intervention_date,
+        x1=intervention_date,
+        y0=0,
+        y1=1,
         line={"color": "red", "dash": "dash"},
     )
     fig.add_annotation(
-        x=intervention_date, y=1, xref="x", yref="paper",
+        x=intervention_date,
+        y=1,
+        xref="x",
+        yref="paper",
         text=f"Launch — {intervention_date.date()}",
-        showarrow=False, xanchor="left", yanchor="top",
+        showarrow=False,
+        xanchor="left",
+        yanchor="top",
         font={"color": "red"},
     )
 
@@ -456,25 +552,33 @@ def _plain_add_intervention_marker(
 def _gap_stats(gap_test: dict) -> dict:
     """Derive CI, MDE₈₀ and observed power from a gap_test dict."""
     import math
-    from scipy.stats import norm as _norm, t as _t_dist
-    gm    = float(gap_test["gap_mean"])
-    gs    = gap_test.get("gap_std")
-    n     = gap_test.get("n_post", 0)
+
+    from scipy.stats import norm as _norm
+    from scipy.stats import t as _t_dist
+
+    gm = float(gap_test["gap_mean"])
+    gs = gap_test.get("gap_std")
+    n = gap_test.get("n_post", 0)
     perm_p = float(gap_test["perm_pvalue"])
     pval_str = f"{perm_p:.4f}" if perm_p >= 0.001 else "<0.001"
     ci_lo = ci_hi = mde = obs_pow = None
     if gs is not None and n >= 2:
-        se     = float(gs) / math.sqrt(int(n))
+        se = float(gs) / math.sqrt(int(n))
         t_crit = float(_t_dist.ppf(0.975, df=int(n) - 1))
-        ci_lo  = gm - t_crit * se
-        ci_hi  = gm + t_crit * se
+        ci_lo = gm - t_crit * se
+        ci_hi = gm + t_crit * se
         z_a, z_b = 1.96, 0.842
-        mde    = (z_a + z_b) * se
-        lam    = abs(gm) / se if se > 0 else 0.0
+        mde = (z_a + z_b) * se
+        lam = abs(gm) / se if se > 0 else 0.0
         obs_pow = float(_norm.cdf(lam - z_a) + _norm.cdf(-lam - z_a))
     return {
-        "gap_mean": gm, "perm_pvalue": perm_p, "pval_str": pval_str,
-        "ci_lo": ci_lo, "ci_hi": ci_hi, "mde": mde, "obs_pow": obs_pow,
+        "gap_mean": gm,
+        "perm_pvalue": perm_p,
+        "pval_str": pval_str,
+        "ci_lo": ci_lo,
+        "ci_hi": ci_hi,
+        "mde": mde,
+        "obs_pow": obs_pow,
     }
 
 
@@ -496,7 +600,8 @@ def _plain_add_endpoint_annotation(
         gs = _gap_stats(gap_test)
         ci_str = (
             f"95% CI=[{gs['ci_lo']:+.2f}, {gs['ci_hi']:+.2f}]"
-            if gs["ci_lo"] is not None else "95% CI=n/a"
+            if gs["ci_lo"] is not None
+            else "95% CI=n/a"
         )
         label = (
             f"<b>gap_mean = {gs['gap_mean']:+.2f} pct pts</b><br>"
@@ -509,11 +614,16 @@ def _plain_add_endpoint_annotation(
             f"<br><b>relative lift = {rel_lift:+.1%}</b>"
         )
     fig.add_annotation(
-        x=x_last, y=final_gain,
+        x=x_last,
+        y=final_gain,
         text=label,
-        showarrow=True, arrowhead=2, ax=-80, ay=-40,
+        showarrow=True,
+        arrowhead=2,
+        ax=-80,
+        ay=-40,
         bgcolor="rgba(255,255,255,0.85)",
-        bordercolor=border, borderwidth=1,
+        bordercolor=border,
+        borderwidth=1,
     )
 
 
@@ -555,15 +665,18 @@ def _plain_footer_text(
         gs = _gap_stats(gap_test)
         ci_str = (
             f"95% CI=[{gs['ci_lo']:+.2f}, {gs['ci_hi']:+.2f}] pct pts"
-            if gs["ci_lo"] is not None else "95% CI=n/a"
+            if gs["ci_lo"] is not None
+            else "95% CI=n/a"
         )
         mde_str = (
             f"MDE\u2088\u2080=\u00b1{gs['mde']:.2f} pct pts"
-            if gs["mde"] is not None else "MDE\u2088\u2080=n/a"
+            if gs["mde"] is not None
+            else "MDE\u2088\u2080=n/a"
         )
         pow_str = (
             f"observed power={gs['obs_pow'] * 100:.0f}%"
-            if gs["obs_pow"] is not None else "observed power=n/a"
+            if gs["obs_pow"] is not None
+            else "observed power=n/a"
         )
         stats_block = (
             "<br><b>Statistical summary (SC gap test)</b><br>"
@@ -610,7 +723,8 @@ def _plain_layout_kwargs(
         direction = "gain" if gs["gap_mean"] >= 0 else "loss"
         mde_str = (
             f"MDE\u2088\u2080=\u00b1{gs['mde']:.2f}"
-            if gs["mde"] is not None else "MDE\u2088\u2080=n/a"
+            if gs["mde"] is not None
+            else "MDE\u2088\u2080=n/a"
         )
         subtitle = (
             f"gap_mean={gs['gap_mean']:+.2f} pct pts ({direction}) · "
@@ -629,19 +743,22 @@ def _plain_layout_kwargs(
                 f"{prefix}Did the launch on {intervention_date.date()} actually help?"
                 f"<br><sup>{subtitle}</sup>"
             ),
-            "y": 0.97, "yanchor": "top",
+            "y": 0.97,
+            "yanchor": "top",
         },
         "xaxis_title": "date",
         "yaxis_title": (
-            "cumulative conversion rate<br>"
-            "<sub>(percentage points, added up daily)</sub>"
+            "cumulative conversion rate<br>" "<sub>(percentage points, added up daily)</sub>"
         ),
         "legend": {
             "orientation": "h",
-            "xanchor": "center", "yanchor": "bottom",
-            "x": 0.5, "y": 1.02,
+            "xanchor": "center",
+            "yanchor": "bottom",
+            "x": 0.5,
+            "y": 1.02,
             "bgcolor": "rgba(255,255,255,0.85)",
-            "bordercolor": "lightgrey", "borderwidth": 1,
+            "bordercolor": "lightgrey",
+            "borderwidth": 1,
         },
         # Bottom margin sized to hold the two-block footer (~180px).
         "margin": {"t": 140, "b": 220, "l": 110, "r": 60},
@@ -654,7 +771,7 @@ def plot_cumulative_effect_plain(
     post_preds: pd.DataFrame,
     *,
     focus_model: str,
-    intervention_date: "pd.Timestamp | str",
+    intervention_date: pd.Timestamp | str,
     effect_summary: pd.DataFrame,
     experiment: str | None = None,
     date_col: str = "ts",
@@ -702,11 +819,7 @@ def plot_cumulative_effect_plain(
         ... )
     """
     iv = pd.Timestamp(intervention_date)
-    focus = (
-        post_preds[post_preds[model_col] == focus_model]
-        .sort_values(date_col)
-        .copy()
-    )
+    focus = post_preds[post_preds[model_col] == focus_model].sort_values(date_col).copy()
     if focus.empty:
         raise ValueError(
             f"plot_cumulative_effect_plain: no rows for focus_model={focus_model!r} "
@@ -734,32 +847,59 @@ def plot_cumulative_effect_plain(
 
     fig = go.Figure()
     _plain_add_signed_band(
-        fig, focus[date_col],
-        focus["cum_obs"].to_numpy(), focus["cum_cf"].to_numpy(),
+        fig,
+        focus[date_col],
+        focus["cum_obs"].to_numpy(),
+        focus["cum_cf"].to_numpy(),
     )
     _plain_add_level_traces(fig, focus[date_col], focus["cum_obs"], focus["cum_cf"])
     _plain_add_effect_traces(
-        fig, focus[date_col], focus["cum_effect"],
-        iv, final_gain, daily_lift, n_days, rate_color,
+        fig,
+        focus[date_col],
+        focus["cum_effect"],
+        iv,
+        final_gain,
+        daily_lift,
+        n_days,
+        rate_color,
     )
     _plain_add_intervention_marker(fig, iv)
     _plain_add_endpoint_annotation(
-        fig, focus[date_col].iloc[-1], final_gain, n_days, rel_lift,
+        fig,
+        focus[date_col].iloc[-1],
+        final_gain,
+        n_days,
+        rel_lift,
         gap_test=gap_test,
     )
     fig.add_annotation(
-        x=0, y=-0.18, xref="paper", yref="paper",
+        x=0,
+        y=-0.18,
+        xref="paper",
+        yref="paper",
         text=_plain_footer_text(
-            rel_lift, final_gain, daily_lift, n_days,
-            cum_expected, cum_observed,
+            rel_lift,
+            final_gain,
+            daily_lift,
+            n_days,
+            cum_expected,
+            cum_observed,
             gap_test=gap_test,
         ),
-        showarrow=False, xanchor="left", yanchor="top", align="left",
+        showarrow=False,
+        xanchor="left",
+        yanchor="top",
+        align="left",
         font={"size": 10, "color": "gray"},
     )
-    fig.update_layout(**_plain_layout_kwargs(
-        experiment, iv, n_days, rel_lift, daily_lift,
-        gap_test=gap_test,
-    ))
+    fig.update_layout(
+        **_plain_layout_kwargs(
+            experiment,
+            iv,
+            n_days,
+            rel_lift,
+            daily_lift,
+            gap_test=gap_test,
+        )
+    )
     return fig
-

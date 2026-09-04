@@ -31,6 +31,7 @@ def _counts(rate: float, n_users: int = 250, seed: int = 0):
 # Validation
 # --------------------------------------------------------------------------- #
 
+
 @pytest.mark.parametrize(
     ("trials", "successes", "match"),
     [
@@ -54,6 +55,7 @@ def test_rejects_nonpositive_kappa_prior():
 # --------------------------------------------------------------------------- #
 # Single-period fit
 # --------------------------------------------------------------------------- #
+
 
 def test_fit_recovers_the_generating_rate():
     trials, successes = _counts(0.20)
@@ -81,8 +83,10 @@ def test_heavier_prior_pulls_mu_toward_its_mean():
     trials, successes = _counts(0.50, n_users=40)
     flat = hier_beta_binomial_fit(trials, successes, **FIT_KW)
     pulled = hier_beta_binomial_fit(
-        trials, successes,
-        prior=BetaPrior(name="strong", alpha=40.0, beta=360.0), **FIT_KW,
+        trials,
+        successes,
+        prior=BetaPrior(name="strong", alpha=40.0, beta=360.0),
+        **FIT_KW,
     )
     assert pulled.mu_mean < flat.mu_mean
 
@@ -90,6 +94,7 @@ def test_heavier_prior_pulls_mu_toward_its_mean():
 # --------------------------------------------------------------------------- #
 # Pre/post contrast, composed from two independent fits (how callers use it)
 # --------------------------------------------------------------------------- #
+
 
 def test_contrast_detects_a_real_lift():
     trials_pre, successes_pre = _counts(0.10, seed=1)
@@ -128,17 +133,25 @@ def test_fit_accepts_unequal_period_sizes():
 # Verdict
 # --------------------------------------------------------------------------- #
 
+
 @pytest.mark.parametrize(
     ("prob", "expected"),
-    [(0.99, "positive"), (0.95, "positive"), (0.01, "negative"),
-     (0.05, "negative"), (0.50, "inconclusive"), (0.94, "inconclusive")],
+    [
+        (0.99, "positive"),
+        (0.95, "positive"),
+        (0.01, "negative"),
+        (0.05, "negative"),
+        (0.50, "inconclusive"),
+        (0.94, "inconclusive"),
+    ],
 )
 def test_verdict_thresholds(prob, expected):
     assert verdict_without_rope(prob, 0.95) == expected
 
 
 @pytest.mark.parametrize(
-    ("prob", "threshold"), [(1.5, 0.95), (-0.1, 0.95), (0.5, 0.0), (0.5, 1.0)],
+    ("prob", "threshold"),
+    [(1.5, 0.95), (-0.1, 0.95), (0.5, 0.0), (0.5, 1.0)],
 )
 def test_verdict_rejects_out_of_range_inputs(prob, threshold):
     with pytest.raises(ValueError):

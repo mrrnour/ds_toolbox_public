@@ -1,8 +1,8 @@
 """Feature importance + interpretability: tree importance, partial dependence, SHAP."""
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
 
 
 def feature_importance_batch(umodel, X, y):
@@ -28,9 +28,9 @@ def feature_importance_batch(umodel, X, y):
         plt.show()
         plt.close()
 
-        feature_importance = pd.Series(
-            umodel.feature_importances_, index=X.columns
-        ).sort_values(ascending=False)
+        feature_importance = pd.Series(umodel.feature_importances_, index=X.columns).sort_values(
+            ascending=False
+        )
         print(
             "non zero features:",
             feature_importance[feature_importance >= 0.01].index.tolist(),
@@ -62,9 +62,7 @@ def pdp_plot_batch(X, umodel, sel_features):
     """
     from sklearn.inspection import PartialDependenceDisplay
 
-    print(
-        "Computing partial dependence plots and individual conditional expectation..."
-    )
+    print("Computing partial dependence plots and individual conditional expectation...")
 
     _, ax = plt.subplots(
         figsize=(30, 30),
@@ -90,27 +88,25 @@ def shap_plots_batch(X, y, umodel, test_size=0.2, kmeans=None, random_state=100)
     Generates SHAP plots for a given model and dataset.
     """
     import shap
-    from sklearn.model_selection import RandomizedSearchCV, train_test_split
+    from sklearn.model_selection import train_test_split
 
     X_train, X_test, y_train, y_test = train_test_split(
-                                                        X, y,
-                                                        test_size=test_size,
-                                                        random_state=random_state
-                                                      )
+        X, y, test_size=test_size, random_state=random_state
+    )
 
     umodel.fit(X_train.values, y_train)
 
     if kmeans is not None:
-       udata= shap.kmeans(X_train, kmeans)
+        udata = shap.kmeans(X_train, kmeans)
     else:
-       udata=X_train.values
+        udata = X_train.values
     explainer = shap.KernelExplainer(
-                                      model=umodel.predict,
-                                      data=udata,
-                                    )
+        model=umodel.predict,
+        data=udata,
+    )
     shap_values = explainer.shap_values(
-                                          X_test,
-                                      )
+        X_test,
+    )
 
     shap.summary_plot(shap_values, X_test, plot_type="violin")
 

@@ -26,7 +26,6 @@ References
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import NormalDist
@@ -46,6 +45,7 @@ _az = optional_import("arviz", "stat_bayes")
 # ---------------------------------------------------------------------------
 # Result containers
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class BestResult:
@@ -162,6 +162,7 @@ class BetaBinomialResult:
 # Priors
 # ---------------------------------------------------------------------------
 
+
 def _kruschke_priors(pooled_mean: float, pooled_sd: float) -> dict[str, object]:
     """Canonical Kruschke (2013) priors — very wide, weakly informed by data."""
     return {
@@ -225,6 +226,7 @@ def _build_model(y_control: np.ndarray, y_treatment: np.ndarray, prior: str):
 # ---------------------------------------------------------------------------
 # Fit
 # ---------------------------------------------------------------------------
+
 
 def best_two_sample(
     y_control,
@@ -314,8 +316,8 @@ def best_two_sample(
 #   3. Correct likelihood family for a binary outcome; no CLT approximation.
 
 _BB_PRIOR_ALPHA_BETA: dict[str, tuple[float, float]] = {
-    "uniform":  (1.0, 1.0),   # Beta(1, 1) — Bayes-Laplace flat prior
-    "jeffreys": (0.5, 0.5),   # Beta(1/2, 1/2) — Jeffreys reference prior
+    "uniform": (1.0, 1.0),  # Beta(1, 1) — Bayes-Laplace flat prior
+    "jeffreys": (0.5, 0.5),  # Beta(1/2, 1/2) — Jeffreys reference prior
 }
 
 
@@ -393,9 +395,7 @@ def beta_prior_from_baseline(
     BetaPrior(name='weakly_informative', alpha=5.0, beta=95.0)
     """
     if not 0.0 < baseline_rate < 1.0:
-        raise ValueError(
-            f"baseline_rate must be in (0, 1); got {baseline_rate}."
-        )
+        raise ValueError(f"baseline_rate must be in (0, 1); got {baseline_rate}.")
     if weight <= 0:
         raise ValueError(f"weight must be > 0; got {weight}.")
     return BetaPrior(
@@ -434,10 +434,16 @@ def _build_beta_binomial_model(
         p_c = _pm.Beta("p_control", alpha=alpha, beta=beta)
         p_t = _pm.Beta("p_treatment", alpha=alpha, beta=beta)
         _pm.Binomial(
-            "obs_control", n=trials_control, p=p_c, observed=successes_control,
+            "obs_control",
+            n=trials_control,
+            p=p_c,
+            observed=successes_control,
         )
         _pm.Binomial(
-            "obs_treatment", n=trials_treatment, p=p_t, observed=successes_treatment,
+            "obs_treatment",
+            n=trials_treatment,
+            p=p_t,
+            observed=successes_treatment,
         )
         _pm.Deterministic("delta", p_t - p_c)
         _pm.Deterministic("rel_lift", (p_t - p_c) / p_c)
@@ -469,7 +475,6 @@ def _build_beta_bernoulli_model(
         _pm.Deterministic("rel_lift", (p_t - p_c) / p_c)
 
     return model
-
 
 
 def beta_bernoulli_two_sample(
@@ -534,10 +539,10 @@ def beta_bernoulli_two_sample(
             return_inferencedata=True,
         )
 
-    delta_samples = np.asarray(trace.posterior["delta"]).ravel()          # type: ignore[attr-defined]
-    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()        # type: ignore[attr-defined]
-    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()      # type: ignore[attr-defined]
-    hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)              # type: ignore[union-attr]
+    delta_samples = np.asarray(trace.posterior["delta"]).ravel()  # type: ignore[attr-defined]
+    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()  # type: ignore[attr-defined]
+    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()  # type: ignore[attr-defined]
+    hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)  # type: ignore[union-attr]
     hdi_arr = np.asarray(hdi_arr).ravel()
     return BetaBinomialResult(
         trace=trace,
@@ -616,10 +621,10 @@ def beta_binomial_two_sample(
             return_inferencedata=True,
         )
 
-    delta_samples = np.asarray(trace.posterior["delta"]).ravel()          # type: ignore[attr-defined]
-    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()        # type: ignore[attr-defined]
-    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()      # type: ignore[attr-defined]
-    hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)                   # type: ignore[union-attr]
+    delta_samples = np.asarray(trace.posterior["delta"]).ravel()  # type: ignore[attr-defined]
+    p_c_samples = np.asarray(trace.posterior["p_control"]).ravel()  # type: ignore[attr-defined]
+    p_t_samples = np.asarray(trace.posterior["p_treatment"]).ravel()  # type: ignore[attr-defined]
+    hdi_arr = _az.hdi(delta_samples, hdi_prob=hdi_prob)  # type: ignore[union-attr]
     hdi_arr = np.asarray(hdi_arr).ravel()
     return BetaBinomialResult(
         trace=trace,
@@ -922,32 +927,40 @@ def rope_comparison_table(
     for name, bounds in ropes.items():
         lo, hi = bounds
         if lo is None or hi is None:
-            rows.append({
-                "rope_low": np.nan,
-                "rope_high": np.nan,
-                "prob_gt_high": np.nan,
-                "prob_in_rope": np.nan,
-                "prob_lt_low": np.nan,
-                "decision": "undefined",
-            })
+            rows.append(
+                {
+                    "rope_low": np.nan,
+                    "rope_high": np.nan,
+                    "prob_gt_high": np.nan,
+                    "prob_in_rope": np.nan,
+                    "prob_lt_low": np.nan,
+                    "decision": "undefined",
+                }
+            )
             continue
         dec = rope_decision(
-            posterior_delta, rope_low=lo, rope_high=hi, threshold=threshold,
+            posterior_delta,
+            rope_low=lo,
+            rope_high=hi,
+            threshold=threshold,
         )
-        rows.append({
-            "rope_low": dec.rope_low,
-            "rope_high": dec.rope_high,
-            "prob_gt_high": dec.prob_gt_high,
-            "prob_in_rope": dec.prob_in_rope,
-            "prob_lt_low": dec.prob_lt_low,
-            "decision": dec.decision,
-        })
+        rows.append(
+            {
+                "rope_low": dec.rope_low,
+                "rope_high": dec.rope_high,
+                "prob_gt_high": dec.prob_gt_high,
+                "prob_in_rope": dec.prob_in_rope,
+                "prob_lt_low": dec.prob_lt_low,
+                "decision": dec.decision,
+            }
+        )
     return pd.DataFrame(rows, index=pd.Index(list(ropes.keys()), name="rope"))
 
 
 # ---------------------------------------------------------------------------
 # Prior sensitivity
 # ---------------------------------------------------------------------------
+
 
 def prior_sensitivity(
     y_control,
@@ -968,19 +981,25 @@ def prior_sensitivity(
     results: dict[str, BestResult] = {}
     for name in priors:
         results[name] = best_two_sample(
-            y_control, y_treatment, prior=name, hdi_prob=hdi_prob, **sample_kwargs,
+            y_control,
+            y_treatment,
+            prior=name,
+            hdi_prob=hdi_prob,
+            **sample_kwargs,
         )
     primary_name = priors[0]
     primary_mean = results[primary_name].posterior_mean_delta
     rows = []
     for name, res in results.items():
-        rows.append({
-            "prior": name,
-            "mean_delta": res.posterior_mean_delta,
-            "lcl": res.hdi[0],
-            "ucl": res.hdi[1],
-            "shift_from_primary": res.posterior_mean_delta - primary_mean,
-        })
+        rows.append(
+            {
+                "prior": name,
+                "mean_delta": res.posterior_mean_delta,
+                "lcl": res.hdi[0],
+                "ucl": res.hdi[1],
+                "shift_from_primary": res.posterior_mean_delta - primary_mean,
+            }
+        )
     return results, pd.DataFrame(rows)
 
 
@@ -997,8 +1016,12 @@ _VERDICT_RANK = {"PRIOR_ROBUST": 0, "PRIOR_SENSITIVE": 1, "PRIOR_DRIVEN": 2}
 #: Columns :func:`prior_overlap_table` produces. Dropped from the input first,
 #: so re-grading a table that was already graded stays idempotent.
 _OVERLAP_COLUMNS = (
-    "is_primary", "hdi_overlap", "shift_hdi_frac", "direction",
-    "direction_flip", "row_verdict",
+    "is_primary",
+    "hdi_overlap",
+    "shift_hdi_frac",
+    "direction",
+    "direction_flip",
+    "row_verdict",
 )
 
 
@@ -1082,9 +1105,7 @@ def prior_overlap_table(
     names = [str(p) for p in shift_table["prior"]]
     primary_name = primary if primary is not None else names[0]
     if primary_name not in names:
-        raise ValueError(
-            f"primary prior {primary_name!r} is not in shift_table; have {names}."
-        )
+        raise ValueError(f"primary prior {primary_name!r} is not in shift_table; have {names}.")
 
     ref = shift_table.iloc[names.index(primary_name)]
     ref_low, ref_high = float(ref["lcl"]), float(ref["ucl"])
@@ -1092,11 +1113,13 @@ def prior_overlap_table(
     ref_mean = float(ref["mean_delta"]) if "mean_delta" in shift_table else float("nan")
     ref_direction = _direction(
         float(ref["prob_delta_gt_0"]) if "prob_delta_gt_0" in shift_table else None,
-        ref_low, ref_high, prob_threshold=prob_threshold,
+        ref_low,
+        ref_high,
+        prob_threshold=prob_threshold,
     )
 
     rows = []
-    for name, (_, row) in zip(names, shift_table.iterrows()):
+    for name, (_, row) in zip(names, shift_table.iterrows(), strict=False):
         low, high = float(row["lcl"]), float(row["ucl"])
         shared = min(ref_high, high) - max(ref_low, low)
         narrower = min(ref_width, high - low)
@@ -1108,32 +1131,39 @@ def prior_overlap_table(
 
         direction = _direction(
             float(row["prob_delta_gt_0"]) if "prob_delta_gt_0" in shift_table else None,
-            low, high, prob_threshold=prob_threshold,
+            low,
+            high,
+            prob_threshold=prob_threshold,
         )
         flip = direction != ref_direction
 
         if shared < 0:
             verdict = "PRIOR_DRIVEN"
-        elif overlap < min_overlap or flip or (
-            not np.isnan(shift_frac) and shift_frac > max_shift_frac
+        elif (
+            overlap < min_overlap
+            or flip
+            or (not np.isnan(shift_frac) and shift_frac > max_shift_frac)
         ):
             verdict = "PRIOR_SENSITIVE"
         else:
             verdict = "PRIOR_ROBUST"
 
-        rows.append({
-            "is_primary": name == primary_name,
-            "hdi_overlap": overlap,
-            "shift_hdi_frac": shift_frac,
-            "direction": direction,
-            "direction_flip": flip,
-            "row_verdict": "PRIOR_ROBUST" if name == primary_name else verdict,
-        })
+        rows.append(
+            {
+                "is_primary": name == primary_name,
+                "hdi_overlap": overlap,
+                "shift_hdi_frac": shift_frac,
+                "direction": direction,
+                "direction_flip": flip,
+                "row_verdict": "PRIOR_ROBUST" if name == primary_name else verdict,
+            }
+        )
 
     return pd.concat(
         [
             shift_table.reset_index(drop=True).drop(
-                columns=list(_OVERLAP_COLUMNS), errors="ignore",
+                columns=list(_OVERLAP_COLUMNS),
+                errors="ignore",
             ),
             pd.DataFrame(rows),
         ],
@@ -1200,8 +1230,11 @@ def prior_sensitivity_verdict(
     'PRIOR_ROBUST'
     """
     graded = prior_overlap_table(
-        shift_table, primary=primary, prob_threshold=prob_threshold,
-        min_overlap=min_overlap, max_shift_frac=max_shift_frac,
+        shift_table,
+        primary=primary,
+        prob_threshold=prob_threshold,
+        min_overlap=min_overlap,
+        max_shift_frac=max_shift_frac,
     )
     return max(graded["row_verdict"], key=_VERDICT_RANK.__getitem__)
 
@@ -1227,6 +1260,7 @@ def _save_fig(fig: Figure, out_path: Path | str | None) -> None:
 def _posterior_mode(samples: np.ndarray) -> float:
     """KDE-based mode estimate — robust across all scipy versions."""
     from scipy.stats import gaussian_kde
+
     arr = np.asarray(samples, dtype=float).ravel()
     kde = gaussian_kde(arr)
     xs = np.linspace(arr.min(), arr.max(), 1000)
@@ -1250,8 +1284,8 @@ def _plot_posterior_predictive(
     """
     from scipy import stats as _stats
 
-    curve_color = "#7bafd4"   # light blue — same as BEST website for all groups
-    hist_color  = "#c44e52"   # red — BEST website uses same red for both groups
+    curve_color = "#7bafd4"  # light blue — same as BEST website for all groups
+    hist_color = "#c44e52"  # red — BEST website uses same red for both groups
 
     n_bins = max(5, min(len(y), 20))
     x_lo = y.mean() - 4 * y.std()
@@ -1271,12 +1305,18 @@ def _plot_posterior_predictive(
     ax.plot(xs, pdf_mean, color=curve_color, linewidth=2.0, zorder=2)
     # Draw histogram on top so bars are always visible
     ax.hist(
-        y, bins=n_bins, density=True,
-        alpha=0.85, color=hist_color, edgecolor="white", linewidth=0.4,
+        y,
+        bins=n_bins,
+        density=True,
+        alpha=0.85,
+        color=hist_color,
+        edgecolor="white",
+        linewidth=0.4,
         zorder=3,
     )
-    ax.annotate(n_label, xy=(0.97, 0.97), xycoords="axes fraction",
-                ha="right", va="top", fontsize=9)
+    ax.annotate(
+        n_label, xy=(0.97, 0.97), xycoords="axes fraction", ha="right", va="top", fontsize=9
+    )
     ax.set_xlabel("Observation")
     ax.set_ylabel("Probability")
 
@@ -1318,47 +1358,90 @@ def plot_kruschke_report(
     fig, axes = plt.subplots(5, 2, figsize=(12, 18))
 
     # Row 0 — μ_treatment | treatment data + posterior predictive
-    _az.plot_posterior(trace, var_names=["mu_treatment"], ax=axes[0, 0],  # type: ignore[union-attr]
-                       point_estimate="mean")
+    _az.plot_posterior(
+        trace,
+        var_names=["mu_treatment"],
+        ax=axes[0, 0],  # type: ignore[union-attr]
+        point_estimate="mean",
+    )
     axes[0, 0].set_title("Study group mean", pad=8)
     _plot_posterior_predictive(
-        axes[0, 1], y_treatment_arr, mu_t_s, sigma_t_s, nu_s,
+        axes[0, 1],
+        y_treatment_arr,
+        mu_t_s,
+        sigma_t_s,
+        nu_s,
         n_label=f"N = {result.n_treatment}",
     )
     axes[0, 1].set_title("Study group data with post. pred.", pad=8)
 
     # Row 1 — μ_control | control data + posterior predictive
-    _az.plot_posterior(trace, var_names=["mu_control"], ax=axes[1, 0],  # type: ignore[union-attr]
-                       point_estimate="mean")
+    _az.plot_posterior(
+        trace,
+        var_names=["mu_control"],
+        ax=axes[1, 0],  # type: ignore[union-attr]
+        point_estimate="mean",
+    )
     axes[1, 0].set_title("Control group mean", pad=8)
     _plot_posterior_predictive(
-        axes[1, 1], y_control_arr, mu_c_s, sigma_c_s, nu_s,
+        axes[1, 1],
+        y_control_arr,
+        mu_c_s,
+        sigma_c_s,
+        nu_s,
         n_label=f"N = {result.n_control}",
     )
     axes[1, 1].set_title("Control group data with post. pred.", pad=8)
 
     # Row 2 — σ_treatment | Difference of means
-    _az.plot_posterior(trace, var_names=["sigma_treatment"], ax=axes[2, 0],  # type: ignore[union-attr]
-                       point_estimate="mode")
+    _az.plot_posterior(
+        trace,
+        var_names=["sigma_treatment"],
+        ax=axes[2, 0],  # type: ignore[union-attr]
+        point_estimate="mode",
+    )
     axes[2, 0].set_title("Study group std. dev.", pad=8)
-    _az.plot_posterior(trace, var_names=["delta"], ax=axes[2, 1],  # type: ignore[union-attr]
-                       point_estimate="mean", ref_val=0)
+    _az.plot_posterior(
+        trace,
+        var_names=["delta"],
+        ax=axes[2, 1],  # type: ignore[union-attr]
+        point_estimate="mean",
+        ref_val=0,
+    )
     axes[2, 1].set_title("Difference of means", pad=8)
 
     # Row 3 — σ_control | Difference of std devs
-    _az.plot_posterior(trace, var_names=["sigma_control"], ax=axes[3, 0],  # type: ignore[union-attr]
-                       point_estimate="mode")
+    _az.plot_posterior(
+        trace,
+        var_names=["sigma_control"],
+        ax=axes[3, 0],  # type: ignore[union-attr]
+        point_estimate="mode",
+    )
     axes[3, 0].set_title("Control group std. dev.", pad=8)
-    _az.plot_posterior(trace, var_names=["delta_sigma"], ax=axes[3, 1],  # type: ignore[union-attr]
-                       point_estimate="mode", ref_val=0)
+    _az.plot_posterior(
+        trace,
+        var_names=["delta_sigma"],
+        ax=axes[3, 1],  # type: ignore[union-attr]
+        point_estimate="mode",
+        ref_val=0,
+    )
     axes[3, 1].set_title("Difference of std. dev.s", pad=8)
 
     # Row 4 — ν (normality) | Effect size
-    _az.plot_posterior(trace, var_names=["nu"], ax=axes[4, 0],  # type: ignore[union-attr]
-                       point_estimate="mode")
+    _az.plot_posterior(
+        trace,
+        var_names=["nu"],
+        ax=axes[4, 0],  # type: ignore[union-attr]
+        point_estimate="mode",
+    )
     axes[4, 0].set_title("Normality", pad=8)
-    _az.plot_posterior(trace, var_names=["effect_size"], ax=axes[4, 1],  # type: ignore[union-attr]
-                       point_estimate="mode", ref_val=0)
+    _az.plot_posterior(
+        trace,
+        var_names=["effect_size"],
+        ax=axes[4, 1],  # type: ignore[union-attr]
+        point_estimate="mode",
+        ref_val=0,
+    )
     axes[4, 1].set_title("Effect size", pad=8)
     axes[4, 1].set_xlabel(r"$(\mu_1 - \mu_2)\,/\,\sqrt{(\sigma_1^2 + \sigma_2^2)\,/\,2}$")
 
@@ -1388,7 +1471,11 @@ def plot_rope_decision(
     else:
         fig = ax.figure  # type: ignore[assignment]
     _az.plot_posterior(  # type: ignore[union-attr]
-        samples, rope=list(rope), ref_val=ref_val, hdi_prob=hdi_prob, ax=ax,
+        samples,
+        rope=list(rope),
+        ref_val=ref_val,
+        hdi_prob=hdi_prob,
+        ax=ax,
     )
     ax.set_title(f"Posterior of δ  |  ROPE = [{rope[0]:.3g}, {rope[1]:.3g}]")
     _save_fig(fig, out_path)
@@ -1435,7 +1522,7 @@ def plot_beta_binomial_report(
     trace = result.trace
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
-    _az.plot_posterior(trace, var_names=["p_control"], ax=axes[0, 0])    # type: ignore[union-attr]
+    _az.plot_posterior(trace, var_names=["p_control"], ax=axes[0, 0])  # type: ignore[union-attr]
     axes[0, 0].set_title(f"p_control  (empirical = {result.rate_control:.4f})")
 
     _az.plot_posterior(trace, var_names=["p_treatment"], ax=axes[0, 1])  # type: ignore[union-attr]
@@ -1444,7 +1531,7 @@ def plot_beta_binomial_report(
     _plot_kw: dict[str, object] = {"var_names": ["delta"], "ax": axes[1, 0], "ref_val": 0.0}
     if rope is not None:
         _plot_kw["rope"] = list(rope)
-    _az.plot_posterior(trace, **_plot_kw)                            # type: ignore[union-attr]
+    _az.plot_posterior(trace, **_plot_kw)  # type: ignore[union-attr]
     axes[1, 0].set_title("δ = p_treatment − p_control")
 
     _az.plot_posterior(trace, var_names=["rel_lift"], ax=axes[1, 1], ref_val=0.0)  # type: ignore[union-attr]

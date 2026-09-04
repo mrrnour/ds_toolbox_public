@@ -26,15 +26,18 @@ def _cfg(targets):
 
 # ---------- Happy paths per kind ----------
 
+
 def test_mssql_windows_trusted():
-    cfg = _cfg({
-        "prod_sql": {
-            "kind": "mssql",
-            "auth": "windows_trusted",
-            "db_server": "PROD-SQL01",
-            "database": "Sales",
+    cfg = _cfg(
+        {
+            "prod_sql": {
+                "kind": "mssql",
+                "auth": "windows_trusted",
+                "db_server": "PROD-SQL01",
+                "database": "Sales",
+            }
         }
-    })
+    )
     ds = ds_module.get("prod_sql", config=cfg)
     assert isinstance(ds, MSSQLDataSource)
     assert ds.target_id == "prod_sql"
@@ -59,20 +62,23 @@ def test_mssql_defaults_minimal_config():
 
 
 def test_synapse_azure_keyvault(monkeypatch):
-    cfg = _cfg({
-        "azure_synapse": {
-            "kind": "synapse",
-            "auth": "azure_keyvault",
-            "key_vault": "kv-an",
-            "secret": "synapse-pw",
-            "hostname": "mysynapse.sql.azuresynapse.net",
-            "database": "warehouse",
-            "port": 1433,
-            "username": "svc_user",
+    cfg = _cfg(
+        {
+            "azure_synapse": {
+                "kind": "synapse",
+                "auth": "azure_keyvault",
+                "key_vault": "kv-an",
+                "secret": "synapse-pw",
+                "hostname": "mysynapse.sql.azuresynapse.net",
+                "database": "warehouse",
+                "port": 1433,
+                "username": "svc_user",
+            }
         }
-    })
+    )
     monkeypatch.setattr(
-        ds_module, "_resolve_keyvault_secret",
+        ds_module,
+        "_resolve_keyvault_secret",
         lambda kv, s, runtime: "PW",
     )
     ds = ds_module.get("azure_synapse", config=cfg)
@@ -87,26 +93,27 @@ def test_synapse_azure_keyvault(monkeypatch):
 
 
 def test_blob_azure_keyvault(monkeypatch):
-    cfg = _cfg({
-        "example_blob": {
-            "kind": "blob",
-            "auth": "azure_keyvault",
-            "key_vault": "kv-example",
-            "secret": "blob-key",
-            "storage_account": "sadatascienceexample",
+    cfg = _cfg(
+        {
+            "example_blob": {
+                "kind": "blob",
+                "auth": "azure_keyvault",
+                "key_vault": "kv-example",
+                "secret": "blob-key",
+                "storage_account": "sadatascienceexample",
+            }
         }
-    })
+    )
     monkeypatch.setattr(
-        ds_module, "_resolve_keyvault_secret",
+        ds_module,
+        "_resolve_keyvault_secret",
         lambda kv, s, runtime: "FAKE_KEY",
     )
     ds = ds_module.get("example_blob", config=cfg)
     assert isinstance(ds, BlobDataSource)
     assert ds.account_key == "FAKE_KEY"
     assert ds.storage_account == "sadatascienceexample"
-    assert ds.spark_conf_key == (
-        "fs.azure.account.key.sadatascienceexample.blob.core.windows.net"
-    )
+    assert ds.spark_conf_key == ("fs.azure.account.key.sadatascienceexample.blob.core.windows.net")
     assert ds.wasbs_uri("mycontainer", "path/to/file.parquet") == (
         "wasbs://mycontainer@sadatascienceexample.blob.core.windows.net/path/to/file.parquet"
     )
@@ -114,42 +121,46 @@ def test_blob_azure_keyvault(monkeypatch):
 
 
 def test_adls_azure_keyvault(monkeypatch):
-    cfg = _cfg({
-        "lake": {
-            "kind": "adls",
-            "auth": "azure_keyvault",
-            "key_vault": "kv",
-            "secret": "k",
-            "storage_account": "datalake01",
+    cfg = _cfg(
+        {
+            "lake": {
+                "kind": "adls",
+                "auth": "azure_keyvault",
+                "key_vault": "kv",
+                "secret": "k",
+                "storage_account": "datalake01",
+            }
         }
-    })
+    )
     monkeypatch.setattr(
-        ds_module, "_resolve_keyvault_secret",
+        ds_module,
+        "_resolve_keyvault_secret",
         lambda kv, s, runtime: "K",
     )
     ds = ds_module.get("lake", config=cfg)
     assert isinstance(ds, ADLSDataSource)
     assert ds.spark_conf_key == "fs.azure.account.key.datalake01.dfs.core.windows.net"
-    assert ds.abfss_uri("c", "p/f") == (
-        "abfss://c@datalake01.dfs.core.windows.net/p/f"
-    )
+    assert ds.abfss_uri("c", "p/f") == ("abfss://c@datalake01.dfs.core.windows.net/p/f")
 
 
 def test_pi_oauth_post(monkeypatch):
-    cfg = _cfg({
-        "pi": {
-            "kind": "pi",
-            "auth": "azure_keyvault",
-            "key_vault": "kv",
-            "secret": "pi-secret",
-            "url": "https://pi.example/oauth/token",
-            "grant_type": "client_credentials",
-            "client_id": "cid",
-            "scope": "scope-x",
+    cfg = _cfg(
+        {
+            "pi": {
+                "kind": "pi",
+                "auth": "azure_keyvault",
+                "key_vault": "kv",
+                "secret": "pi-secret",
+                "url": "https://pi.example/oauth/token",
+                "grant_type": "client_credentials",
+                "client_id": "cid",
+                "scope": "scope-x",
+            }
         }
-    })
+    )
     monkeypatch.setattr(
-        ds_module, "_resolve_keyvault_secret",
+        ds_module,
+        "_resolve_keyvault_secret",
         lambda kv, s, runtime: "OAUTH_SECRET",
     )
 
@@ -175,17 +186,19 @@ def test_pi_oauth_post(monkeypatch):
 
 
 def test_postgres_inline_password():
-    cfg = _cfg({
-        "local_pg": {
-            "kind": "postgres",
-            "auth": "inline_password",
-            "host": "localhost",
-            "port": 5432,
-            "user": "alice",
-            "password": "s3cret",
-            "database": "appdb",
+    cfg = _cfg(
+        {
+            "local_pg": {
+                "kind": "postgres",
+                "auth": "inline_password",
+                "host": "localhost",
+                "port": 5432,
+                "user": "alice",
+                "password": "s3cret",
+                "database": "appdb",
+            }
         }
-    })
+    )
     ds = ds_module.get("local_pg", config=cfg)
     assert isinstance(ds, PostgresDataSource)
     assert ds.password == "s3cret"
@@ -195,10 +208,14 @@ def test_postgres_inline_password():
 
 # ---------- Repr never leaks secrets ----------
 
+
 def test_password_not_in_repr_mssql():
     ds = MSSQLDataSource(
-        target_id="t", db_server="x", trusted_connection=False,
-        username="u", password="SHHH",
+        target_id="t",
+        db_server="x",
+        trusted_connection=False,
+        username="u",
+        password="SHHH",
     )
     assert "SHHH" not in repr(ds)
 
@@ -214,6 +231,7 @@ def test_bearer_not_in_repr_pi():
 
 
 # ---------- Error paths ----------
+
 
 def test_unknown_target():
     with pytest.raises(UnknownTargetError, match="missing"):
@@ -233,23 +251,26 @@ def test_unknown_kind():
 
 
 def test_azure_keyvault_missing_fields():
-    cfg = _cfg({
-        "t": {"kind": "blob", "auth": "azure_keyvault", "storage_account": "x"}
-    })
+    cfg = _cfg({"t": {"kind": "blob", "auth": "azure_keyvault", "storage_account": "x"}})
     with pytest.raises(Exception, match="key_vault"):
         ds_module.get("t", config=cfg)
 
 
 # ---------- Runtime override ----------
 
+
 def test_runtime_override_passed_to_resolver(monkeypatch):
-    cfg = _cfg({
-        "b": {
-            "kind": "blob", "auth": "azure_keyvault",
-            "key_vault": "kv", "secret": "s",
-            "storage_account": "acct",
+    cfg = _cfg(
+        {
+            "b": {
+                "kind": "blob",
+                "auth": "azure_keyvault",
+                "key_vault": "kv",
+                "secret": "s",
+                "storage_account": "acct",
+            }
         }
-    })
+    )
     seen = {}
 
     def fake_resolve(kv, secret, runtime):
@@ -262,17 +283,22 @@ def test_runtime_override_passed_to_resolver(monkeypatch):
 
 
 def test_runtime_defaults_to_databricks(monkeypatch):
-    cfg = _cfg({
-        "b": {
-            "kind": "blob", "auth": "azure_keyvault",
-            "key_vault": "kv", "secret": "s",
-            "storage_account": "acct",
+    cfg = _cfg(
+        {
+            "b": {
+                "kind": "blob",
+                "auth": "azure_keyvault",
+                "key_vault": "kv",
+                "secret": "s",
+                "storage_account": "acct",
+            }
         }
-    })
+    )
     seen = {}
     monkeypatch.delenv("DSTOOLBOX_RUNTIME", raising=False)
     monkeypatch.setattr(
-        ds_module, "_resolve_keyvault_secret",
+        ds_module,
+        "_resolve_keyvault_secret",
         lambda kv, s, runtime: seen.setdefault("runtime", runtime) or "K",
     )
     ds_module.get("b", config=cfg)

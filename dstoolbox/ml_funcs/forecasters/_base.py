@@ -57,8 +57,8 @@ def nan_intervals(n: int) -> tuple[np.ndarray, np.ndarray]:
 # ===== imports preserved from public (needed by extras below) =====
 from sklearn.base import BaseEstimator, TransformerMixin
 
-
 # ===== public-only extensions (preserved on vendor merge) =====
+
 
 def align_forecast(
     forecast_index: pd.DatetimeIndex,
@@ -90,7 +90,7 @@ class DropColumns(BaseEstimator, TransformerMixin):
     def __init__(self, columns: list[str]) -> None:
         self.columns = columns
 
-    def fit(self, X, y=None) -> "DropColumns":
+    def fit(self, X, y=None) -> DropColumns:
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:

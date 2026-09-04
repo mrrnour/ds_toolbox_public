@@ -170,7 +170,11 @@ def hier_beta_binomial_fit(
         # (1-mu)*kappa) marginalised out, so per-unit rates never enter the
         # sampler and fit cost is independent of unit count.
         _pm.BetaBinomial(  # type: ignore[union-attr]
-            "obs", n=n, alpha=mu * kappa, beta=(1.0 - mu) * kappa, observed=k,
+            "obs",
+            n=n,
+            alpha=mu * kappa,
+            beta=(1.0 - mu) * kappa,
+            observed=k,
         )
         trace = _pm.sample(  # type: ignore[union-attr]
             draws=draws,
@@ -185,7 +189,7 @@ def hier_beta_binomial_fit(
         trace, var_names=["mu", "kappa"], round_to=6
     )[["r_hat", "ess_bulk", "ess_tail", "mcse_mean"]]
 
-    mu_samples = np.asarray(trace.posterior["mu"]).ravel()        # type: ignore[attr-defined]
+    mu_samples = np.asarray(trace.posterior["mu"]).ravel()  # type: ignore[attr-defined]
     kappa_samples = np.asarray(trace.posterior["kappa"]).ravel()  # type: ignore[attr-defined]
 
     return HierBetaBinomialFit(
@@ -236,9 +240,7 @@ def verdict_without_rope(
     if not 0.0 <= prob_gt_zero <= 1.0:
         raise ValueError(f"prob_gt_zero must be in [0, 1]; got {prob_gt_zero}.")
     if not 0.0 < credibility_threshold < 1.0:
-        raise ValueError(
-            f"credibility_threshold must be in (0, 1); got {credibility_threshold}."
-        )
+        raise ValueError(f"credibility_threshold must be in (0, 1); got {credibility_threshold}.")
     if prob_gt_zero >= credibility_threshold:
         return "positive"
     if (1.0 - prob_gt_zero) >= credibility_threshold:

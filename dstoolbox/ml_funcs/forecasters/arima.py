@@ -46,16 +46,18 @@ class AutoArimaSklearn(BaseEstimator, RegressorMixin, IntervalMixin):
         self.freq = freq
         self.arima_kwargs = arima_kwargs
 
-    def fit(self, X: pd.DataFrame, y) -> "AutoArimaSklearn":
+    def fit(self, X: pd.DataFrame, y) -> AutoArimaSklearn:
         series = train_series(X, y, self.date_col)
         self._freq_ = self.freq or infer_freq(series.index)
         self._last_train_ = series.index.max()
 
-        long_df = pd.DataFrame({
-            "unique_id": "y",
-            "ds": series.index,
-            "y": series.to_numpy(),
-        })
+        long_df = pd.DataFrame(
+            {
+                "unique_id": "y",
+                "ds": series.index,
+                "y": series.to_numpy(),
+            }
+        )
         model = _sf_models.AutoARIMA(season_length=self.season_length, **self.arima_kwargs)
         self._sf_ = _sf.StatsForecast(models=[model], freq=self._freq_, n_jobs=1)
         self._sf_.fit(long_df)

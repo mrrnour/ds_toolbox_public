@@ -14,7 +14,8 @@ windowed seasonal-naive with one call.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from . import (
     AutoArimaSklearn,
@@ -41,7 +42,11 @@ def _holiday_kwargs(holidays: Any) -> dict[str, Any]:
     """
     if holidays is None:
         return {}
-    get = holidays.get if isinstance(holidays, Mapping) else (lambda k, default=None: getattr(holidays, k, default))
+    get = (
+        holidays.get
+        if isinstance(holidays, Mapping)
+        else (lambda k, default=None: getattr(holidays, k, default))
+    )
     enabled = get("enabled", True)
     if not enabled:
         return {}

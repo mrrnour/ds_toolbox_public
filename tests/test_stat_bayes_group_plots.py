@@ -61,6 +61,7 @@ def _close_figures():
 # Verdict styling — the single lookup every figure shares
 # --------------------------------------------------------------------------- #
 
+
 @pytest.mark.parametrize(
     "decision",
     ["positive", "negative", "equivalent", "inconclusive"],
@@ -81,6 +82,7 @@ def test_unknown_verdict_degrades_instead_of_raising():
 # plot_effect
 # --------------------------------------------------------------------------- #
 
+
 def test_effect_figure_has_two_panels(effect):
     fig = plot_effect(effect)
     assert len(fig.axes) == 2
@@ -100,9 +102,7 @@ def test_effect_figure_accepts_a_custom_title(effect):
 def test_effect_figure_draws_the_band_only_when_there_is_one(effect):
     with_band = len(plot_effect(effect).axes[1].patches)
 
-    plain = fit_prepost(
-        _events(0.10, 0.25), effect.window, **FIT_KW
-    )
+    plain = fit_prepost(_events(0.10, 0.25), effect.window, **FIT_KW)
     without_band = len(plot_effect(plain).axes[1].patches)
 
     assert with_band > without_band
@@ -111,6 +111,7 @@ def test_effect_figure_draws_the_band_only_when_there_is_one(effect):
 # --------------------------------------------------------------------------- #
 # ArviZ-backed diagnostics
 # --------------------------------------------------------------------------- #
+
 
 def test_convergence_returns_all_three_diagnostics(effect):
     pytest.importorskip("arviz")
@@ -137,6 +138,7 @@ def test_forest_plots_both_periods(effect):
 # --------------------------------------------------------------------------- #
 # plot_summary — sized from the data, any number of arms
 # --------------------------------------------------------------------------- #
+
 
 @pytest.mark.parametrize("n_arms", [1, 2, 5])
 def test_summary_takes_any_number_of_arms(effect, n_arms):

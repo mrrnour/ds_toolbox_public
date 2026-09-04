@@ -18,7 +18,9 @@ _darts_models = optional_import("darts.models", "DartsTheta/DartsNBEATSSklearn")
 def _to_darts_series(series: pd.Series, freq: str):
     """Convert a pandas Series into a ``darts.TimeSeries``."""
     return _darts_ts.TimeSeries.from_times_and_values(
-        times=series.index, values=series.to_numpy(), freq=freq,
+        times=series.index,
+        values=series.to_numpy(),
+        freq=freq,
     )
 
 
@@ -64,7 +66,7 @@ class DartsThetaSklearn(BaseEstimator, RegressorMixin, IntervalMixin):
         self.n_samples_for_interval = n_samples_for_interval
         self.theta_kwargs = theta_kwargs
 
-    def fit(self, X: pd.DataFrame, y) -> "DartsThetaSklearn":
+    def fit(self, X: pd.DataFrame, y) -> DartsThetaSklearn:
         series = train_series(X, y, self.date_col)
         self._freq_ = self.freq or infer_freq(series.index)
         self._last_train_ = series.index.max()
@@ -94,7 +96,8 @@ class DartsThetaSklearn(BaseEstimator, RegressorMixin, IntervalMixin):
         target = as_datetime_index(X, self.date_col)
         try:
             forecast = self._model_.predict(
-                self._horizon(X), num_samples=self.n_samples_for_interval,
+                self._horizon(X),
+                num_samples=self.n_samples_for_interval,
             )
             arr = forecast.all_values()  # (T, 1, n_samples)
             lo_q = (1 - level) / 2
@@ -144,7 +147,7 @@ class DartsNBEATSSklearn(BaseEstimator, RegressorMixin, ProbabilisticMixin):
         self.n_epochs = n_epochs
         self.nbeats_kwargs = nbeats_kwargs
 
-    def fit(self, X: pd.DataFrame, y) -> "DartsNBEATSSklearn":
+    def fit(self, X: pd.DataFrame, y) -> DartsNBEATSSklearn:
         series = train_series(X, y, self.date_col)
         self._freq_ = self.freq or infer_freq(series.index)
         self._last_train_ = series.index.max()

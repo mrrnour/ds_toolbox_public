@@ -1,6 +1,6 @@
 """Spark spatial grouping: cluster consecutive rows whose successive locations exceed a distance threshold."""
 
-from typing import Callable, List
+from collections.abc import Callable
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
@@ -12,8 +12,8 @@ def group_by_proximity(
     distance_func: Callable,
     x_col: str,
     y_col: str,
-    group_by_cols: List[str],
-    order_cols: List[str],
+    group_by_cols: list[str],
+    order_cols: list[str],
     distance_threshold: float = 20.0,
     distance_col_name: str = "distance",
     ordered_ids: bool = False,
@@ -88,7 +88,6 @@ def group_by_proximity(
         )
 
     window_group = Window.partitionBy("Global_Group_ID")
-    return (
-        df_with_groups.withColumn("Group_Row_Count", F.count("*").over(window_group))
-        .orderBy(*order_cols, "Local_Group_ID")
+    return df_with_groups.withColumn("Group_Row_Count", F.count("*").over(window_group)).orderBy(
+        *order_cols, "Local_Group_ID"
     )

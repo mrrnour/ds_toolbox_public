@@ -144,7 +144,10 @@ def test_clustering_inflates_the_standard_error():
     y_control, c_control = _clustered_events(n_clusters=400, reps=10, rate=0.20, seed=1)
     y_treatment, c_treatment = _clustered_events(n_clusters=400, reps=10, rate=0.24, seed=2)
     res = welch_t_two_sample(
-        y_control, y_treatment, cluster_control=c_control, cluster_treatment=c_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=c_control,
+        cluster_treatment=c_treatment,
     )
     assert res.se_cluster > res.se_naive
     # 10 identical rows per cluster ⇒ variance inflated by ~10x.
@@ -157,7 +160,10 @@ def test_point_estimate_is_event_weighted_and_ignores_clustering():
     y_control, c_control = _clustered_events(n_clusters=50, reps=4, rate=0.30, seed=3)
     y_treatment, c_treatment = _clustered_events(n_clusters=50, reps=7, rate=0.40, seed=4)
     res = welch_t_two_sample(
-        y_control, y_treatment, cluster_control=c_control, cluster_treatment=c_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=c_control,
+        cluster_treatment=c_treatment,
     )
     assert res.mean_control == pytest.approx(float(np.mean(y_control)), rel=1e-12)
     assert res.mean_treatment == pytest.approx(float(np.mean(y_treatment)), rel=1e-12)
@@ -167,12 +173,18 @@ def test_variance_choice_changes_inference_but_not_the_effect():
     y_control, c_control = _clustered_events(n_clusters=300, reps=8, rate=0.20, seed=5)
     y_treatment, c_treatment = _clustered_events(n_clusters=300, reps=8, rate=0.26, seed=6)
     naive = welch_t_two_sample(
-        y_control, y_treatment,
-        cluster_control=c_control, cluster_treatment=c_treatment, variance="naive",
+        y_control,
+        y_treatment,
+        cluster_control=c_control,
+        cluster_treatment=c_treatment,
+        variance="naive",
     )
     clustered = welch_t_two_sample(
-        y_control, y_treatment,
-        cluster_control=c_control, cluster_treatment=c_treatment, variance="cluster",
+        y_control,
+        y_treatment,
+        cluster_control=c_control,
+        cluster_treatment=c_treatment,
+        variance="cluster",
     )
     assert naive.delta_mean == pytest.approx(clustered.delta_mean, rel=1e-12)
     assert abs(clustered.t_stat) < abs(naive.t_stat)
@@ -293,8 +305,10 @@ def test_rejects_samples_shorter_than_two():
 def test_rejects_cluster_length_mismatch():
     with pytest.raises(ValueError, match="same length"):
         welch_t_two_sample(
-            [1.0, 2.0, 3.0], [1.0, 2.0, 3.0],
-            cluster_control=[1, 2], cluster_treatment=[1, 2, 3],
+            [1.0, 2.0, 3.0],
+            [1.0, 2.0, 3.0],
+            cluster_control=[1, 2],
+            cluster_treatment=[1, 2, 3],
         )
 
 
@@ -355,8 +369,10 @@ def test_delta_method_reproduces_run_delta_steps():
     y_treatment = np.repeat(rng.binomial(1, 0.26, 350), 4).astype(float)
 
     res = delta_method_two_sample(
-        y_control, y_treatment,
-        cluster_control=ids_control, cluster_treatment=ids_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=ids_control,
+        cluster_treatment=ids_treatment,
     )
 
     est_diff = y_treatment.mean() - y_control.mean()
@@ -383,8 +399,10 @@ def test_delta_method_uses_the_normal_not_the_t():
     y_treatment = np.repeat(rng.normal(10.4, 2.0, 200), 5)
 
     res = delta_method_two_sample(
-        y_control, y_treatment,
-        cluster_control=ids_control, cluster_treatment=ids_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=ids_control,
+        cluster_treatment=ids_treatment,
     )
     assert res.dof == float("inf")
     assert res.p_value == pytest.approx(2.0 * norm.sf(abs(res.t_stat)), rel=1e-12)
@@ -400,8 +418,10 @@ def test_delta_method_se_tracks_the_clustered_se_not_the_naive_one():
     y_treatment = np.repeat(rng.binomial(1, 0.3, 150), 6).astype(float)
 
     res = delta_method_two_sample(
-        y_control, y_treatment,
-        cluster_control=ids_control, cluster_treatment=ids_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=ids_control,
+        cluster_treatment=ids_treatment,
     )
     assert res.se == pytest.approx(res.se_cluster, rel=1e-12)
     assert res.se > res.se_naive
@@ -417,12 +437,13 @@ def test_delta_method_matches_gettyab_within_the_ddof_gap():
     y_treatment = np.repeat(rng.binomial(1, 0.28, 500), 3).astype(float)
 
     res = delta_method_two_sample(
-        y_control, y_treatment,
-        cluster_control=ids_control, cluster_treatment=ids_treatment,
+        y_control,
+        y_treatment,
+        cluster_control=ids_control,
+        cluster_treatment=ids_treatment,
     )
     se_gettyab = np.sqrt(
-        _gettyab_var_delta(y_control, ids_control)
-        + _gettyab_var_delta(y_treatment, ids_treatment)
+        _gettyab_var_delta(y_control, ids_control) + _gettyab_var_delta(y_treatment, ids_treatment)
     )
     assert res.se == pytest.approx(se_gettyab, rel=5e-3)
 

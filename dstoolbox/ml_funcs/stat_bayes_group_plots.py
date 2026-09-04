@@ -48,9 +48,9 @@ _DELTA_COLOR = "#2e7d32"
 # band is set can make the stronger claim in their own prose; this module
 # cannot.
 _VERDICT_STYLE: dict[str, tuple[str, str]] = {
-    "positive":     ("#2e7d32", "Improvement"),
-    "negative":     ("#c62828", "Regression"),
-    "equivalent":   ("#f57f17", "Practically equivalent"),
+    "positive": ("#2e7d32", "Improvement"),
+    "negative": ("#c62828", "Regression"),
+    "equivalent": ("#f57f17", "Practically equivalent"),
     "inconclusive": ("#555555", "Inconclusive"),
 }
 
@@ -73,8 +73,12 @@ def _density(samples: np.ndarray, grid: np.ndarray) -> np.ndarray:
 
 def _annotate(ax, x: float, y: float, text: str) -> None:
     ax.text(
-        x, y, text,
-        transform=ax.transAxes, va="top", fontsize=7.5,
+        x,
+        y,
+        text,
+        transform=ax.transAxes,
+        va="top",
+        fontsize=7.5,
         bbox={"boxstyle": "round,pad=0.3", "fc": "white", "alpha": 0.85},
     )
 
@@ -82,6 +86,7 @@ def _annotate(ax, x: float, y: float, text: str) -> None:
 # ---------------------------------------------------------------------------
 # The result of one fit
 # ---------------------------------------------------------------------------
+
 
 def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
     """Two panels: the two population rates, and the delta against its band.
@@ -105,7 +110,8 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
     fig, (ax_mu, ax_delta) = plt.subplots(1, 2, figsize=(12, 4.5))
     fig.suptitle(
         title or f"{effect.metric}  ·  {effect.window}",
-        fontsize=12, fontweight="bold",
+        fontsize=12,
+        fontweight="bold",
     )
 
     # ── Left: mu_pre vs mu_post ──────────────────────────────────────────
@@ -122,8 +128,11 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
         (mu_post, _POST_COLOR, "post", effect.mu_treatment_mean),
     ):
         ax_mu.fill_between(
-            grid, _density(samples, grid),
-            alpha=0.35, color=color, label=f"{label}  μ={mean:.3%}",
+            grid,
+            _density(samples, grid),
+            alpha=0.35,
+            color=color,
+            label=f"{label}  μ={mean:.3%}",
         )
         ax_mu.axvline(mean, color=color, lw=1.5, ls="--")
 
@@ -132,7 +141,9 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
     ax_mu.set_title("Posterior: μ_pre vs μ_post")
     ax_mu.legend(fontsize=8)
     _annotate(
-        ax_mu, 0.03, 0.97,
+        ax_mu,
+        0.03,
+        0.97,
         f"users  pre={effect.n_users_control:,}  post={effect.n_users_treatment:,}\n"
         f"events pre={effect.n_events_control:,}  post={effect.n_events_treatment:,}\n"
         f"pooled {effect.pooled_rate_control:.3%} → {effect.pooled_rate_treatment:.3%}",
@@ -145,21 +156,29 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
 
     ax_delta.fill_between(grid_d, _density(delta, grid_d), alpha=0.45, color=_DELTA_COLOR)
     ax_delta.axvspan(
-        effect.lcl, effect.ucl,
-        alpha=0.15, color=_DELTA_COLOR,
+        effect.lcl,
+        effect.ucl,
+        alpha=0.15,
+        color=_DELTA_COLOR,
         label=f"{effect.hdi_prob:.0%} HDI",
     )
     ax_delta.axvline(0, color="black", lw=0.8, ls=":")
     ax_delta.axvline(
-        effect.estimate, color=_DELTA_COLOR, lw=1.5, ls="--",
+        effect.estimate,
+        color=_DELTA_COLOR,
+        lw=1.5,
+        ls="--",
         label=f"mean = {effect.estimate:+.3%}",
     )
 
     lines = [f"P(δ>0) = {effect.prob_gt_zero:.3f}"]
     if effect.rope is not None:
         ax_delta.axvspan(
-            effect.rope.rope_low, effect.rope.rope_high,
-            alpha=0.12, color="gray", label="ROPE",
+            effect.rope.rope_low,
+            effect.rope.rope_high,
+            alpha=0.12,
+            color="gray",
+            label="ROPE",
         )
         lines += [
             f"P(δ>ROPE) = {effect.rope.prob_gt_high:.3f}",
@@ -170,7 +189,9 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
 
     color, label = verdict_style(effect.decision)
     ax_delta.set_title(
-        f"Posterior δ = μ_post − μ_pre\n{label}", color=color, fontweight="bold",
+        f"Posterior δ = μ_post − μ_pre\n{label}",
+        color=color,
+        fontweight="bold",
     )
     ax_delta.set_xlabel("δ  (absolute rate difference)")
     ax_delta.set_ylabel("Density")
@@ -184,6 +205,7 @@ def plot_effect(effect: GroupEffect, *, title: str | None = None) -> Figure:
 # ---------------------------------------------------------------------------
 # Sampler diagnostics
 # ---------------------------------------------------------------------------
+
 
 def plot_convergence(effect: GroupEffect, *, label: str = "") -> dict[str, Figure]:
     """Trace, rank and autocorrelation figures for the pre and post fits.
@@ -210,8 +232,8 @@ def plot_convergence(effect: GroupEffect, *, label: str = "") -> dict[str, Figur
 
     fig_trace, axes = plt.subplots(2 * n, 2, figsize=(12, 5 * n), squeeze=False)
     for row, (period, trace) in enumerate(traces.items()):
-        az.plot_trace(trace, var_names=_DIAG_VARS, axes=axes[row * 2:row * 2 + 2, :])
-        for ax, var in zip(axes[row * 2], _DIAG_VARS):
+        az.plot_trace(trace, var_names=_DIAG_VARS, axes=axes[row * 2 : row * 2 + 2, :])
+        for ax, var in zip(axes[row * 2], _DIAG_VARS, strict=False):
             ax.set_title(f"{period}: {var}")
     fig_trace.suptitle(f"MCMC trace — {header}", fontsize=12)
     fig_trace.tight_layout()
@@ -225,7 +247,7 @@ def plot_convergence(effect: GroupEffect, *, label: str = "") -> dict[str, Figur
         for row, (period, trace) in enumerate(traces.items()):
             kwargs = {"combined": True} if kind == "autocorr" else {}
             plotter(trace, var_names=_DIAG_VARS, ax=axes[row], **kwargs)
-            for ax, var in zip(axes[row], _DIAG_VARS):
+            for ax, var in zip(axes[row], _DIAG_VARS, strict=False):
                 ax.set_title(f"{period}: {var}")
         fig.suptitle(f"{kind.capitalize()} — {header}  ({caption})", fontsize=12)
         fig.tight_layout()
@@ -248,9 +270,9 @@ def plot_forest(effect: GroupEffect, *, label: str = "") -> Figure:
     )
     fig = plt.gcf()
     fig.suptitle(
-        f"μ_pre vs μ_post — {label or effect.metric}  "
-        f"({effect.hdi_prob:.0%} HDI)",
-        fontsize=12, y=1.02,
+        f"μ_pre vs μ_post — {label or effect.metric}  " f"({effect.hdi_prob:.0%} HDI)",
+        fontsize=12,
+        y=1.02,
     )
     fig.tight_layout()
     return fig
@@ -259,6 +281,7 @@ def plot_forest(effect: GroupEffect, *, label: str = "") -> Figure:
 # ---------------------------------------------------------------------------
 # Many fits at once
 # ---------------------------------------------------------------------------
+
 
 def _summary_view(item: GroupEffect | Mapping[str, Any]) -> dict[str, Any]:
     """Normalise a fit or a ``to_row()`` mapping to the five things drawn.
@@ -330,25 +353,37 @@ def plot_summary(
     fig, ax = plt.subplots(figsize=(10, 1.1 * n + 1.8))
     positions = np.arange(n)[::-1]  # first entry at the top
 
-    for y, (_label, view) in zip(positions, views):
+    for y, (_label, view) in zip(positions, views, strict=False):
         color, verdict = verdict_style(view["decision"])
 
         if view["rope"] is not None:
             rope_low, rope_high = view["rope"]
             ax.barh(
-                y, rope_high - rope_low,
-                left=rope_low, height=0.7,
-                color="gray", alpha=0.15, zorder=1,
+                y,
+                rope_high - rope_low,
+                left=rope_low,
+                height=0.7,
+                color="gray",
+                alpha=0.15,
+                zorder=1,
             )
         ax.plot(
-            [view["lcl"], view["ucl"]], [y, y],
-            color=color, lw=2.5, solid_capstyle="round", zorder=2,
+            [view["lcl"], view["ucl"]],
+            [y, y],
+            color=color,
+            lw=2.5,
+            solid_capstyle="round",
+            zorder=2,
         )
         ax.scatter(view["estimate"], y, color=color, s=60, zorder=3)
         ax.annotate(
             f"{view['estimate']:+.2%}   {verdict}",
-            xy=(view["ucl"], y), xytext=(6, 0), textcoords="offset points",
-            va="center", fontsize=8.5, color=color,
+            xy=(view["ucl"], y),
+            xytext=(6, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=8.5,
+            color=color,
         )
 
     ax.axvline(0, color="black", lw=0.9, ls=":", zorder=0)
@@ -402,7 +437,6 @@ def plot_prior_forest(
     matplotlib.figure.Figure
     """
 
-
     palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     prior_order = list(dict.fromkeys(rows["prior"]))
     colour = {name: palette[i % len(palette)] for i, name in enumerate(prior_order)}
@@ -412,8 +446,11 @@ def plot_prior_forest(
     for _, row in rows.iterrows():
         c = colour[row["prior"]]
         ax.plot(
-            [row["lcl_pp"], row["ucl_pp"]], [row["y"], row["y"]],
-            color=c, linewidth=2.5, solid_capstyle="butt",
+            [row["lcl_pp"], row["ucl_pp"]],
+            [row["y"], row["y"]],
+            color=c,
+            linewidth=2.5,
+            solid_capstyle="butt",
         )
         ax.plot(row["mean_pp"], row["y"], "o", color=c, markersize=7)
 
@@ -426,8 +463,12 @@ def plot_prior_forest(
     for label, block in rows.groupby("group", sort=False):
         mid = float(block["y"].mean())
         ax.text(
-            1.02, mid, f"{label}\n{verdicts.get(label, '')}".rstrip(),
-            transform=ax.get_yaxis_transform(), va="center", fontsize=9,
+            1.02,
+            mid,
+            f"{label}\n{verdicts.get(label, '')}".rstrip(),
+            transform=ax.get_yaxis_transform(),
+            va="center",
+            fontsize=9,
         )
         boundary = float(block["y"].min()) - 0.5
         if boundary > rows["y"].min() - 0.5:

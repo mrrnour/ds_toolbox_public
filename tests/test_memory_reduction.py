@@ -6,7 +6,6 @@ non-mutating contract of ``_apply_memory_reduction``.
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from dstoolbox.utils.dataframes import (
     _apply_memory_reduction,
@@ -17,11 +16,14 @@ from dstoolbox.utils.dataframes import (
 
 def _targets(plan: pd.DataFrame) -> dict:
     """Column -> target dtype; NaN (missing) is normalized to ``None``."""
-    return {c: (None if pd.isna(t) else t)
-            for c, t in zip(plan["column"], plan["target_dtype"])}
+    return {
+        c: (None if pd.isna(t) else t)
+        for c, t in zip(plan["column"], plan["target_dtype"], strict=False)
+    }
 
 
 # ---------- Integer selection ----------
+
 
 def test_int_fits_int8():
     df = pd.DataFrame({"x": pd.array([-5, 0, 127], dtype="int64")})
@@ -48,6 +50,7 @@ def test_int_too_big_stays():
 
 
 # ---------- Float selection ----------
+
 
 def test_float_finite_picks_float32():
     df = pd.DataFrame({"x": [0.1, 1.5, -3.7]})
@@ -81,6 +84,7 @@ def test_float16_off_by_default():
 
 # ---------- Object / string / category ----------
 
+
 def test_object_to_category_by_default():
     df = pd.DataFrame({"x": ["a", "b", "a"]})
     plan = _plan_memory_reduction(df)
@@ -102,6 +106,7 @@ def test_object_left_alone_when_neither_selected():
 
 # ---------- Datetime skipped ----------
 
+
 def test_datetime_left_alone():
     df = pd.DataFrame({"d": pd.to_datetime(["2024-01-01", "2024-01-02"])})
     plan = _plan_memory_reduction(df)
@@ -111,14 +116,17 @@ def test_datetime_left_alone():
 
 # ---------- Mixed frame ----------
 
+
 def test_mixed_frame_full_decisions():
-    df = pd.DataFrame({
-        "small_int": pd.array([1, 2, 3], dtype="int64"),
-        "big_int":   pd.array([1, 10**12], dtype="int64").repeat(2)[:3],
-        "f":         [0.5, 1.5, 2.5],
-        "label":     ["a", "b", "a"],
-        "when":      pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
-    })
+    df = pd.DataFrame(
+        {
+            "small_int": pd.array([1, 2, 3], dtype="int64"),
+            "big_int": pd.array([1, 10**12], dtype="int64").repeat(2)[:3],
+            "f": [0.5, 1.5, 2.5],
+            "label": ["a", "b", "a"],
+            "when": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+        }
+    )
     plan = _plan_memory_reduction(df)
     targets = _targets(plan)
     assert targets["small_int"] == "int8"
@@ -129,6 +137,7 @@ def test_mixed_frame_full_decisions():
 
 
 # ---------- Apply contract ----------
+
 
 def test_apply_does_not_mutate_input():
     df = pd.DataFrame({"x": pd.array([1, 2, 3], dtype="int64")})
@@ -148,11 +157,14 @@ def test_apply_with_empty_plan_is_identity():
 
 # ---------- Convenience wrapper ----------
 
+
 def test_reduce_mem_usage_returns_new_frame_and_shrinks(capsys):
-    df = pd.DataFrame({
-        "x": pd.array([1, 2, 3, 4], dtype="int64"),
-        "y": [0.1, 0.2, 0.3, 0.4],
-    })
+    df = pd.DataFrame(
+        {
+            "x": pd.array([1, 2, 3, 4], dtype="int64"),
+            "y": [0.1, 0.2, 0.3, 0.4],
+        }
+    )
     before_dtypes = df.dtypes.copy()
     out = reduce_mem_usage(df)
     # Input not mutated
@@ -168,11 +180,14 @@ def test_reduce_mem_usage_returns_new_frame_and_shrinks(capsys):
 
 # ---------- Plan.changes filter ----------
 
+
 def test_plan_changes_filters_to_actual_dtype_changes():
-    df = pd.DataFrame({
-        "small":   pd.array([1, 2], dtype="int64"),
-        "skipped": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-    })
+    df = pd.DataFrame(
+        {
+            "small": pd.array([1, 2], dtype="int64"),
+            "skipped": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        }
+    )
     plan = _plan_memory_reduction(df)
     assert len(plan) == 2
     changes = plan[plan["target_dtype"].notna()]

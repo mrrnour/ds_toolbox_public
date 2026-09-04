@@ -41,11 +41,10 @@ def _events(rate_pre: float, rate_post: float, *, n_users: int = 150, seed: int 
 # Window generation — the equal-length invariant
 # --------------------------------------------------------------------------- #
 
+
 def test_windows_grow_on_both_sides_together():
     windows = matched_sequential_windows("2026-07-02", n_periods=3)
-    assert [(w.n_days_pre, w.n_days_post) for w in windows] == [
-        (7, 7), (14, 14), (21, 21)
-    ]
+    assert [(w.n_days_pre, w.n_days_post) for w in windows] == [(7, 7), (14, 14), (21, 21)]
 
 
 def test_windows_meet_at_the_intervention_without_overlapping():
@@ -55,15 +54,18 @@ def test_windows_meet_at_the_intervention_without_overlapping():
 
 
 def test_period_length_is_configurable():
-    w, = matched_sequential_windows("2026-07-02", n_periods=1, period_days=30)
+    (w,) = matched_sequential_windows("2026-07-02", n_periods=1, period_days=30)
     assert w.n_days_pre == 30
     assert w.pre_start == pd.Timestamp("2026-06-02")
 
 
-@pytest.mark.parametrize(("kwargs", "match"), [
-    ({"n_periods": 0}, "n_periods"),
-    ({"n_periods": 2, "period_days": 0}, "period_days"),
-])
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"n_periods": 0}, "n_periods"),
+        ({"n_periods": 2, "period_days": 0}, "period_days"),
+    ],
+)
 def test_window_generation_rejects_nonpositive_counts(kwargs, match):
     with pytest.raises(ValueError, match=match):
         matched_sequential_windows("2026-07-02", **kwargs)
@@ -72,6 +74,7 @@ def test_window_generation_rejects_nonpositive_counts(kwargs, match):
 # --------------------------------------------------------------------------- #
 # Prior sensitivity
 # --------------------------------------------------------------------------- #
+
 
 @pytest.fixture(scope="module")
 def sensitivity():
@@ -88,8 +91,9 @@ def test_sensitivity_returns_one_row_per_prior(sensitivity):
 
 def test_sensitivity_table_matches_the_overlap_contract(sensitivity):
     table, _ = sensitivity
-    assert {"prior", "lcl", "ucl", "mean_delta", "prob_delta_gt_0",
-            "shift_from_primary"} <= set(table.columns)
+    assert {"prior", "lcl", "ucl", "mean_delta", "prob_delta_gt_0", "shift_from_primary"} <= set(
+        table.columns
+    )
 
 
 def test_sensitivity_measures_the_shift_against_the_first_prior(sensitivity):
@@ -97,7 +101,9 @@ def test_sensitivity_measures_the_shift_against_the_first_prior(sensitivity):
     assert table.iloc[0]["shift_from_primary"] == 0.0
     expected = table["mean_delta"] - table.iloc[0]["mean_delta"]
     pd.testing.assert_series_equal(
-        table["shift_from_primary"], expected, check_names=False,
+        table["shift_from_primary"],
+        expected,
+        check_names=False,
     )
 
 
@@ -106,7 +112,8 @@ def test_sensitivity_rejects_duplicate_prior_names():
     window = PrePostWindow("2026-01-01", "2026-01-28", "2026-01-29", "2026-02-25")
     with pytest.raises(ValueError, match="unique"):
         prior_sensitivity_groups(
-            _events(0.10, 0.25), window,
+            _events(0.10, 0.25),
+            window,
             priors=("uniform", BetaPrior("uniform", 2.0, 2.0)),
             **FIT_KW,
         )
@@ -117,8 +124,11 @@ def test_sensitivity_rejects_an_unswept_primary():
     window = PrePostWindow("2026-01-01", "2026-01-28", "2026-01-29", "2026-02-25")
     with pytest.raises(ValueError, match="not among the priors swept"):
         prior_sensitivity_groups(
-            _events(0.10, 0.25), window,
-            priors=("uniform", "jeffreys"), primary="kruschke", **FIT_KW,
+            _events(0.10, 0.25),
+            window,
+            priors=("uniform", "jeffreys"),
+            primary="kruschke",
+            **FIT_KW,
         )
 
 
@@ -143,6 +153,7 @@ def test_sensitivity_rejects_an_empty_prior_list():
 # Sequential scan
 # --------------------------------------------------------------------------- #
 
+
 def test_scan_returns_a_row_per_window():
     pytest.importorskip("pymc")
     windows = matched_sequential_windows("2026-01-29", n_periods=2, period_days=14)
@@ -162,33 +173,42 @@ def test_scan_rejects_an_empty_window_list():
 # prior_forest_rows — flattening several groups into one plot-ready frame
 # --------------------------------------------------------------------------- #
 
+
 def _group_table(means: list[float]) -> pd.DataFrame:
-    return pd.DataFrame({
-        "prior": ["noninformative", "weakly_informative", "informative"],
-        "mean_delta": means,
-        "lcl": [m - 0.01 for m in means],
-        "ucl": [m + 0.01 for m in means],
-    })
+    return pd.DataFrame(
+        {
+            "prior": ["noninformative", "weakly_informative", "informative"],
+            "mean_delta": means,
+            "lcl": [m - 0.01 for m in means],
+            "ucl": [m + 0.01 for m in means],
+        }
+    )
 
 
 def test_forest_rows_keeps_group_then_prior_order():
-    rows = prior_forest_rows({
-        "video_newest": _group_table([0.025, 0.024, 0.020]),
-        "stills_oldest": _group_table([0.002, 0.002, 0.002]),
-    })
+    rows = prior_forest_rows(
+        {
+            "video_newest": _group_table([0.025, 0.024, 0.020]),
+            "stills_oldest": _group_table([0.002, 0.002, 0.002]),
+        }
+    )
     assert list(rows["group"])[:3] == ["video_newest"] * 3
     assert list(rows["prior"])[:3] == [
-        "noninformative", "weakly_informative", "informative",
+        "noninformative",
+        "weakly_informative",
+        "informative",
     ]
     assert list(rows["group"])[3:] == ["stills_oldest"] * 3
 
 
 def test_forest_rows_stacks_the_first_group_at_the_top():
     """Row order is display order: y descends so the caller reads top-down."""
-    rows = prior_forest_rows({
-        "video_newest": _group_table([0.025, 0.024, 0.020]),
-        "stills_oldest": _group_table([0.002, 0.002, 0.002]),
-    })
+    rows = prior_forest_rows(
+        {
+            "video_newest": _group_table([0.025, 0.024, 0.020]),
+            "stills_oldest": _group_table([0.002, 0.002, 0.002]),
+        }
+    )
     assert rows["y"].iloc[0] > rows["y"].iloc[-1]
     assert rows["y"].is_monotonic_decreasing
 
@@ -208,6 +228,7 @@ def test_forest_rows_rejects_empty_input():
 # --------------------------------------------------------------------------- #
 # prior_shape_table — what was actually varied
 # --------------------------------------------------------------------------- #
+
 
 def test_shape_table_reports_one_row_per_prior_in_order():
     priors = [BetaPrior("weak", 2.0, 2.0), BetaPrior("strong", 20.0, 80.0)]

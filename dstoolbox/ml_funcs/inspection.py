@@ -8,11 +8,10 @@ the training code.
 
 from __future__ import annotations
 
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 import pandas as pd
 from sklearn.pipeline import Pipeline
-
 
 #: All capability flags this module knows about. Order matters for printing.
 CAPABILITIES: tuple[str, ...] = (
@@ -142,8 +141,8 @@ def is_forecaster(model: object) -> bool:
 # ===== imports preserved from public (needed by extras below) =====
 from sklearn.base import is_classifier
 
-
 # ===== public-only extensions (preserved on vendor merge) =====
+
 
 def task_kind(model: object) -> str:
     """Return ``"classification"``, ``"forecasting"``, or ``"regression"``."""

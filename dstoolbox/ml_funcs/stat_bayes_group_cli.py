@@ -68,27 +68,34 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "data", nargs="+", metavar="CSV",
+        "data",
+        nargs="+",
+        metavar="CSV",
         help="one CSV per group (control first), or a single CSV to split "
-             "with --group-col or --pre/--post",
+        "with --group-col or --pre/--post",
     )
 
     split = parser.add_argument_group("how to split a single CSV")
     split.add_argument(
-        "--group-col", metavar="COL",
+        "--group-col",
+        metavar="COL",
         help="column holding the group label; must take exactly two values",
     )
     split.add_argument(
-        "--control", metavar="VALUE",
-        help="which --group-col value is the control "
-             "(default: whichever sorts first)",
+        "--control",
+        metavar="VALUE",
+        help="which --group-col value is the control " "(default: whichever sorts first)",
     )
     split.add_argument(
-        "--pre", type=_window_arg, metavar="START:END",
+        "--pre",
+        type=_window_arg,
+        metavar="START:END",
         help="pre-period, both bounds inclusive",
     )
     split.add_argument(
-        "--post", type=_window_arg, metavar="START:END",
+        "--post",
+        type=_window_arg,
+        metavar="START:END",
         help="post-period, both bounds inclusive",
     )
 
@@ -99,43 +106,55 @@ def _build_parser() -> argparse.ArgumentParser:
 
     model = parser.add_argument_group("model")
     model.add_argument(
-        "--rope-pct", type=float, default=None, metavar="FRAC",
-        help="equivalence band as a fraction of the control rate, e.g. "
-             "0.10 for +/-10%%.",
+        "--rope-pct",
+        type=float,
+        default=None,
+        metavar="FRAC",
+        help="equivalence band as a fraction of the control rate, e.g. " "0.10 for +/-10%%.",
     )
     model.add_argument(
-        "--rope-stat", type=float, default=None, metavar="COEF",
+        "--rope-stat",
+        type=float,
+        default=None,
+        metavar="COEF",
         help="equivalence band as a multiple of the control's standard "
-             "error, e.g. 0.1 for the Cohen-like 'smaller than noise' band",
+        "error, e.g. 0.1 for the Cohen-like 'smaller than noise' band",
     )
     model.add_argument(
-        "--rope-biz", type=float, nargs=2, default=None, metavar=("LOW", "HIGH"),
+        "--rope-biz",
+        type=float,
+        nargs=2,
+        default=None,
+        metavar=("LOW", "HIGH"),
         help="explicit equivalence band in the units of the rate difference",
     )
     model.add_argument(
-        "--min-users", type=int, default=0, metavar="N",
+        "--min-users",
+        type=int,
+        default=0,
+        metavar="N",
         help="refuse to fit if either group has fewer units than this",
     )
     model.add_argument(
-        "--threshold", type=float, default=0.95, metavar="P",
+        "--threshold",
+        type=float,
+        default=0.95,
+        metavar="P",
         help="posterior mass needed to call a verdict",
     )
-    model.add_argument("--ci", type=float, default=0.95, metavar="P",
-                       help="credible interval width")
-    model.add_argument("--prior", default="uniform",
-                       help="Beta prior on mu: uniform | jeffreys")
+    model.add_argument(
+        "--ci", type=float, default=0.95, metavar="P", help="credible interval width"
+    )
+    model.add_argument("--prior", default="uniform", help="Beta prior on mu: uniform | jeffreys")
     model.add_argument("--draws", type=int, default=2000)
     model.add_argument("--tune", type=int, default=1000)
     model.add_argument("--chains", type=int, default=4)
     model.add_argument("--seed", type=int, default=0)
 
     out = parser.add_argument_group("output")
-    out.add_argument("--plot", metavar="PATH",
-                     help="write the posterior figure here (.png / .svg)")
-    out.add_argument("--csv", metavar="PATH",
-                     help="write the result as a one-row CSV")
-    out.add_argument("--quiet", action="store_true",
-                     help="print the verdict only")
+    out.add_argument("--plot", metavar="PATH", help="write the posterior figure here (.png / .svg)")
+    out.add_argument("--csv", metavar="PATH", help="write the result as a one-row CSV")
+    out.add_argument("--quiet", action="store_true", help="print the verdict only")
     return parser
 
 
@@ -146,9 +165,7 @@ def _groups_from_files(args) -> tuple[GroupCounts, GroupCounts, None]:
     shared = dict(unit_col=args.user_col, metric_col=args.metric_col)
     return (
         *(
-            GroupCounts.from_events(
-                pd.read_csv(path), label=Path(path).stem, **shared
-            )
+            GroupCounts.from_events(pd.read_csv(path), label=Path(path).stem, **shared)
             for path in args.data
         ),
         None,
@@ -175,7 +192,9 @@ def _groups_from_column(args, events: pd.DataFrame) -> tuple[GroupCounts, GroupC
     return (
         *(
             GroupCounts.from_events(
-                events, label=str(v), mask=(events[args.group_col] == v).to_numpy(),
+                events,
+                label=str(v),
+                mask=(events[args.group_col] == v).to_numpy(),
                 **shared,
             )
             for v in values
@@ -188,8 +207,11 @@ def _groups_from_dates(args, events: pd.DataFrame):
     """Split one CSV on two date windows."""
     window = PrePostWindow(*args.pre, *args.post)
     pre, post = split_by_window(
-        events, window,
-        unit_col=args.user_col, metric_col=args.metric_col, date_col=args.date_col,
+        events,
+        window,
+        unit_col=args.user_col,
+        metric_col=args.metric_col,
+        date_col=args.date_col,
     )
     return pre, post, window
 
@@ -218,10 +240,7 @@ def _resolve_groups(args):
     # Checked the flags first so a bad invocation reports the usage problem
     # rather than whatever the file turns out to be.
     events = pd.read_csv(args.data[0])
-    return (
-        _groups_from_column(args, events) if args.group_col
-        else _groups_from_dates(args, events)
-    )
+    return _groups_from_column(args, events) if args.group_col else _groups_from_dates(args, events)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("hyperopt", reason="ml_funcs.tuning requires hyperopt")
 
-from dstoolbox.ml_funcs.tuning import _apply_trial_suggest  
+from dstoolbox.ml_funcs.tuning import _apply_trial_suggest
 
 
 class _FakeTrial:
@@ -34,16 +34,12 @@ class TestApplyTrialSuggest:
 
     def test_float_with_kwargs(self):
         trial = _FakeTrial()
-        _apply_trial_suggest(
-            "trial.suggest_float('lr', 0.001, 0.1, log=True)", trial
-        )
+        _apply_trial_suggest("trial.suggest_float('lr', 0.001, 0.1, log=True)", trial)
         assert trial.calls[0][2] == {"log": True}
 
     def test_categorical_from_list(self):
         trial = _FakeTrial()
-        _apply_trial_suggest(
-            "trial.suggest_categorical('opt', ['adam', 'sgd'])", trial
-        )
+        _apply_trial_suggest("trial.suggest_categorical('opt', ['adam', 'sgd'])", trial)
         assert trial.calls[0][1] == ("opt", ("adam", "sgd"))
 
     def test_rejects_non_trial_expression(self):

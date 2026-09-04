@@ -1,10 +1,9 @@
 """Logging helpers: file+console logger creation, stdout/stderr redirect to log."""
 
+import logging
 import os
 import sys
-import logging
 import warnings
-
 
 _DEPRECATION_EMITTED = False
 
@@ -79,13 +78,13 @@ def make_logger(uFile, name, logLevel=logging.INFO):
 
     # configure log formatter
     logFormatter1 = logging.Formatter(
-        '%(asctime)s | %(levelname)-3s | %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+        "%(asctime)s | %(levelname)-3s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
     logFormatter2 = logging.Formatter("%(message)s")
     #   logFormatter2 = logFormatter1
 
     # configure file handler
-    fileHandler = logging.FileHandler(uFile, 'w')
+    fileHandler = logging.FileHandler(uFile, "w")
     fileHandler.setFormatter(logFormatter1)
 
     # configure stream handler
@@ -127,7 +126,7 @@ class _loggerWriter:
         """Forward a non-newline message to the configured log-level callable."""
         # if statement reduces the amount of newlines that are
         # printed to the logger
-        if message != '\n':
+        if message != "\n":
             self.level(message)
 
     def flush(self):
@@ -162,7 +161,7 @@ def redirect_stdio_to_logger(stdoutLvl, stderrLvl):
     old_stderr = sys.stderr
     sys.stdout = _loggerWriter(stdoutLvl)
     sys.stderr = _loggerWriter(stderrLvl)
-    return(old_stdout, old_stderr)
+    return (old_stdout, old_stderr)
 
 
 def setup_logger(log_file):
@@ -180,7 +179,7 @@ def setup_logger(log_file):
         os.makedirs(log_dir, exist_ok=True)
 
     # Create logger
-    logger = logging.getLogger('intranet_downloader')
+    logger = logging.getLogger("intranet_downloader")
     logger.setLevel(logging.INFO)
 
     # Remove any existing handlers
@@ -188,8 +187,8 @@ def setup_logger(log_file):
         logger.handlers.clear()
 
     # Create formatters
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    console_formatter = logging.Formatter('%(message)s')
+    file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    console_formatter = logging.Formatter("%(message)s")
 
     # File handler
     try:

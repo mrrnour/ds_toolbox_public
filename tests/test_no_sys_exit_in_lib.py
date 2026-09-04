@@ -36,7 +36,9 @@ class _SysExitFinder(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-@pytest.mark.parametrize("path", list(_library_py_files()), ids=lambda p: str(p.relative_to(PACKAGE_ROOT)))
+@pytest.mark.parametrize(
+    "path", list(_library_py_files()), ids=lambda p: str(p.relative_to(PACKAGE_ROOT))
+)
 def test_no_sys_exit_in_library_module(path: Path) -> None:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))

@@ -103,6 +103,7 @@ ROPE_BANDS: tuple[str, ...] = ("stat", "pct", "biz")
 # The window
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class PrePostWindow:
     """Four explicit dates. Both bounds of both windows are inclusive.
@@ -131,8 +132,7 @@ class PrePostWindow:
 
         if self.pre_start > self.pre_end:
             raise ValueError(
-                f"pre_start ({self.pre_start.date()}) is after "
-                f"pre_end ({self.pre_end.date()})."
+                f"pre_start ({self.pre_start.date()}) is after " f"pre_end ({self.pre_end.date()})."
             )
         if self.post_start > self.post_end:
             raise ValueError(
@@ -177,6 +177,7 @@ class PrePostWindow:
 # ---------------------------------------------------------------------------
 # The groups
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class GroupCounts:
@@ -300,6 +301,7 @@ def split_by_window(
 # ---------------------------------------------------------------------------
 # The result
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class GroupEffect:
@@ -426,22 +428,26 @@ class GroupEffect:
             "divergences": self.divergences,
         }
         if self.window is not None:
-            row.update({
-                "pre_start": self.window.pre_start.date().isoformat(),
-                "pre_end": self.window.pre_end.date().isoformat(),
-                "post_start": self.window.post_start.date().isoformat(),
-                "post_end": self.window.post_end.date().isoformat(),
-                "n_days_pre": self.window.n_days_pre,
-                "n_days_post": self.window.n_days_post,
-            })
+            row.update(
+                {
+                    "pre_start": self.window.pre_start.date().isoformat(),
+                    "pre_end": self.window.pre_end.date().isoformat(),
+                    "post_start": self.window.post_start.date().isoformat(),
+                    "post_end": self.window.post_end.date().isoformat(),
+                    "n_days_pre": self.window.n_days_pre,
+                    "n_days_post": self.window.n_days_post,
+                }
+            )
         if self.rope is not None:
-            row.update({
-                "rope_low": self.rope.rope_low,
-                "rope_high": self.rope.rope_high,
-                "prob_gt_rope": self.rope.prob_gt_high,
-                "prob_in_rope": self.rope.prob_in_rope,
-                "prob_lt_rope": self.rope.prob_lt_low,
-            })
+            row.update(
+                {
+                    "rope_low": self.rope.rope_low,
+                    "rope_high": self.rope.rope_high,
+                    "prob_gt_rope": self.rope.prob_gt_high,
+                    "prob_in_rope": self.rope.prob_in_rope,
+                    "prob_lt_rope": self.rope.prob_lt_low,
+                }
+            )
         # Every band gets a column whether or not it was requested, so a
         # summary table over several fits keeps a stable schema.
         for band in ROPE_BANDS:
@@ -453,7 +459,8 @@ class GroupEffect:
 
     def __str__(self) -> str:
         header = (
-            str(self.window) if self.window is not None
+            str(self.window)
+            if self.window is not None
             else f"{self.control_label} vs {self.treatment_label}"
         )
         lines = [
@@ -482,6 +489,7 @@ class GroupEffect:
 # ---------------------------------------------------------------------------
 # Pieces
 # ---------------------------------------------------------------------------
+
 
 def aggregate_counts(
     events: pd.DataFrame,
@@ -565,11 +573,11 @@ def _band_bounds(
     return {
         "stat": (
             rope_from_control_se(control_mean, n_users_control, rope_stat_coef)
-            if rope_stat_coef is not None else None
+            if rope_stat_coef is not None
+            else None
         ),
         "pct": (
-            rope_from_control(control_mean, rope_pct_coef)
-            if rope_pct_coef is not None else None
+            rope_from_control(control_mean, rope_pct_coef) if rope_pct_coef is not None else None
         ),
         "biz": rope_biz,
     }
@@ -598,10 +606,12 @@ def _merge_diagnostics(
     ``ess_bulk`` *and* ``ess_tail`` because the interval bounds are tail
     quantities — a healthy bulk ESS alone does not license them.
     """
-    table = pd.concat([
-        fit_control.diagnostics.rename(index=lambda v: f"pre:{v}"),
-        fit_treatment.diagnostics.rename(index=lambda v: f"post:{v}"),
-    ])
+    table = pd.concat(
+        [
+            fit_control.diagnostics.rename(index=lambda v: f"pre:{v}"),
+            fit_treatment.diagnostics.rename(index=lambda v: f"post:{v}"),
+        ]
+    )
     return (
         table,
         float(table["r_hat"].max()),
@@ -613,6 +623,7 @@ def _merge_diagnostics(
 # ---------------------------------------------------------------------------
 # The one entry point
 # ---------------------------------------------------------------------------
+
 
 def fit_group_comparison(
     control: GroupCounts,
@@ -718,9 +729,7 @@ def fit_group_comparison(
     if not 0.0 < hdi_prob < 1.0:
         raise ValueError(f"hdi_prob must be in (0, 1); got {hdi_prob}.")
     if not 0.0 < credibility_threshold < 1.0:
-        raise ValueError(
-            f"credibility_threshold must be in (0, 1); got {credibility_threshold}."
-        )
+        raise ValueError(f"credibility_threshold must be in (0, 1); got {credibility_threshold}.")
     if rope_pct_coef is not None and rope_pct_coef <= 0:
         raise ValueError(f"rope_pct_coef must be > 0; got {rope_pct_coef}.")
     if rope_stat_coef is not None and rope_stat_coef <= 0:
@@ -749,10 +758,16 @@ def fit_group_comparison(
         progressbar=progressbar,
     )
     fit_control = hier_beta_binomial_fit(
-        control.trials, control.successes, random_seed=random_seed, **shared,
+        control.trials,
+        control.successes,
+        random_seed=random_seed,
+        **shared,
     )
     fit_treatment = hier_beta_binomial_fit(
-        treatment.trials, treatment.successes, random_seed=random_seed + 1, **shared,
+        treatment.trials,
+        treatment.successes,
+        random_seed=random_seed + 1,
+        **shared,
     )
 
     # The verdict is on the model's own parameter. `delta` is a difference of
@@ -775,9 +790,12 @@ def fit_group_comparison(
     )
     ropes: dict[str, RopeDecision | None] = {
         band: (
-            None if b is None
+            None
+            if b is None
             else rope_decision(
-                delta, rope_low=b[0], rope_high=b[1],
+                delta,
+                rope_low=b[0],
+                rope_high=b[1],
                 threshold=credibility_threshold,
             )
         )
@@ -789,9 +807,7 @@ def fit_group_comparison(
     else:
         decision = primary.decision
 
-    diagnostics, rhat_max, ess_min, divergences = _merge_diagnostics(
-        fit_control, fit_treatment
-    )
+    diagnostics, rhat_max, ess_min, divergences = _merge_diagnostics(fit_control, fit_treatment)
 
     return GroupEffect(
         control_label=control.label,
@@ -813,8 +829,7 @@ def fit_group_comparison(
         ucl=float(ucl),
         hdi_prob=hdi_prob,
         prob_gt_zero=prob_gt_zero,
-        rel_lift=float(delta.mean() / mu_control_mean)
-        if mu_control_mean else 0.0,
+        rel_lift=float(delta.mean() / mu_control_mean) if mu_control_mean else 0.0,
         rope=primary,
         decision=decision,
         ropes=ropes,
@@ -850,9 +865,10 @@ def fit_prepost(
         If a required column is missing, or either window selects no rows.
     """
     pre, post = split_by_window(
-        events, window,
-        unit_col=unit_col, metric_col=metric_col, date_col=date_col,
+        events,
+        window,
+        unit_col=unit_col,
+        metric_col=metric_col,
+        date_col=date_col,
     )
-    return fit_group_comparison(
-        pre, post, metric=metric_col, window=window, **kwargs
-    )
+    return fit_group_comparison(pre, post, metric=metric_col, window=window, **kwargs)

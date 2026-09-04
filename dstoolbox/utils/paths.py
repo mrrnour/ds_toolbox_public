@@ -1,16 +1,16 @@
 """Filesystem and config helpers: path validation, output folder setup, yaml config + params loading."""
 
-import os
-import shutil
 import argparse
 import importlib.util
+import os
+import shutil
 
 from .exceptions import InvalidConfigError, OutputFolderError
 
 
 def check_path(path):
     """Raise exception if the file path doesn't exist."""
-    if '~' in path:
+    if "~" in path:
         path = os.path.expanduser(path)
     if not os.path.exists(path):
         msg = "File (%s) not found!" % path
@@ -18,40 +18,41 @@ def check_path(path):
     return path
 
 
-def copy_ymls(dstoolbox, platform='databricks', destination=None):
-  """Copy the bundled ``config.yml`` and ``sql_template.yml`` to a destination dir.
+def copy_ymls(dstoolbox, platform="databricks", destination=None):
+    """Copy the bundled ``config.yml`` and ``sql_template.yml`` to a destination dir.
 
-  Parameters
-  ----------
-  dstoolbox : module
-      The ``dstoolbox`` package whose installed location holds the source
-      YAMLs.
-  platform : str, optional
-      Currently only ``'databricks'`` triggers an actual copy (uses
-      ``dbutils.fs.cp``); other platforms are no-ops here. Default
-      ``'databricks'``.
-  destination : str or None, optional
-      Target directory. Defaults to the current working directory.
+    Parameters
+    ----------
+    dstoolbox : module
+        The ``dstoolbox`` package whose installed location holds the source
+        YAMLs.
+    platform : str, optional
+        Currently only ``'databricks'`` triggers an actual copy (uses
+        ``dbutils.fs.cp``); other platforms are no-ops here. Default
+        ``'databricks'``.
+    destination : str or None, optional
+        Target directory. Defaults to the current working directory.
 
-  Returns
-  -------
-  None
-      Files are written for side effects.
-  """
-  ##TODO: add comments:
-  from io_funcs import io_funcs
-  upath=dstoolbox.__file__
-  if destination==None:
-    destination=os.getcwd()
-  for ufile in ['config.yml', 'sql_template.yml']:
-    ufile_src=os.path.join(os.path.dirname(upath), ufile)
-    ufile_desc=os.path.join(destination, ufile)
-    ufile_desc_tmp=os.path.join(destination, f'.{ufile}.crc')
-    print(f"copying {ufile_src} ---> {ufile_desc}")
-    if platform=='databricks':
-      dbutils=io_funcs.get_dbutils()
-      dbutils.fs.cp(f'file://{ufile_src}', f'file://{ufile_desc}')
-      dbutils.fs.rm(f'file://{ufile_desc_tmp}')
+    Returns
+    -------
+    None
+        Files are written for side effects.
+    """
+    ##TODO: add comments:
+    from io_funcs import io_funcs
+
+    upath = dstoolbox.__file__
+    if destination == None:
+        destination = os.getcwd()
+    for ufile in ["config.yml", "sql_template.yml"]:
+        ufile_src = os.path.join(os.path.dirname(upath), ufile)
+        ufile_desc = os.path.join(destination, ufile)
+        ufile_desc_tmp = os.path.join(destination, f".{ufile}.crc")
+        print(f"copying {ufile_src} ---> {ufile_desc}")
+        if platform == "databricks":
+            dbutils = io_funcs.get_dbutils()
+            dbutils.fs.cp(f"file://{ufile_src}", f"file://{ufile_desc}")
+            dbutils.fs.rm(f"file://{ufile_desc_tmp}")
 
 
 def setup_output_folder(outputFolder, uFiles, overWrite):
@@ -82,15 +83,14 @@ def setup_output_folder(outputFolder, uFiles, overWrite):
     """
 
     # Setting output directory and copying template file(s)
-    if len(outputFolder.split('/')) == 1:
+    if len(outputFolder.split("/")) == 1:
         outputFolder = os.path.abspath(os.path.join(os.getcwd(), outputFolder))
     else:
         outputFolder = os.path.abspath(outputFolder)
 
     if os.path.exists(outputFolder) & (not overWrite):
         raise OutputFolderError(
-            "overwrite is not allowed and the output directory exists: "
-            f"{outputFolder!r}"
+            "overwrite is not allowed and the output directory exists: " f"{outputFolder!r}"
         )
     # elif os.path.exists(outputFolder):
     #     shutil.rmtree(outputFolder)
@@ -99,14 +99,10 @@ def setup_output_folder(outputFolder, uFiles, overWrite):
     #     os.makedirs(outputFolder)
     elif not os.path.exists(outputFolder):
         os.makedirs(outputFolder)
-    if (overWrite):
+    if overWrite:
         for uFile in uFiles:
-            shutil.copyfile(
-                uFile,
-                os.path.join(
-                    outputFolder,
-                    os.path.basename(uFile)))
-    return (outputFolder)
+            shutil.copyfile(uFile, os.path.join(outputFolder, os.path.basename(uFile)))
+    return outputFolder
 
 
 def load_config(config_file, logger):
@@ -134,22 +130,22 @@ def load_config(config_file, logger):
     try:
         if not os.path.exists(config_file):
             logger.error(f"Config file {config_file} not found")
-            return {'username': '', 'password': ''}
+            return {"username": "", "password": ""}
 
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config = yaml.safe_load(f)
 
-        if not config or 'internet_credentials' not in config:
+        if not config or "internet_credentials" not in config:
             logger.error("Invalid config file format: missing 'internet_credentials' section")
-            return {'username': '', 'password': ''}
+            return {"username": "", "password": ""}
 
-        return config['internet_credentials']
+        return config["internet_credentials"]
     except yaml.YAMLError as e:
         logger.error(f"YAML parsing error in {config_file}: {str(e)}")
-        return {'username': '', 'password': ''}
+        return {"username": "", "password": ""}
     except Exception as e:
         logger.error(f"Error loading {config_file}: {str(e)}")
-        return {'username': '', 'password': ''}
+        return {"username": "", "password": ""}
 
 
 def load_params(param_file):
@@ -177,6 +173,4 @@ def load_params(param_file):
         spec.loader.exec_module(params)
         return params
     except Exception as e:
-        raise InvalidConfigError(
-            f"Error loading params file {param_file!r}: {e}"
-        ) from e
+        raise InvalidConfigError(f"Error loading params file {param_file!r}: {e}") from e

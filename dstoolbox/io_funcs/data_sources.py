@@ -8,11 +8,12 @@ module.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Dict, Optional
-
+from typing import Any, ClassVar
 
 # === Errors ===
+
 
 class DataSourceError(Exception):
     """Base for data_sources seam errors."""
@@ -32,16 +33,17 @@ class UnknownKindError(DataSourceError):
 
 # === DataSource dataclasses ===
 
+
 @dataclass(frozen=True)
 class MSSQLDataSource:
     kind: ClassVar[str] = "mssql"
     target_id: str
     db_server: str
-    database: Optional[str] = None
+    database: str | None = None
     trusted_connection: bool = True
     trust_server_certificate: bool = True
-    username: Optional[str] = None
-    password: Optional[str] = field(default=None, repr=False)
+    username: str | None = None
+    password: str | None = field(default=None, repr=False)
     driver: str = "ODBC Driver 17 for SQL Server"
 
     @property
@@ -76,7 +78,7 @@ class SynapseDataSource:
         return f"jdbc:sqlserver://{self.hostname}:{self.port};database={self.database}"
 
     @property
-    def jdbc_properties(self) -> Dict[str, str]:
+    def jdbc_properties(self) -> dict[str, str]:
         return {"user": self.username, "password": self.password, "driver": self.driver}
 
     @property
@@ -142,11 +144,12 @@ class PostgresDataSource:
     user: str
     password: str = field(repr=False)
     database: str
-    sslmode: Optional[str] = None
+    sslmode: str | None = None
 
     @property
     def sqlalchemy_url(self) -> str:
         from urllib.parse import quote_plus
+
         base = (
             f"postgresql://{quote_plus(self.user)}:{quote_plus(self.password)}"
             f"@{self.host}:{self.port}/{self.database}"
@@ -158,29 +161,28 @@ class PostgresDataSource:
 
 # === Auth adapters: entry -> Optional[secret string] ===
 
-def _fetch_via_azure_keyvault(entry: Dict[str, Any]) -> str:
+
+def _fetch_via_azure_keyvault(entry: dict[str, Any]) -> str:
     kv_name = entry.get("key_vault")
     secret_name = entry.get("secret")
     if not kv_name or not secret_name:
-        raise DataSourceError(
-            "azure_keyvault auth requires 'key_vault' and 'secret' fields"
-        )
+        raise DataSourceError("azure_keyvault auth requires 'key_vault' and 'secret' fields")
     runtime = entry.get("runtime") or os.environ.get("DSTOOLBOX_RUNTIME", "databricks")
     return _resolve_keyvault_secret(kv_name, secret_name, runtime)
 
 
-def _fetch_via_windows_trusted(entry: Dict[str, Any]) -> None:
+def _fetch_via_windows_trusted(entry: dict[str, Any]) -> None:
     return None
 
 
-def _fetch_via_inline_password(entry: Dict[str, Any]) -> str:
+def _fetch_via_inline_password(entry: dict[str, Any]) -> str:
     pwd = entry.get("password")
     if pwd is None:
         raise DataSourceError("inline_password auth requires 'password' field")
     return pwd
 
 
-_AUTH_ADAPTERS: Dict[str, Callable[[Dict[str, Any]], Optional[str]]] = {
+_AUTH_ADAPTERS: dict[str, Callable[[dict[str, Any]], str | None]] = {
     "azure_keyvault": _fetch_via_azure_keyvault,
     "windows_trusted": _fetch_via_windows_trusted,
     "inline_password": _fetch_via_inline_password,
@@ -194,6 +196,7 @@ def _resolve_keyvault_secret(kv_name: str, secret_name: str, runtime: str) -> st
     """
     if runtime == "databricks":
         from .bootstrap import get_dbutils
+
         return get_dbutils().secrets.get(scope=kv_name, key=secret_name)
 
     if runtime == "aml":
@@ -201,12 +204,14 @@ def _resolve_keyvault_secret(kv_name: str, secret_name: str, runtime: str) -> st
         if not ml_app_id:
             raise DataSourceError("aml runtime requires AZURE_ML_APP_ID env var")
         from azure.identity import ManagedIdentityCredential
+
         credential = ManagedIdentityCredential(client_id=ml_app_id)
         credential.get_token("https://vault.azure.net/.default")
         return _kv_get(kv_name, secret_name, credential)
 
     if runtime in ("local", "vm_docker"):
         from azure.identity import DefaultAzureCredential
+
         return _kv_get(kv_name, secret_name, DefaultAzureCredential())
 
     raise DataSourceError(f"unknown runtime: {runtime!r}")
@@ -214,6 +219,7 @@ def _resolve_keyvault_secret(kv_name: str, secret_name: str, runtime: str) -> st
 
 def _kv_get(kv_name: str, secret_name: str, credential: Any) -> str:
     from azure.keyvault.secrets import SecretClient
+
     client = SecretClient(
         vault_url=f"https://{kv_name}.vault.azure.net",
         credential=credential,
@@ -222,6 +228,7 @@ def _kv_get(kv_name: str, secret_name: str, credential: Any) -> str:
 
 
 # === Kind builders: (entry, secret, target_id) -> DataSource ===
+
 
 def _build_mssql(entry, secret, target_id):
     return MSSQLDataSource(
@@ -266,6 +273,7 @@ def _build_adls(entry, secret, target_id):
 
 def _build_pi(entry, secret, target_id):
     import requests
+
     url = entry["url"]
     payload = {
         "grant_type": entry["grant_type"],
@@ -276,9 +284,7 @@ def _build_pi(entry, secret, target_id):
     response = requests.post(url, data=payload)
     token = response.json().get("access_token")
     if not token:
-        raise DataSourceError(
-            f"PI OAuth response did not include access_token for {target_id!r}"
-        )
+        raise DataSourceError(f"PI OAuth response did not include access_token for {target_id!r}")
     return PIDataSource(target_id=target_id, url=url, bearer_token=token)
 
 
@@ -294,7 +300,7 @@ def _build_postgres(entry, secret, target_id):
     )
 
 
-_KIND_BUILDERS: Dict[str, Callable[..., Any]] = {
+_KIND_BUILDERS: dict[str, Callable[..., Any]] = {
     "mssql": _build_mssql,
     "synapse": _build_synapse,
     "blob": _build_blob,
@@ -306,10 +312,11 @@ _KIND_BUILDERS: Dict[str, Callable[..., Any]] = {
 
 # === Public entry point ===
 
+
 def get(
     target_id: str,
-    runtime: Optional[str] = None,
-    config: Optional[Dict[str, Any]] = None,
+    runtime: str | None = None,
+    config: dict[str, Any] | None = None,
 ) -> Any:
     """Resolve ``target_id`` to a typed ``DataSource``.
 
@@ -355,16 +362,17 @@ def get(
         )
     if kind not in _KIND_BUILDERS:
         raise UnknownKindError(
-            f"unknown kind {kind!r} for target {target_id!r}; "
-            f"valid: {sorted(_KIND_BUILDERS)}"
+            f"unknown kind {kind!r} for target {target_id!r}; " f"valid: {sorted(_KIND_BUILDERS)}"
         )
 
     secret = _AUTH_ADAPTERS[auth](entry)
     return _KIND_BUILDERS[kind](entry, secret, target_id)
 
 
-def _load_bundled_config() -> Dict[str, Any]:
+def _load_bundled_config() -> dict[str, Any]:
     from importlib import resources as res
+
     import yaml
+
     with res.open_binary("dstoolbox", "config.yml") as fp:
         return yaml.safe_load(fp) or {}

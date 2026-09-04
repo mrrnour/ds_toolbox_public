@@ -15,7 +15,6 @@ computed as ``sqrt(mean_squared_error)`` in the leaderboard step, and
 
 from __future__ import annotations
 
-
 METRIC_ALIASES: dict[str, str] = {
     "rmse": "mean_squared_error",  # caller takes sqrt in the leaderboard
     "mae": "mean_absolute_error",

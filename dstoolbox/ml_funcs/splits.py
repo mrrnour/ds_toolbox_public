@@ -8,8 +8,8 @@ window) and :class:`HoldoutSplit` (single train/val fold).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 import numpy as np
 
@@ -98,7 +98,9 @@ class ExpandingBacktestSplit:
             )
         if n_folds is not None and (initial_train is None or step is None):
             if n_samples is None:
-                raise ValueError("n_samples is required when deriving initial_train or step from n_folds")
+                raise ValueError(
+                    "n_samples is required when deriving initial_train or step from n_folds"
+                )
             if n_folds < 1:
                 raise ValueError(f"n_folds must be >= 1, got {n_folds}")
             if initial_train is None:
@@ -131,9 +133,7 @@ class ExpandingBacktestSplit:
             val_start = train_end + self.gap
             val_end = val_start + self.horizon
             train_start = (
-                max(0, train_end - self.max_train_size)
-                if self.max_train_size is not None
-                else 0
+                max(0, train_end - self.max_train_size) if self.max_train_size is not None else 0
             )
             yield np.arange(train_start, train_end), np.arange(val_start, val_end)
             train_end += self.step
@@ -191,7 +191,9 @@ class HoldoutSplit:
         self.gap = gap
 
     def _train_end(self, n: int) -> int:
-        return int(self.train_size * n) if isinstance(self.train_size, float) else int(self.train_size)
+        return (
+            int(self.train_size * n) if isinstance(self.train_size, float) else int(self.train_size)
+        )
 
     def split(self, X, y=None, groups=None) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         n = len(X)
@@ -210,12 +212,13 @@ class HoldoutSplit:
 
 
 # ===== imports preserved from public (needed by extras below) =====
-from sklearn.model_selection import TimeSeriesSplit
-from typing import Iterator, Mapping
-import pandas as pd
+from collections.abc import Mapping
 
+import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit
 
 # ===== public-only extensions (preserved on vendor merge) =====
+
 
 def _n_splits_for(n_samples: int, cfg: BacktestConfig) -> int:
     """How many folds fit in ``n_samples`` given an initial train + step + horizon."""
@@ -310,9 +313,7 @@ class PanelTimeSeriesSplit:
     ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         """Yield ``(train_idx, val_idx)`` positional indices for each fold."""
         if self.date_col not in X.columns:
-            raise KeyError(
-                f"PanelTimeSeriesSplit: date_col={self.date_col!r} not in X"
-            )
+            raise KeyError(f"PanelTimeSeriesSplit: date_col={self.date_col!r} not in X")
 
         dates = pd.to_datetime(X[self.date_col]).to_numpy()
         unique_dates = np.sort(np.unique(dates))

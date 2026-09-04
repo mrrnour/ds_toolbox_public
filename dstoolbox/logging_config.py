@@ -15,7 +15,6 @@ Example
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 _DEFAULT_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 _DEFAULT_DATEFMT = "%Y-%m-%d %H:%M:%S"
@@ -59,7 +58,7 @@ def configure_logging(
     return logger
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     """Return a logger under the ``dstoolbox`` tree.
 
     Parameters

@@ -1,6 +1,7 @@
 """List utilities: regex search, flatten, deduplicate, dropouts."""
 
 import re
+
 import numpy as np
 
 
@@ -79,7 +80,7 @@ def unique_list(seq):
     """
     seen = set()
     seen_add = seen.add
-    out=[x for x in seq if not (x in seen or seen_add(x))]
+    out = [x for x in seq if not (x in seen or seen_add(x))]
     return out
 
 
@@ -97,8 +98,8 @@ def remove_extra_none(nested_lst):
         Order-preserving unique items, with ``'None'`` removed unless it
         is the only value.
     """
-    items=list(dict.fromkeys(nested_lst))
-    if (('None' in items) & (len(items)>1)):
-        items.remove('None')
+    items = list(dict.fromkeys(nested_lst))
+    if ("None" in items) & (len(items) > 1):
+        items.remove("None")
     # print(items)
     return items

@@ -26,7 +26,7 @@ from plotly.subplots import make_subplots
 logger = logging.getLogger(__name__)
 
 _TRAIN_COLOR = "#2CA02C"  # green
-_VAL_COLOR = "#D62728"    # red
+_VAL_COLOR = "#D62728"  # red
 _METRIC_COLOR = "#1f77b4"  # blue — metric-box fill on the metric rows
 _METRIC_YAXIS_PAD_FRAC = 0.18
 _MIN_METRIC_SPAN = 0.2
@@ -34,9 +34,16 @@ _MIN_METRIC_SPAN = 0.2
 _PI_FILL = "rgba(111,67,214,0.20)"
 _PI_LINE = "rgba(111,67,214,0.0)"
 
-_REQUIRED_COLS: frozenset[str] = frozenset({
-    "model", "ts", "fold", "split", "y_true", "y_pred",
-})
+_REQUIRED_COLS: frozenset[str] = frozenset(
+    {
+        "model",
+        "ts",
+        "fold",
+        "split",
+        "y_true",
+        "y_pred",
+    }
+)
 
 
 def _ribbon_trace(x, lo, hi, name: str) -> go.Scatter:
@@ -89,7 +96,8 @@ class BacktestReport:
     series: pd.DataFrame | None = None
     cols: int = 2
     _palette: tuple[str, ...] = field(
-        default_factory=lambda: tuple(px.colors.qualitative.Plotly), repr=False,
+        default_factory=lambda: tuple(px.colors.qualitative.Plotly),
+        repr=False,
     )
 
     def __post_init__(self) -> None:
@@ -126,11 +134,13 @@ class BacktestReport:
             va_s, va_e = ts_min.loc[(m, fold)].get("val"), ts_max.loc[(m, fold)].get("val")
             d["train_range"] = (
                 f"{pd.Timestamp(tr_s).date()} → {pd.Timestamp(tr_e).date()}"
-                if pd.notna(tr_s) else "—"
+                if pd.notna(tr_s)
+                else "—"
             )
             d["val_range"] = (
                 f"{pd.Timestamp(va_s).date()} → {pd.Timestamp(va_e).date()}"
-                if pd.notna(va_s) else "—"
+                if pd.notna(va_s)
+                else "—"
             )
             info[(m, int(fold))] = d
         return info
@@ -157,11 +167,15 @@ class BacktestReport:
 
     def plot_origin(self, origin: pd.Timestamp, model: str) -> go.Figure:
         """Forecast vs actual + PI ribbon for a single backtest origin."""
-        sub = self.preds[
-            (self.preds.get("origin") == origin) & (self.preds["model"] == model)
-        ].sort_values("ts") if "origin" in self.preds.columns else self.preds[
-            (self.preds["fold"] == origin) & (self.preds["model"] == model)
-        ].sort_values("ts")
+        sub = (
+            self.preds[
+                (self.preds.get("origin") == origin) & (self.preds["model"] == model)
+            ].sort_values("ts")
+            if "origin" in self.preds.columns
+            else self.preds[
+                (self.preds["fold"] == origin) & (self.preds["model"] == model)
+            ].sort_values("ts")
+        )
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=sub["ts"], y=sub["y_true"], name="actual", mode="markers"))
         fig.add_trace(go.Scatter(x=sub["ts"], y=sub["y_pred"], name="forecast", mode="lines"))
@@ -176,7 +190,9 @@ class BacktestReport:
                 showlegend=True,
             )
         )
-        fig.update_layout(title=f"{model} — backtest origin {pd.Timestamp(origin).date() if hasattr(origin, 'date') or isinstance(origin, pd.Timestamp) else origin}")
+        fig.update_layout(
+            title=f"{model} — backtest origin {pd.Timestamp(origin).date() if hasattr(origin, 'date') or isinstance(origin, pd.Timestamp) else origin}"
+        )
         return fig
 
     def plot_faceted(
@@ -220,7 +236,8 @@ class BacktestReport:
 
         rows, cols = _model_grid(self.models, cols=self.cols)
         fig = make_subplots(
-            rows=rows, cols=cols,
+            rows=rows,
+            cols=cols,
             subplot_titles=[self._title(m) for m in self.models],
             shared_xaxes=True,
         )
@@ -229,9 +246,7 @@ class BacktestReport:
         for i, name in enumerate(self.models):
             r, c = i // cols + 1, i % cols + 1
             m_preds = (
-                preds[preds["model"] == name].sort_values("ts")
-                if draw_val
-                else preds.iloc[0:0]
+                preds[preds["model"] == name].sort_values("ts") if draw_val else preds.iloc[0:0]
             )
             folds = sorted(m_preds["fold"].unique().tolist())
             latest = folds[-1] if folds else None
@@ -239,26 +254,34 @@ class BacktestReport:
             if series_xy is not None:
                 fig.add_trace(
                     go.Scatter(
-                        x=series_xy[0], y=series_xy[1],
-                        mode="lines", name="training",
-                        legendgroup="training", showlegend=False,
+                        x=series_xy[0],
+                        y=series_xy[1],
+                        mode="lines",
+                        name="training",
+                        legendgroup="training",
+                        showlegend=False,
                         line={"color": "#9aa0a6", "width": 1},
                         hoverinfo="skip",
                     ),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
 
             for fk in folds:
                 f = m_preds[m_preds["fold"] == fk].drop_duplicates(subset=["ts"]).sort_values("ts")
                 fig.add_trace(
                     go.Scatter(
-                        x=f["ts"], y=f["y_true"],
-                        mode="lines+markers", name="actual",
-                        legendgroup="actual", showlegend=False,
+                        x=f["ts"],
+                        y=f["y_true"],
+                        mode="lines+markers",
+                        name="actual",
+                        legendgroup="actual",
+                        showlegend=False,
                         marker={"color": "#2A2A2A", "size": 4},
                         line={"color": "#2A2A2A", "width": 1},
                     ),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
 
             for j, fk in enumerate(folds):
@@ -268,17 +291,22 @@ class BacktestReport:
                 if fk == latest:
                     fig.add_trace(
                         _ribbon_trace(sub["ts"], sub["y_lo"], sub["y_hi"], f"{name} PI"),
-                        row=r, col=c,
+                        row=r,
+                        col=c,
                     )
                 fig.add_trace(
                     go.Scatter(
-                        x=sub["ts"], y=sub["y_pred"],
-                        mode="lines", name=label,
-                        legendgroup=label, showlegend=False,
+                        x=sub["ts"],
+                        y=sub["y_pred"],
+                        mode="lines",
+                        name=label,
+                        legendgroup=label,
+                        showlegend=False,
                         line={"color": color, "width": 1.5},
                         opacity=1.0 if fk == latest else 0.55,
                     ),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
 
         title = (
@@ -289,7 +317,9 @@ class BacktestReport:
         fig.update_layout(title=title, height=300 * rows, showlegend=False)
         return fig
 
-    def plot_folds_per_model(self, train_lookback: int | None = None, cols: int | None = None) -> dict[str, go.Figure]:
+    def plot_folds_per_model(
+        self, train_lookback: int | None = None, cols: int | None = None
+    ) -> dict[str, go.Figure]:
         """One figure per model; each is a grid of n_folds subplots.
 
         For each fold panel:
@@ -344,7 +374,8 @@ class BacktestReport:
             total_height = 420 * rows + 120
             vspace = min(0.18, 80 / total_height) if rows > 1 else 0.0
             fig = make_subplots(
-                rows=rows, cols=cols,
+                rows=rows,
+                cols=cols,
                 subplot_titles=subplot_titles,
                 shared_yaxes=False,
                 vertical_spacing=vspace,
@@ -353,7 +384,7 @@ class BacktestReport:
 
             for i, f in enumerate(folds_for_model):
                 r, c = i // cols + 1, i % cols + 1
-                show_legend = (i == 0)
+                show_legend = i == 0
 
                 tr = m_train[m_train["fold"] == f]
                 if train_lookback and len(tr) > train_lookback:
@@ -367,70 +398,97 @@ class BacktestReport:
                 # line visually reach the val start without duplicating
                 # markers on the val side.
                 va_first = va.head(1)
-                tr_actual = pd.concat([tr[["ts", "y_true"]], va_first[["ts", "y_true"]]]) if not va_first.empty else tr[["ts", "y_true"]]
+                tr_actual = (
+                    pd.concat([tr[["ts", "y_true"]], va_first[["ts", "y_true"]]])
+                    if not va_first.empty
+                    else tr[["ts", "y_true"]]
+                )
 
                 if not tr.empty:
                     fig.add_trace(
                         go.Scatter(
-                            x=tr_actual["ts"], y=tr_actual["y_true"],
-                            mode="lines+markers", name="training actuals",
+                            x=tr_actual["ts"],
+                            y=tr_actual["y_true"],
+                            mode="lines+markers",
+                            name="training actuals",
                             legendgroup="training",
                             marker={"color": train_color, "size": 5},
                             line={"color": train_color, "width": 1.5},
                             showlegend=show_legend,
                         ),
-                        row=r, col=c,
+                        row=r,
+                        col=c,
                     )
                     tr_pred = tr.dropna(subset=["y_pred"])
                     if not tr_pred.empty:
-                        bridge_pred = pd.concat([tr_pred[["ts", "y_pred"]], va_first[["ts", "y_pred"]]])
+                        bridge_pred = pd.concat(
+                            [tr_pred[["ts", "y_pred"]], va_first[["ts", "y_pred"]]]
+                        )
                         fig.add_trace(
                             go.Scatter(
-                                x=bridge_pred["ts"], y=bridge_pred["y_pred"],
-                                mode="lines+markers", name="in-sample forecast",
+                                x=bridge_pred["ts"],
+                                y=bridge_pred["y_pred"],
+                                mode="lines+markers",
+                                name="in-sample forecast",
                                 legendgroup="insample",
-                                marker={"color": forecast_color, "size": 4, "symbol": "circle-open"},
+                                marker={
+                                    "color": forecast_color,
+                                    "size": 4,
+                                    "symbol": "circle-open",
+                                },
                                 line={"color": forecast_color, "width": 1.2, "dash": "dot"},
                                 opacity=0.7,
                                 showlegend=show_legend,
                             ),
-                            row=r, col=c,
+                            row=r,
+                            col=c,
                         )
 
                 fig.add_trace(
                     go.Scatter(
-                        x=va["ts"], y=va["y_true"],
-                        mode="lines+markers", name="forecast-period actuals",
+                        x=va["ts"],
+                        y=va["y_true"],
+                        mode="lines+markers",
+                        name="forecast-period actuals",
                         legendgroup="actual",
                         marker={"color": actual_color, "size": 6},
                         line={"color": actual_color, "width": 1.5},
                         showlegend=show_legend,
                     ),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
                 fig.add_trace(
                     _ribbon_trace(va["ts"], va["y_lo"], va["y_hi"], f"{name} PI"),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
                 fig.add_trace(
                     go.Scatter(
-                        x=va["ts"], y=va["y_pred"],
-                        mode="lines+markers", name="forecast",
+                        x=va["ts"],
+                        y=va["y_pred"],
+                        mode="lines+markers",
+                        name="forecast",
                         legendgroup="forecast",
                         marker={"color": forecast_color, "size": 5},
                         line={"color": forecast_color, "width": 2},
                         showlegend=show_legend,
                     ),
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
                 fig.add_vline(
-                    x=pd.Timestamp(origin), line_dash="dash", line_color="#888",
-                    row=r, col=c,
+                    x=pd.Timestamp(origin),
+                    line_dash="dash",
+                    line_color="#888",
+                    row=r,
+                    col=c,
                 )
                 fig.update_xaxes(
                     title_text=xaxis_titles[i],
                     title_font={"size": 9, "color": "#555"},
-                    row=r, col=c,
+                    row=r,
+                    col=c,
                 )
 
             fig.update_layout(
@@ -481,9 +539,7 @@ class BacktestReport:
         if model not in set(self.preds["model"]):
             raise ValueError(f"model {model!r} not in preds; have {self.models}")
 
-        sub = self.preds[
-            (self.preds["model"] == model) & (self.preds["split"] == split)
-        ].copy()
+        sub = self.preds[(self.preds["model"] == model) & (self.preds["split"] == split)].copy()
         if sub.empty:
             raise ValueError(f"no rows for model={model!r} split={split!r}")
         sub["resid"] = sub["y_true"] - sub["y_pred"]
@@ -506,21 +562,26 @@ class BacktestReport:
                 titles.append(f"fold {int(k)} — n={r.size}")
 
         fig = make_subplots(
-            rows=len(folds), cols=1, shared_xaxes=False, subplot_titles=titles,
+            rows=len(folds),
+            cols=1,
+            shared_xaxes=False,
+            subplot_titles=titles,
         )
         color = self.color_map.get(model, "#1f77b4")
         for i, k in enumerate(folds, start=1):
             s = sub.loc[sub["fold"] == k].sort_values("ts")
             fig.add_trace(
                 go.Scatter(
-                    x=s["ts"], y=s["resid"],
+                    x=s["ts"],
+                    y=s["resid"],
                     mode="lines+markers",
                     line={"color": color},
                     marker={"color": color, "size": 5},
                     name=f"fold {int(k)}",
                     showlegend=False,
                 ),
-                row=i, col=1,
+                row=i,
+                col=1,
             )
             fig.add_hline(y=0, line_dash="dot", line_color="gray", row=i, col=1)
 
@@ -607,16 +668,18 @@ class BacktestReport:
                     w = np.ones(len(g))
                 obs = float(np.average(g["y_true"], weights=w))
                 fcst = float(np.average(g["y_pred"], weights=w))
-                rows.append({
-                    "model": m,
-                    "window_start": pd.Timestamp(start),
-                    "window_end": g["ts"].max(),
-                    "n_days": len(g),
-                    "obs": obs,
-                    "fcst": fcst,
-                    "residual": obs - fcst,
-                    "rel_residual": (obs - fcst) / obs if obs != 0 else np.nan,
-                })
+                rows.append(
+                    {
+                        "model": m,
+                        "window_start": pd.Timestamp(start),
+                        "window_end": g["ts"].max(),
+                        "n_days": len(g),
+                        "obs": obs,
+                        "fcst": fcst,
+                        "residual": obs - fcst,
+                        "rel_residual": (obs - fcst) / obs if obs != 0 else np.nan,
+                    }
+                )
         if not rows:
             raise ValueError(f"grouper freq={window!r} produced no windows")
         return pd.DataFrame(rows)
@@ -636,7 +699,9 @@ class BacktestReport:
         df = (
             rolling[rolling["model"] == model].copy()
             if rolling is not None
-            else self.rolling_window_residuals(window=window, weights=weights, model=model, split=split)
+            else self.rolling_window_residuals(
+                window=window, weights=weights, model=model, split=split
+            )
         ).sort_values("window_start")
         if df.empty:
             raise ValueError(f"no rolling windows for model={model!r}")
@@ -649,16 +714,26 @@ class BacktestReport:
             f"{ws} → {we}<br>n_days={n}<br>obs={ob:.4g}<br>fcst={fc:.4g}<br>"
             f"residual={r:.4g}<br>rel={rr:.3%}"
             for ws, we, n, ob, fc, r, rr in zip(
-                df["label"], df["window_end"].dt.strftime("%Y-%m-%d"),
-                df["n_days"], df["obs"], df["fcst"], df["residual"], df["rel_residual"],
+                df["label"],
+                df["window_end"].dt.strftime("%Y-%m-%d"),
+                df["n_days"],
+                df["obs"],
+                df["fcst"],
+                df["residual"],
+                df["rel_residual"],
+                strict=False,
             )
         ]
 
         fig = go.Figure()
         fig.add_trace(
             go.Bar(
-                x=df["label"], y=df["residual"], name="residual",
-                marker={"color": color}, hovertext=hover, hoverinfo="text",
+                x=df["label"],
+                y=df["residual"],
+                name="residual",
+                marker={"color": color},
+                hovertext=hover,
+                hoverinfo="text",
                 showlegend=False,
             ),
         )
@@ -667,7 +742,8 @@ class BacktestReport:
         fig.update_xaxes(title_text="window start")
         fig.update_layout(
             title=f"{model} — residual (obs − fcst) per {window} window ({_label})",
-            height=380, bargap=0.2,
+            height=380,
+            bargap=0.2,
         )
         return fig
 
@@ -683,14 +759,19 @@ class BacktestReport:
         wr = (
             rolling
             if rolling is not None
-            else self.rolling_window_residuals(window=window, weights=weights, model=None, split=split)
+            else self.rolling_window_residuals(
+                window=window, weights=weights, model=None, split=split
+            )
         )
         if "model" not in wr.columns:
             raise ValueError("rolling frame must contain a 'model' column (pass model=None)")
         _label = weight_label or ("weighted" if weights is not None else "uniform")
 
         fig = px.box(
-            wr, x="model", y="residual", points="all",
+            wr,
+            x="model",
+            y="residual",
+            points="all",
             hover_data=["window_start", "window_end", "n_days", "obs", "fcst", "rel_residual"],
             title=f"Absolute residual (obs − fcst) per {window} window — {_label}",
         )
@@ -709,22 +790,22 @@ class BacktestReport:
         if self.metrics is None:
             raise ValueError("plot_metric_box requires metrics= at construction")
         fig = px.box(
-            self.metrics, x="model", y=metric, points="all",
+            self.metrics,
+            x="model",
+            y=metric,
+            points="all",
             title=f"Per-origin {metric} — all models",
         )
         fig.update_traces(boxmean=True)
 
-        means = (
-            self.metrics.groupby("model", sort=False)[metric]
-            .mean()
-            .dropna()
-        )
+        means = self.metrics.groupby("model", sort=False)[metric].mean().dropna()
         y_max = self.metrics[metric].max()
         y_min = self.metrics[metric].min()
         offset = (y_max - y_min) * 0.05 if y_max != y_min else abs(y_max) * 0.05 or 1.0
         for model_name, mean_val in means.items():
             fig.add_annotation(
-                x=model_name, y=mean_val + offset,
+                x=model_name,
+                y=mean_val + offset,
                 text=f"μ={mean_val:.3g}",
                 showarrow=False,
                 font={"size": 11, "color": "#444"},
@@ -760,8 +841,10 @@ class BacktestReport:
         n_rows = len(metric_list) + 1
         titles = ["n training samples per fold", *metric_list]
         fig = make_subplots(
-            rows=n_rows, cols=1,
-            shared_xaxes=True, vertical_spacing=0.06,
+            rows=n_rows,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.06,
             subplot_titles=titles,
         )
 
@@ -778,17 +861,22 @@ class BacktestReport:
                     text=y_vals,
                     textposition="outside",
                 ),
-                row=1, col=1,
+                row=1,
+                col=1,
             )
             fig.update_yaxes(
                 title_text="n train",
                 range=[0, max(y_vals) * 1.18],
-                row=1, col=1,
+                row=1,
+                col=1,
             )
             fig.update_xaxes(
-                tickmode="linear", tick0=0, dtick=1,
+                tickmode="linear",
+                tick0=0,
+                dtick=1,
                 range=[folds_sorted[0] - 0.5, folds_sorted[-1] + 0.5],
-                row=1, col=1,
+                row=1,
+                col=1,
             )
 
         for r, metric in enumerate(metric_list, start=2):
@@ -798,7 +886,7 @@ class BacktestReport:
                     continue
                 sub[metric] = pd.to_numeric(sub[metric], errors="coerce")
                 hover = []
-                for fold, val in zip(sub["fold"], sub[metric]):
+                for fold, val in zip(sub["fold"], sub[metric], strict=False):
                     info = self._fold_info.get((m, int(fold)), {})
                     lines = [
                         f"<b>{m}</b> — fold {fold}",
@@ -810,13 +898,18 @@ class BacktestReport:
                     hover.append("<br>".join(lines))
                 fig.add_trace(
                     go.Scatter(
-                        x=sub["fold"], y=sub[metric],
-                        mode="lines+markers", name=m,
-                        legendgroup=m, showlegend=(r == 2),
+                        x=sub["fold"],
+                        y=sub[metric],
+                        mode="lines+markers",
+                        name=m,
+                        legendgroup=m,
+                        showlegend=(r == 2),
                         line={"color": self.color_map[m]},
-                        hovertext=hover, hoverinfo="text",
+                        hovertext=hover,
+                        hoverinfo="text",
                     ),
-                    row=r, col=1,
+                    row=r,
+                    col=1,
                 )
             fig.update_yaxes(title_text=metric, row=r, col=1)
 
@@ -875,7 +968,8 @@ def plot_backtest_splits(
         n_train_per_fold.append(n_train)
         fig.add_trace(
             go.Scatter(
-                x=[t_start, t_end], y=[y, y],
+                x=[t_start, t_end],
+                y=[y, y],
                 mode="lines",
                 line={"color": "#1f77b4", "width": 8},
                 name="train",
@@ -900,7 +994,8 @@ def plot_backtest_splits(
         if t_end < v_start - pd.Timedelta(days=1):
             fig.add_trace(
                 go.Scatter(
-                    x=[t_end, v_start], y=[y, y],
+                    x=[t_end, v_start],
+                    y=[y, y],
                     mode="lines",
                     line={"color": "grey", "width": 2, "dash": "dot"},
                     name="gap",
@@ -967,18 +1062,28 @@ def _annotate_split_geometry(fig, folds, ts, k: int, n: int) -> None:
     def bracket(x0, x1, y_off: float, label: str, color: str) -> None:
         y_line = y + y_off
         fig.add_shape(
-            type="line", x0=x0, x1=x1, y0=y_line, y1=y_line,
+            type="line",
+            x0=x0,
+            x1=x1,
+            y0=y_line,
+            y1=y_line,
             line={"color": color, "width": 2},
         )
         cap = 0.08
         for x in (x0, x1):
             fig.add_shape(
-                type="line", x0=x, x1=x, y0=y_line - cap, y1=y_line + cap,
+                type="line",
+                x0=x,
+                x1=x,
+                y0=y_line - cap,
+                y1=y_line + cap,
                 line={"color": color, "width": 2},
             )
         fig.add_annotation(
-            x=x0 + (x1 - x0) / 2, y=y_line,
-            text=label, showarrow=False,
+            x=x0 + (x1 - x0) / 2,
+            y=y_line,
+            text=label,
+            showarrow=False,
             font={"color": color, "size": 11},
             yshift=14 if y_off > 0 else -14,
             bgcolor="rgba(255,255,255,0.85)",
@@ -1004,7 +1109,9 @@ def _annotate_split_geometry(fig, folds, ts, k: int, n: int) -> None:
 # long as they appear as columns on that frame.
 
 
-def _metric_yrange(values: pd.Series, pad_frac: float = _METRIC_YAXIS_PAD_FRAC) -> tuple[float, float] | None:
+def _metric_yrange(
+    values: pd.Series, pad_frac: float = _METRIC_YAXIS_PAD_FRAC
+) -> tuple[float, float] | None:
     """Padded ``(ymin, ymax)`` so 'outside' point labels don't clip; None if empty."""
     vals = pd.to_numeric(values, errors="coerce").dropna()
     if vals.empty:
@@ -1077,8 +1184,12 @@ def _add_residual_row(
             col=1,
         )
     fig.update_xaxes(
-        categoryorder="array", categoryarray=model_order,
-        title_text="model", showticklabels=True, row=row, col=1,
+        categoryorder="array",
+        categoryarray=model_order,
+        title_text="model",
+        showticklabels=True,
+        row=row,
+        col=1,
     )
 
 
@@ -1122,8 +1233,12 @@ def _add_metric_row(
         y_kwargs["range"] = list(yrange)
     fig.update_yaxes(row=row, col=1, **y_kwargs)
     fig.update_xaxes(
-        categoryorder="array", categoryarray=model_order,
-        title_text="model", showticklabels=True, row=row, col=1,
+        categoryorder="array",
+        categoryarray=model_order,
+        title_text="model",
+        showticklabels=True,
+        row=row,
+        col=1,
     )
     fig.add_hline(y=0, line_dash="dot", line_color="grey", row=row, col=1)
 
@@ -1140,12 +1255,14 @@ def _train_overlap_by_fold(preds: pd.DataFrame, last_fold: int) -> dict | None:
     rows = []
     for f in sorted(idx_by_fold):
         shared = len(idx_by_fold[f] & idx_by_fold[last_fold])
-        rows.append({
-            "fold": f,
-            "n_train": len(idx_by_fold[f]),
-            "shared_with_last": shared,
-            "pct_of_last": shared / last_n if last_n else 0.0,
-        })
+        rows.append(
+            {
+                "fold": f,
+                "n_train": len(idx_by_fold[f]),
+                "shared_with_last": shared,
+                "pct_of_last": shared / last_n if last_n else 0.0,
+            }
+        )
     return {"reference_fold": last_fold, "last_train_n": last_n, "rows": rows}
 
 
@@ -1263,7 +1380,9 @@ def plot_metrics_and_residuals(
     higher_set = set(higher_is_better or ())
     first_metric = metric_cols[0]
     model_order = _order_models_by_metric(
-        metrics, first_metric, higher_is_better=first_metric in higher_set,
+        metrics,
+        first_metric,
+        higher_is_better=first_metric in higher_set,
     )
 
     split_colors = {"train": _TRAIN_COLOR, "val": _VAL_COLOR}
@@ -1297,7 +1416,9 @@ def plot_metrics_and_residuals(
     )
 
     _add_residual_row(
-        fig, train_last, val_all,
+        fig,
+        train_last,
+        val_all,
         model_order=model_order,
         split_colors=split_colors,
         boxpoints=boxpoints,
@@ -1308,7 +1429,9 @@ def plot_metrics_and_residuals(
 
     for i, col in enumerate(metric_cols, start=2):
         _add_metric_row(
-            fig, metrics, col,
+            fig,
+            metrics,
+            col,
             model_order=model_order,
             metric_color=metric_color,
             metric_boxpoints=metric_boxpoints,
@@ -1340,7 +1463,11 @@ def plot_metrics_and_residuals(
         logger.info(
             "plot_metrics_and_residuals: last fold=%s; folds pooled for val=%s; "
             "metric_cols=%s; models (best %s median → worst)=%s",
-            last_fold, n_folds, list(metric_cols), first_metric, model_order,
+            last_fold,
+            n_folds,
+            list(metric_cols),
+            first_metric,
+            model_order,
         )
 
     return fig, diag

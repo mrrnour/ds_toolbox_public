@@ -23,6 +23,7 @@ Usage:
   python rename_to_jd.py --dry-run      # preview only, no changes
   python rename_to_jd.py --output DIR   # operate on a non-default output dir
 """
+
 from __future__ import annotations
 
 import argparse
@@ -87,7 +88,11 @@ def plan(md_dir: Path, html_dir: Path) -> list[dict]:
         # De-duplicate: if two postings produce the same name, suffix _2, _3...
         candidate = base
         n = 2
-        while candidate in seen_targets or (md_dir / f"{candidate}.md").exists() and (md_dir / f"{candidate}.md") != md:
+        while (
+            candidate in seen_targets
+            or (md_dir / f"{candidate}.md").exists()
+            and (md_dir / f"{candidate}.md") != md
+        ):
             candidate = f"{base}_{n}"
             n += 1
         seen_targets.add(candidate)
@@ -100,11 +105,16 @@ def plan(md_dir: Path, html_dir: Path) -> list[dict]:
         old_html = old_html_candidates[0] if old_html_candidates else None
         new_html = html_dir / f"{candidate}.html" if old_html else None
 
-        plan.append(dict(
-            old_md=md, new_md=new_md,
-            old_html=old_html, new_html=new_html,
-            title=title, company=company,
-        ))
+        plan.append(
+            dict(
+                old_md=md,
+                new_md=new_md,
+                old_html=old_html,
+                new_html=new_html,
+                title=title,
+                company=company,
+            )
+        )
     return plan
 
 
@@ -141,7 +151,9 @@ def update_jsonl(path: Path, mapping: dict[str, str], dry_run: bool) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--output", default="./output", help="output directory (default: ./output)")
     ap.add_argument("--dry-run", action="store_true", help="preview only — don't rename")
     args = ap.parse_args()
@@ -196,7 +208,9 @@ def main() -> int:
 
     # Update JSONL summaries
     crawl_changed = update_jsonl(out / "crawling_summary.jsonl", html_map, dry_run=False)
-    conv_changed = update_jsonl(out / "conversion_summary.jsonl", {**html_map, **md_map}, dry_run=False)
+    conv_changed = update_jsonl(
+        out / "conversion_summary.jsonl", {**html_map, **md_map}, dry_run=False
+    )
 
     print(f"\n✓ Renamed {len(md_map)} markdown, {len(html_map)} html")
     print(f"✓ Updated {crawl_changed} record(s) in crawling_summary.jsonl")

@@ -1,7 +1,5 @@
 """Spark binning: pandas.cut-style discretization of continuous columns."""
 
-from typing import Dict, List, Optional, Tuple
-
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -10,11 +8,11 @@ from pyspark.sql.window import Window
 def cut(
     df: DataFrame,
     input_col: str,
-    splits: List[float],
-    labels: Optional[Dict[int, str]] = None,
-    output_col: Optional[str] = None,
+    splits: list[float],
+    labels: dict[int, str] | None = None,
+    output_col: str | None = None,
     handle_invalid: str = "keep",
-) -> Tuple[DataFrame, DataFrame]:
+) -> tuple[DataFrame, DataFrame]:
     """Bin a continuous Spark column into discrete intervals (pandas.cut equivalent).
 
     Parameters:

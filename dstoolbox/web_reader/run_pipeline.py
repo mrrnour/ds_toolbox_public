@@ -52,7 +52,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Read URLs, scrape/crawl, and convert outputs to Markdown."
     )
-    parser.add_argument("-r", "--reset", action="store_true", help="Clear checkpoint and rerun all steps")
+    parser.add_argument(
+        "-r", "--reset", action="store_true", help="Clear checkpoint and rerun all steps"
+    )
 
     parser.add_argument(
         "-bi",
@@ -116,7 +118,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--force-step",
         action="append",
         default=[],
-        choices=["tools/filter_bookmarks.py", "tools/bookmarks_to_urls.py", "scraper.py", "convert.py", "tools/rename_to_jd.py"],
+        choices=[
+            "tools/filter_bookmarks.py",
+            "tools/bookmarks_to_urls.py",
+            "scraper.py",
+            "convert.py",
+            "tools/rename_to_jd.py",
+        ],
         help="Force rerun a specific step even if checkpoint says it is complete (repeatable)",
     )
     return parser
@@ -147,7 +155,9 @@ def load_checkpoint() -> set[str]:
     """
     if not CHECKPOINT.exists():
         return set()
-    return {line.strip() for line in CHECKPOINT.read_text(encoding="utf-8").splitlines() if line.strip()}
+    return {
+        line.strip() for line in CHECKPOINT.read_text(encoding="utf-8").splitlines() if line.strip()
+    }
 
 
 def append_checkpoint(step_key: str) -> None:
@@ -296,7 +306,7 @@ def main() -> int:
         force="scraper.py" in forced_steps,
         required_paths=[Path(params.CRAWLING_SUMMARY_PATH)],
     )
-    
+
     # Build convert command with optional folder name for organizing output
     convert_cmd = python_cmd("convert.py")
     if args.folder_name:

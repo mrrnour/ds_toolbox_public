@@ -1,7 +1,5 @@
 """DataFrame-level utilities: column ops, merges, memory reduction, comparison, encoding bridges, joins."""
 
-from typing import List, Optional, Tuple, Union
-
 import numpy as np
 import pandas as pd
 
@@ -9,7 +7,7 @@ from .lists import regex_filter_list
 from .text import normalize_text
 
 
-def movecol(df, cols_to_move=None, ref_col='', place='After'):
+def movecol(df, cols_to_move=None, ref_col="", place="After"):
     """Reorder ``df`` by moving ``cols_to_move`` next to ``ref_col``.
 
     Parameters
@@ -32,89 +30,86 @@ def movecol(df, cols_to_move=None, ref_col='', place='After'):
     if cols_to_move is None:
         cols_to_move = []
     cols = df.columns.tolist()
-    if place == 'After':
-        seg1 = cols[:list(cols).index(ref_col) + 1]
+    if place == "After":
+        seg1 = cols[: list(cols).index(ref_col) + 1]
         seg2 = cols_to_move
-    if place == 'Before':
-        seg1 = cols[:list(cols).index(ref_col)]
+    if place == "Before":
+        seg1 = cols[: list(cols).index(ref_col)]
         seg2 = cols_to_move + [ref_col]
 
     seg1 = [i for i in seg1 if i not in seg2]
     seg3 = [i for i in cols if i not in seg1 + seg2]
 
-    return(df[seg1 + seg2 + seg3])
+    return df[seg1 + seg2 + seg3]
 
 
 def merge_between(df1, df2, groupCol, closed="both"):
-  """Tag each row in ``df1`` with the index of the matching ``[Start, End]`` interval in ``df2``.
+    """Tag each row in ``df1`` with the index of the matching ``[Start, End]`` interval in ``df2``.
 
-  For each group (per ``groupCol``), builds an ``IntervalIndex`` from
-  ``df2['Start']`` and ``df2['End']`` and assigns the index of the
-  enclosing interval to ``df1['Date']``. Rows whose ``Date`` is not
-  inside any interval get index ``-1``.
+    For each group (per ``groupCol``), builds an ``IntervalIndex`` from
+    ``df2['Start']`` and ``df2['End']`` and assigns the index of the
+    enclosing interval to ``df1['Date']``. Rows whose ``Date`` is not
+    inside any interval get index ``-1``.
 
-  Parameters
-  ----------
-  df1 : pandas.DataFrame
-      Must contain ``groupCol`` and a ``Date`` column.
-  df2 : pandas.DataFrame
-      Must contain ``groupCol``, ``Start``, and ``End`` columns.
-  groupCol : str
-      Column name used to align rows across the two frames.
-  closed : {'left', 'right', 'both', 'neither'}, optional
-      Interval-closure semantics. Default ``'both'``.
+    Parameters
+    ----------
+    df1 : pandas.DataFrame
+        Must contain ``groupCol`` and a ``Date`` column.
+    df2 : pandas.DataFrame
+        Must contain ``groupCol``, ``Start``, and ``End`` columns.
+    groupCol : str
+        Column name used to align rows across the two frames.
+    closed : {'left', 'right', 'both', 'neither'}, optional
+        Interval-closure semantics. Default ``'both'``.
 
-  Returns
-  -------
-  pandas.DataFrame
-      ``df1`` with an extra ``Index_no`` column.
-  """
+    Returns
+    -------
+    pandas.DataFrame
+        ``df1`` with an extra ``Index_no`` column.
+    """
     #   df1=df_pi_dic_wide
     #   df2=df_cases_edited
     #   groupCol='Vessel'
 
-  df_out=pd.DataFrame(columns=df1.columns.tolist()+['Index_no'])
-  for name, group_df in df1.groupby([groupCol]):
-    df2_sub=df2.loc[df2[groupCol]==name]
+    df_out = pd.DataFrame(columns=df1.columns.tolist() + ["Index_no"])
+    for name, group_df in df1.groupby([groupCol]):
+        df2_sub = df2.loc[df2[groupCol] == name]
 
-    #     https://stackoverflow.com/questions/68792511/efficient-way-to-merge-large-pandas-dataframes-between-two-dates
-    #     https://stackoverflow.com/questions/31328014/merging-dataframes-based-on-date-range
-    #     https://stackoverflow.com/questions/69824730/check-if-value-in-pandas-dataframe-is-within-any-two-values-of-two-other-columns
-    #     https://stackoverflow.com/questions/43593554/merging-two-dataframes-based-on-a-date-between-two-other-dates-without-a-common
-    #     https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.from_arrays.html
-    i = pd.IntervalIndex.from_arrays(df2_sub['Start'],
-                                     df2_sub['End'],
-                                     closed=closed
-                                               )
-    group_df['Index_no']=i.get_indexer(group_df['Date'])
+        #     https://stackoverflow.com/questions/68792511/efficient-way-to-merge-large-pandas-dataframes-between-two-dates
+        #     https://stackoverflow.com/questions/31328014/merging-dataframes-based-on-date-range
+        #     https://stackoverflow.com/questions/69824730/check-if-value-in-pandas-dataframe-is-within-any-two-values-of-two-other-columns
+        #     https://stackoverflow.com/questions/43593554/merging-two-dataframes-based-on-a-date-between-two-other-dates-without-a-common
+        #     https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.from_arrays.html
+        i = pd.IntervalIndex.from_arrays(df2_sub["Start"], df2_sub["End"], closed=closed)
+        group_df["Index_no"] = i.get_indexer(group_df["Date"])
 
-    df_out=pd.concat([group_df, df_out],axis=0)
+        df_out = pd.concat([group_df, df_out], axis=0)
 
-  return df_out
+    return df_out
 
 
 def cell_share_of_total(df, axis=0):
-  """Normalize each cell as a fraction of its column (axis=0) or row (axis=1) sum.
+    """Normalize each cell as a fraction of its column (axis=0) or row (axis=1) sum.
 
-  Parameters
-  ----------
-  df : pandas.DataFrame
-      Numeric frame.
-  axis : {0, 1}, optional
-      ``0`` (default) → divide by column totals; ``1`` → divide by row
-      totals.
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Numeric frame.
+    axis : {0, 1}, optional
+        ``0`` (default) → divide by column totals; ``1`` → divide by row
+        totals.
 
-  Returns
-  -------
-  pandas.DataFrame
-      Same shape as ``df`` with values rescaled to sum to 1 along the
-      requested axis.
-  """
-  if axis==0:
-    out=df.div(df.sum(axis=0), axis=1)
-  else:
-    out=df.div(df.sum(axis=1), axis=0)
-  return out
+    Returns
+    -------
+    pandas.DataFrame
+        Same shape as ``df`` with values rescaled to sum to 1 along the
+        requested axis.
+    """
+    if axis == 0:
+        out = df.div(df.sum(axis=0), axis=1)
+    else:
+        out = df.div(df.sum(axis=1), axis=0)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -122,15 +117,35 @@ def cell_share_of_total(df, axis=0):
 # ---------------------------------------------------------------------------
 
 _COMPARISON_COL_ORDER = [
-    "Column", "In_DF1", "In_DF2", "Type_Match", "Value_Commonality_Pct",
-    "DF1_Type", "DF1_Memory_MB", "DF1_Missing_Count", "DF1_Missing_Pct",
-    "DF2_Type", "DF2_Memory_MB", "DF2_Missing_Count", "DF2_Missing_Pct",
+    "Column",
+    "In_DF1",
+    "In_DF2",
+    "Type_Match",
+    "Value_Commonality_Pct",
+    "DF1_Type",
+    "DF1_Memory_MB",
+    "DF1_Missing_Count",
+    "DF1_Missing_Pct",
+    "DF2_Type",
+    "DF2_Memory_MB",
+    "DF2_Missing_Count",
+    "DF2_Missing_Pct",
 ]
 
 _DISPLAY_COL_LABELS = [
-    "Column", "In DF1", "In DF2", "Type Match", "Value Match %",
-    "DF1 Type", "DF1 Memory (MB)", "DF1 Missing Count", "DF1 Missing %",
-    "DF2 Type", "DF2 Memory (MB)", "DF2 Missing Count", "DF2 Missing %",
+    "Column",
+    "In DF1",
+    "In DF2",
+    "Type Match",
+    "Value Match %",
+    "DF1 Type",
+    "DF1 Memory (MB)",
+    "DF1 Missing Count",
+    "DF1 Missing %",
+    "DF2 Type",
+    "DF2 Memory (MB)",
+    "DF2 Missing Count",
+    "DF2 Missing %",
 ]
 
 
@@ -206,8 +221,11 @@ def _comparison_row(col: str, df1: pd.DataFrame, df2: pd.DataFrame) -> dict:
 
 def _sort_comparison_table(df: pd.DataFrame) -> pd.DataFrame:
     """Sort by descending commonality, then column name (case-insensitive)."""
+
     def key(row):
-        commonality = -1 if row["Value_Commonality_Pct"] == "N/A" else float(row["Value_Commonality_Pct"])
+        commonality = (
+            -1 if row["Value_Commonality_Pct"] == "N/A" else float(row["Value_Commonality_Pct"])
+        )
         return (-commonality, str(row["Column"]).lower())
 
     order = sorted(range(len(df)), key=lambda i: key(df.iloc[i]))
@@ -220,34 +238,43 @@ def _format_display_table(comparison_df: pd.DataFrame) -> pd.DataFrame:
     out.columns = _DISPLAY_COL_LABELS
     for col in ("DF1 Memory (MB)", "DF2 Memory (MB)"):
         out[col] = out[col].apply(
-            lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and x != 0 else str(x))
+            lambda x: f"{x:.4f}" if isinstance(x, (int, float)) and x != 0 else str(x)
+        )
     for col in ("DF1 Missing %", "DF2 Missing %", "Value Match %"):
-        out[col] = out[col].apply(
-            lambda x: f"{x:.1f}%" if isinstance(x, (int, float)) else str(x))
+        out[col] = out[col].apply(lambda x: f"{x:.1f}%" if isinstance(x, (int, float)) else str(x))
     return out
 
 
-def _dtype_summary(df1: pd.DataFrame, df2: pd.DataFrame,
-                   df1_name: str, df2_name: str) -> pd.DataFrame:
+def _dtype_summary(
+    df1: pd.DataFrame, df2: pd.DataFrame, df1_name: str, df2_name: str
+) -> pd.DataFrame:
     """Count of columns by dtype for each frame."""
     df1_types = df1.dtypes.value_counts().to_dict()
     df2_types = df2.dtypes.value_counts().to_dict()
     all_types = sorted(set(df1_types) | set(df2_types), key=str)
-    return pd.DataFrame([
-        {
-            "Data_Type": str(dt),
-            f"{df1_name}_Count": df1_types.get(dt, 0),
-            f"{df2_name}_Count": df2_types.get(dt, 0),
-        }
-        for dt in all_types
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "Data_Type": str(dt),
+                f"{df1_name}_Count": df1_types.get(dt, 0),
+                f"{df2_name}_Count": df2_types.get(dt, 0),
+            }
+            for dt in all_types
+        ]
+    )
 
 
 def _print_comparison_report(
-    df1: pd.DataFrame, df2: pd.DataFrame, df1_name: str, df2_name: str,
-    comparison_df: pd.DataFrame, common_columns: set,
-    df1_only: List[str], df2_only: List[str],
-    type_matches: int, type_match_pct: float,
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
+    df1_name: str,
+    df2_name: str,
+    comparison_df: pd.DataFrame,
+    common_columns: set,
+    df1_only: list[str],
+    df2_only: list[str],
+    type_matches: int,
+    type_match_pct: float,
 ) -> None:
     """Console display for the full comparison report."""
     print(f"{'='*80}\nDATAFRAME COLUMN COMPARISON: {df1_name} vs {df2_name}\n{'='*80}")
@@ -265,7 +292,9 @@ def _print_comparison_report(
     print(f"Only in {df2_name}: {len(df2_only)}")
 
     if common_columns:
-        print(f"Common columns with matching types: {type_matches}/{len(common_columns)} ({type_match_pct:.1f}%)")
+        print(
+            f"Common columns with matching types: {type_matches}/{len(common_columns)} ({type_match_pct:.1f}%)"
+        )
         commonalities = [float(v) for v in comparison_df["Value_Commonality_Pct"] if v != "N/A"]
         if commonalities:
             print(f"Average value commonality: {sum(commonalities)/len(commonalities):.1f}%")
@@ -286,10 +315,12 @@ def _print_comparison_report(
 
 
 def compare_dataframes_columns(
-    df1: pd.DataFrame, df2: pd.DataFrame,
-    df1_name: str = "DataFrame 1", df2_name: str = "DataFrame 2",
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
+    df1_name: str = "DataFrame 1",
+    df2_name: str = "DataFrame 2",
     display: bool = True,
-) -> Tuple[pd.DataFrame, dict, pd.DataFrame]:
+) -> tuple[pd.DataFrame, dict, pd.DataFrame]:
     """Compare columns between two DataFrames.
 
     Reports per-column presence, dtype match, value commonality, memory,
@@ -313,8 +344,16 @@ def compare_dataframes_columns(
 
     if display:
         _print_comparison_report(
-            df1, df2, df1_name, df2_name, comparison_df,
-            common_columns, df1_only, df2_only, type_matches, type_match_pct,
+            df1,
+            df2,
+            df1_name,
+            df2_name,
+            comparison_df,
+            common_columns,
+            df1_only,
+            df2_only,
+            type_matches,
+            type_match_pct,
         )
 
     summary_dict = {
@@ -327,8 +366,12 @@ def compare_dataframes_columns(
         "df2_only_columns": df2_only,
         "type_matches": type_matches,
         "type_match_percentage": type_match_pct,
-        "total_memory_df1_mb": comparison_df.loc[comparison_df["DF1_Memory_MB"] != 0, "DF1_Memory_MB"].sum(),
-        "total_memory_df2_mb": comparison_df.loc[comparison_df["DF2_Memory_MB"] != 0, "DF2_Memory_MB"].sum(),
+        "total_memory_df1_mb": comparison_df.loc[
+            comparison_df["DF1_Memory_MB"] != 0, "DF1_Memory_MB"
+        ].sum(),
+        "total_memory_df2_mb": comparison_df.loc[
+            comparison_df["DF2_Memory_MB"] != 0, "DF2_Memory_MB"
+        ].sum(),
     }
     return comparison_df, summary_dict, _dtype_summary(df1, df2, df1_name, df2_name)
 
@@ -344,16 +387,14 @@ def categorical_to_codes(df: pd.DataFrame) -> pd.DataFrame:
         + out.select_dtypes(include=["category"]).columns.tolist()
     )
     if cat_columns:
-        out[cat_columns] = out[cat_columns].apply(
-            lambda x: x.astype("category").cat.codes
-        )
+        out[cat_columns] = out[cat_columns].apply(lambda x: x.astype("category").cat.codes)
     return out
 
 
 _PLAN_COLS = ("column", "original_dtype", "target_dtype", "reason")
 
 
-def _select_int_dtype(c_min, c_max) -> Optional[str]:
+def _select_int_dtype(c_min, c_max) -> str | None:
     """Smallest int dtype fitting ``[c_min, c_max]`` or None if int64 already fits best."""
     if c_min >= np.iinfo(np.int8).min and c_max <= np.iinfo(np.int8).max:
         return "int8"
@@ -364,7 +405,7 @@ def _select_int_dtype(c_min, c_max) -> Optional[str]:
     return None
 
 
-def _select_float_dtype(c_min, c_max, use_float16: bool) -> Optional[str]:
+def _select_float_dtype(c_min, c_max, use_float16: bool) -> str | None:
     """Smallest float dtype fitting ``[c_min, c_max]``; ``None`` if float64 needed."""
     if use_float16 and abs(c_max - c_min) < 65504:
         f16 = np.finfo(np.float16)
@@ -379,8 +420,8 @@ def _select_float_dtype(c_min, c_max, use_float16: bool) -> Optional[str]:
 def _plan_column(
     series: pd.Series,
     column: str,
-    obj2str_cols: Union[List[str], str],
-    str2cat_cols: Union[List[str], str],
+    obj2str_cols: list[str] | str,
+    str2cat_cols: list[str] | str,
     use_float16: bool,
 ) -> dict:
     """Return one plan row: ``{column, original_dtype, target_dtype, reason}``.
@@ -392,8 +433,12 @@ def _plan_column(
     original_dtype = str(series.dtype)
 
     def row(target, reason):
-        return {"column": column, "original_dtype": original_dtype,
-                "target_dtype": target, "reason": reason}
+        return {
+            "column": column,
+            "original_dtype": original_dtype,
+            "target_dtype": target,
+            "reason": reason,
+        }
 
     if is_datetime(series):
         return row(None, "datetime column — left untouched")
@@ -434,8 +479,8 @@ def _plan_column(
 
 def _plan_memory_reduction(
     df: pd.DataFrame,
-    obj2str_cols: Union[List[str], str] = "all_columns",
-    str2cat_cols: Union[List[str], str] = "all_columns",
+    obj2str_cols: list[str] | str = "all_columns",
+    str2cat_cols: list[str] | str = "all_columns",
     use_float16: bool = False,
 ) -> pd.DataFrame:
     """Decide what dtype each column should become to shrink memory. Pure.
@@ -458,8 +503,7 @@ def _plan_memory_reduction(
         If True, allow float16 (precision-lossy). Float32 otherwise.
     """
     rows = [
-        _plan_column(df[col], col, obj2str_cols, str2cat_cols, use_float16)
-        for col in df.columns
+        _plan_column(df[col], col, obj2str_cols, str2cat_cols, use_float16) for col in df.columns
     ]
     return pd.DataFrame(rows, columns=list(_PLAN_COLS))
 
@@ -477,8 +521,13 @@ def _apply_memory_reduction(df: pd.DataFrame, plan: pd.DataFrame) -> pd.DataFram
     return out
 
 
-def reduce_mem_usage(df, obj2str_cols="all_columns", str2cat_cols="all_columns",
-                     use_float16: bool = False, verbose: bool = False) -> pd.DataFrame:
+def reduce_mem_usage(
+    df,
+    obj2str_cols="all_columns",
+    str2cat_cols="all_columns",
+    use_float16: bool = False,
+    verbose: bool = False,
+) -> pd.DataFrame:
     """Convenience: plan, apply, and print a before/after memory summary.
 
     Returns a new optimized DataFrame; the input is not mutated.
@@ -542,63 +591,64 @@ def unify_cols(df1, df2, df1_name, df2_name):
     tuple of pandas.DataFrame
         ``(df1, df2)`` with identical columns.
     """
-    df1.index=df2.index
+    df1.index = df2.index
+
     def unify_cols__sub(df1, df2, df1_name, df2_name):
         """Add any of ``df1``'s missing columns to ``df2`` as zero-filled columns."""
-        diff1=np.setdiff1d(df1.columns, df2.columns)
-        if diff1.size!=0:
-            print(f'Adding following columns to {df2_name} as there are in {df1_name}:\n {diff1}')
-            df2=pd.concat([df2,
-                  pd.DataFrame(0, index=df2.index, columns=diff1)], axis=1)
-            df2=df2[df1.columns]
+        diff1 = np.setdiff1d(df1.columns, df2.columns)
+        if diff1.size != 0:
+            print(f"Adding following columns to {df2_name} as there are in {df1_name}:\n {diff1}")
+            df2 = pd.concat([df2, pd.DataFrame(0, index=df2.index, columns=diff1)], axis=1)
+            df2 = df2[df1.columns]
         return df2
-    df2=unify_cols__sub(df1, df2, df1_name, df2_name)
-    df1=unify_cols__sub(df2, df1, df2_name, df1_name)
+
+    df2 = unify_cols__sub(df1, df2, df1_name, df2_name)
+    df1 = unify_cols__sub(df2, df1, df2_name, df1_name)
     return df1, df2
 
 
 def percent_agg(df, grpby1, grpby2, sumCol):
-  """Compute each ``grpby1`` total as a percentage of its parent ``grpby2`` total.
+    """Compute each ``grpby1`` total as a percentage of its parent ``grpby2`` total.
 
-  Useful for sub-aggregate share calculations (e.g. share of revenue
-  per product within each region).
+    Useful for sub-aggregate share calculations (e.g. share of revenue
+    per product within each region).
 
-  Parameters
-  ----------
-  df : pandas.DataFrame
-      Source frame.
-  grpby1 : list of str
-      Fine-grained group key (must include ``grpby2`` as a subset).
-  grpby2 : list of str
-      Coarse group key used as the percentage denominator.
-  sumCol : str
-      Column to sum.
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Source frame.
+    grpby1 : list of str
+        Fine-grained group key (must include ``grpby2`` as a subset).
+    grpby2 : list of str
+        Coarse group key used as the percentage denominator.
+    sumCol : str
+        Column to sum.
 
-  Returns
-  -------
-  pandas.DataFrame
-      Long-format frame with ``grpby1`` columns plus ``<sumCol>_percent``
-      and ``<sumCol>``; rows where the percentage is zero are dropped.
-  """
-  agg1=df.groupby(grpby1)[sumCol].sum().reset_index()
-  agg2=df.groupby(grpby2)[sumCol].sum().reset_index()
+    Returns
+    -------
+    pandas.DataFrame
+        Long-format frame with ``grpby1`` columns plus ``<sumCol>_percent``
+        and ``<sumCol>``; rows where the percentage is zero are dropped.
+    """
+    agg1 = df.groupby(grpby1)[sumCol].sum().reset_index()
+    agg2 = df.groupby(grpby2)[sumCol].sum().reset_index()
 
-  agg1 = df.groupby(grpby1)[sumCol].sum()
-  agg1 = agg1.groupby(level=grpby2).apply(lambda x:100 * x / float(x.sum())).reset_index()
-  agg1.rename(columns={sumCol:f"{sumCol}_percent"}, inplace=True)
+    agg1 = df.groupby(grpby1)[sumCol].sum()
+    agg1 = agg1.groupby(level=grpby2).apply(lambda x: 100 * x / float(x.sum())).reset_index()
+    agg1.rename(columns={sumCol: f"{sumCol}_percent"}, inplace=True)
 
-  agg1=agg1[agg1[f"{sumCol}_percent"]!=0]
-  #   agg1=agg1.merge(agg2,on=grpby2)
-  #   agg1[f'{sumCol}_percent']=np.round(agg1[f'{sumCol}_x']/agg1[f'{sumCol}_y']*100,0)
-  #   agg1=agg1[agg1[outCol]!=0]
+    agg1 = agg1[agg1[f"{sumCol}_percent"] != 0]
+    #   agg1=agg1.merge(agg2,on=grpby2)
+    #   agg1[f'{sumCol}_percent']=np.round(agg1[f'{sumCol}_x']/agg1[f'{sumCol}_y']*100,0)
+    #   agg1=agg1[agg1[outCol]!=0]
 
     ##NOTE:
-  #   agg1.div(agg2, level=grpby2) * 100  doesnot work
+    #   agg1.div(agg2, level=grpby2) * 100  doesnot work
 
-  ##print(agg1.groupby(grpby2)[f"{sumCol}_percent"].sum())
-  agg1[f"{sumCol}"]= pd.Series(df.groupby(grpby1)[sumCol].sum().values)
+    ##print(agg1.groupby(grpby2)[f"{sumCol}_percent"].sum())
+    agg1[f"{sumCol}"] = pd.Series(df.groupby(grpby1)[sumCol].sum().values)
 
-  return agg1
+    return agg1
 
 
 def fill_with_colnames(udata):
@@ -623,17 +673,13 @@ def fill_with_colnames(udata):
 
     tmp = np.tile(udata.columns, [len(udata.index), 1])
     tmp2 = pd.DataFrame(
-        np.where(
-            udata.astype(int),
-            tmp,
-            0),
-        columns=udata.columns,
-        index=udata.index)
+        np.where(udata.astype(int), tmp, 0), columns=udata.columns, index=udata.index
+    )
     # tmp2 = tmp2.replace(0, "")
-    return (tmp2)
+    return tmp2
 
 
-def join_non_zero(x, sep=', '):
+def join_non_zero(x, sep=", "):
     """Join items of ``x`` with ``sep``, skipping any item equal to ``0``.
 
     Designed to consume rows produced by :func:`fill_with_colnames`,
@@ -654,7 +700,7 @@ def join_non_zero(x, sep=', '):
         Concatenation of the non-zero items.
     """
     y = sep.join(list(filter(lambda xx: xx != 0, x)))
-    return(y)
+    return y
 
 
 def clean_product_descriptions(prodDesc, df):
@@ -686,19 +732,18 @@ def clean_product_descriptions(prodDesc, df):
         indicating a merge inconsistency.
     """
 
-    prodDesc2 = prodDesc[['PRODUCT_ID', 'LOB']].drop_duplicates()
-    prodDesc2['PRODUCT_ID'] = prodDesc2['PRODUCT_ID'].str.upper()
-    prodDesc2['LOB'] = prodDesc2['LOB'].str.upper()
+    prodDesc2 = prodDesc[["PRODUCT_ID", "LOB"]].drop_duplicates()
+    prodDesc2["PRODUCT_ID"] = prodDesc2["PRODUCT_ID"].str.upper()
+    prodDesc2["LOB"] = prodDesc2["LOB"].str.upper()
 
-    tmp = (pd.DataFrame(df.columns.str.upper(), columns=['PRODUCT_ID']))
-    prodDesc2 = tmp.merge(prodDesc2, on='PRODUCT_ID', how='left')
+    tmp = pd.DataFrame(df.columns.str.upper(), columns=["PRODUCT_ID"])
+    prodDesc2 = tmp.merge(prodDesc2, on="PRODUCT_ID", how="left")
 
     if prodDesc2.shape[0] != df.shape[1]:
         print(prodDesc2)
         print(df.columns)
         raise ValueError(
-            "prodDesc2 row count does not match df column count; "
-            "check PRODUCT_ID coverage."
+            "prodDesc2 row count does not match df column count; " "check PRODUCT_ID coverage."
         )
 
     return prodDesc2
@@ -731,12 +776,11 @@ def condense_cols(df, remove_prefix, umap):
     """
 
     if remove_prefix:
-        df.columns = pd.Series(["_".join(x.split('_')[1:])
-                                for x in df.columns])
+        df.columns = pd.Series(["_".join(x.split("_")[1:]) for x in df.columns])
     if len(umap) != 0:
         df.rename(columns=umap, inplace=True)
     df2 = fill_with_colnames(df)
-    df2 = df2.apply(join_non_zero, sep=', ', axis=1)
+    df2 = df2.apply(join_non_zero, sep=", ", axis=1)
     return df2
 
 
@@ -775,12 +819,12 @@ def _rank_products(x, y):
     y = y[idx]
 
     idx = np.argwhere(x == 0)
-    y[idx] = ''
+    y[idx] = ""
 
     return y.tolist() + x.tolist()
 
 
-def encode_categoricals(df, cat_decoder='OneHotEncoder'):
+def encode_categoricals(df, cat_decoder="OneHotEncoder"):
     """Encode object/category columns to numeric using one-hot or category codes.
 
     Strings are first lower-cased and stripped. With ``cat_decoder='OneHotEncoder'``
@@ -800,33 +844,38 @@ def encode_categoricals(df, cat_decoder='OneHotEncoder'):
         Frame with categorical columns replaced by their numeric encoding.
     """
     # -------Conversion cat to numerical
-    #TODO:add to functions or use existing lib
-    cat_columns = df.select_dtypes(include=['object','category']).columns.tolist()
+    # TODO:add to functions or use existing lib
+    cat_columns = df.select_dtypes(include=["object", "category"]).columns.tolist()
     if len(cat_columns) != 0:
-        df[cat_columns] = df[cat_columns].applymap(lambda x: str(x).lower().strip() if not pd.isnull(x) else x) #lower case
-        print('Categorical columns...')
-        tmp=df[cat_columns].nunique()
-        tmp.sort_values(inplace=True,ascending=False)
+        df[cat_columns] = df[cat_columns].applymap(
+            lambda x: str(x).lower().strip() if not pd.isnull(x) else x
+        )  # lower case
+        print("Categorical columns...")
+        tmp = df[cat_columns].nunique()
+        tmp.sort_values(inplace=True, ascending=False)
         print(tmp)
         ### debugging:
         # df=df0.copy()
         # cat_columns = df.select_dtypes(include=['object']).columns.tolist()+df.select_dtypes(include=['category']).columns.tolist()
 
-        if cat_decoder=='OneHotEncoder':
-            df[cat_columns]=df[cat_columns].fillna('None').astype('category')
+        if cat_decoder == "OneHotEncoder":
+            df[cat_columns] = df[cat_columns].fillna("None").astype("category")
             from sklearn.preprocessing import OneHotEncoder
+
             enc = OneHotEncoder()
             tmp = enc.fit_transform(df[cat_columns])
 
-            tmp2=pd.DataFrame(tmp.todense(),columns=enc.get_feature_names(cat_columns ),index=df.index)
-            df=pd.concat([df.drop(cat_columns,axis=1),tmp2],axis=1)
+            tmp2 = pd.DataFrame(
+                tmp.todense(), columns=enc.get_feature_names(cat_columns), index=df.index
+            )
+            df = pd.concat([df.drop(cat_columns, axis=1), tmp2], axis=1)
         else:
-            df[cat_columns] = df[cat_columns].apply(lambda x: x.astype('category').cat.codes)
+            df[cat_columns] = df[cat_columns].apply(lambda x: x.astype("category").cat.codes)
 
     return df
 
 
-def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='inner', **kwargs):
+def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how="inner", **kwargs):
     """
     Join two DataFrames with flexible string matching that handles differences in:
     - spaces, underscores, and other special characters (/, -, etc.)
@@ -880,7 +929,7 @@ def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='
     left_norm_cols = []
     right_norm_cols = []
 
-    for lcol, rcol in zip(left_on, right_on):
+    for lcol, rcol in zip(left_on, right_on, strict=False):
         # Create normalized column names that include the original column names
         left_norm_col = f"_normalized_left_{lcol}"
         right_norm_col = f"_normalized_right_{rcol}"
@@ -895,11 +944,7 @@ def flexible_join(left_df, right_df, left_on=None, right_on=None, on=None, how='
 
     # Perform the join on the normalized keys
     result = pd.merge(
-        left_copy, right_copy,
-        left_on=left_norm_cols,
-        right_on=right_norm_cols,
-        how=how,
-        **kwargs
+        left_copy, right_copy, left_on=left_norm_cols, right_on=right_norm_cols, how=how, **kwargs
     )
 
     # Drop the temporary normalized key columns
@@ -937,13 +982,12 @@ def dates_to_months_since_min(df, dateCols):
     tmploc, _ = regex_filter_list(dateCols, df.columns.values)
 
     if len(tmploc) != 0:
-
-        df[tmploc] = df[tmploc].astype('datetime64[ns]')
+        df[tmploc] = df[tmploc].astype("datetime64[ns]")
 
         print("conversion date features to number (month): date - " + str(df[tmploc].min()[0]))
         tmp3 = df[tmploc].apply(lambda x: x - df[tmploc].min()[0])
-        tmp3 = tmp3.apply(lambda x: x / np.timedelta64(1, 'M'))
-        df[tmploc] = tmp3.fillna(-1).round(0).astype('int64')
-        df[tmploc]=df[tmploc].replace(-1,np.nan)
+        tmp3 = tmp3.apply(lambda x: x / np.timedelta64(1, "M"))
+        df[tmploc] = tmp3.fillna(-1).round(0).astype("int64")
+        df[tmploc] = df[tmploc].replace(-1, np.nan)
 
-    return(df)
+    return df

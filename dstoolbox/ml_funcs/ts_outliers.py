@@ -46,12 +46,15 @@ import numpy as np
 import pandas as pd
 
 DetectMethod = Literal["zscore", "mad", "iqr", "rolling_zscore", "rolling_mad", "stl_resid"]
-ImputeMethod = Literal["none", "linear", "time", "rolling_median", "seasonal_mean", "ffill_bfill", "stl_recon"]
+ImputeMethod = Literal[
+    "none", "linear", "time", "rolling_median", "seasonal_mean", "ffill_bfill", "stl_recon"
+]
 
 
 # ---------------------------------------------------------------------------
 # Detectors
 # ---------------------------------------------------------------------------
+
 
 def detect_zscore(s: pd.Series, k: float = 3.0) -> pd.Series:
     """Global z-score: ``|x - mean| / std > k``. Non-robust (mean/std are pulled by the outliers themselves)."""
@@ -95,7 +98,12 @@ def detect_rolling_mad(s: pd.Series, window: int = 28, k: float = 3.5) -> pd.Ser
     """Local MAD-based modified z-score over a centered rolling window. Robust + adaptive."""
     roll = s.rolling(window=window, center=True, min_periods=max(3, window // 2))
     med = roll.median()
-    mad = (s - med).abs().rolling(window=window, center=True, min_periods=max(3, window // 2)).median()
+    mad = (
+        (s - med)
+        .abs()
+        .rolling(window=window, center=True, min_periods=max(3, window // 2))
+        .median()
+    )
     score = 0.6745 * (s - med) / mad.replace(0, np.nan)
     return (score.abs() > k).fillna(False)
 
@@ -137,6 +145,7 @@ def detect_outliers(s: pd.Series, method: DetectMethod = "rolling_mad", **kwargs
 # ---------------------------------------------------------------------------
 # Imputers (replace outliers; also fill incidental NaNs)
 # ---------------------------------------------------------------------------
+
 
 def _mask_to_nan(s: pd.Series, mask: pd.Series) -> pd.Series:
     out = s.astype(float).copy()
@@ -219,7 +228,9 @@ _IMPUTERS = {
 }
 
 
-def impute_outliers(s: pd.Series, mask: pd.Series, method: ImputeMethod = "linear", **kwargs) -> pd.Series:
+def impute_outliers(
+    s: pd.Series, mask: pd.Series, method: ImputeMethod = "linear", **kwargs
+) -> pd.Series:
     """Dispatch to one of the named imputers. ``**kwargs`` forwarded to the imputer."""
     if method not in _IMPUTERS:
         raise ValueError(f"Unknown impute method '{method}'. Options: {sorted(_IMPUTERS)}")
@@ -229,6 +240,7 @@ def impute_outliers(s: pd.Series, mask: pd.Series, method: ImputeMethod = "linea
 # ---------------------------------------------------------------------------
 # End-to-end convenience
 # ---------------------------------------------------------------------------
+
 
 def replace_outliers(
     df: pd.DataFrame,
@@ -268,6 +280,7 @@ def replace_outliers(
 # ---------------------------------------------------------------------------
 # Manual window masking (known-bad periods)
 # ---------------------------------------------------------------------------
+
 
 def _window_bounds(window: Any) -> tuple[Any, Any]:
     """Return ``(start, end)`` from either an object with ``.start``/``.end`` or a 2-tuple."""

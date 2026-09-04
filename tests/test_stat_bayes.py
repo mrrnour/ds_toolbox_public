@@ -25,7 +25,6 @@ from dstoolbox.ml_funcs.stat_bayes import (  # noqa: E402
     BestResult,
     BetaBinomialResult,
     BetaPrior,
-    RopeDecision,
     _classify,
     _resolve_beta_prior,
     best_two_sample,
@@ -42,10 +41,10 @@ from dstoolbox.ml_funcs.stat_bayes import (  # noqa: E402
     rope_decision_normal,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fast tests (no MCMC)
 # ---------------------------------------------------------------------------
+
 
 def test_classify_positive():
     assert _classify(0.97, 0.02, 0.01) == "positive"
@@ -67,14 +66,14 @@ def test_classify_inconclusive():
 # Shared vocabulary
 # ---------------------------------------------------------------------------
 
+
 def test_both_decision_rules_speak_the_same_vocabulary():
     """A renderer must not need to know which rule produced a label."""
     from dstoolbox.ml_funcs.stat_bayes_hier import verdict_without_rope
 
     banded = {
         _classify(*masses)
-        for masses in [(0.97, 0.02, 0.01), (0.01, 0.02, 0.97),
-                       (0.02, 0.96, 0.02), (0.4, 0.3, 0.3)]
+        for masses in [(0.97, 0.02, 0.01), (0.01, 0.02, 0.97), (0.02, 0.96, 0.02), (0.4, 0.3, 0.3)]
     }
     unbanded = {verdict_without_rope(p) for p in (0.99, 0.01, 0.5)}
     assert banded <= set(VERDICTS)
@@ -83,8 +82,7 @@ def test_both_decision_rules_speak_the_same_vocabulary():
 
 @pytest.mark.parametrize(
     ("decision", "expected"),
-    [("positive", True), ("negative", True),
-     ("equivalent", False), ("inconclusive", False)],
+    [("positive", True), ("negative", True), ("equivalent", False), ("inconclusive", False)],
 )
 def test_is_call_names_an_effect_but_equivalence_is_not_one(decision, expected):
     assert is_call(decision) is expected
@@ -144,8 +142,12 @@ def test_default_threshold_mirrors_a_two_sided_five_percent_test():
 
 @pytest.mark.parametrize(
     ("bayes", "other", "expected"),
-    [(True, True, CALLED_BOTH), (True, False, CALLED_BAYES),
-     (False, True, CALLED_FREQ), (False, False, CALLED_NONE)],
+    [
+        (True, True, CALLED_BOTH),
+        (True, False, CALLED_BAYES),
+        (False, True, CALLED_FREQ),
+        (False, False, CALLED_NONE),
+    ],
 )
 def test_call_agreement_names_which_arms_made_the_call(bayes, other, expected):
     assert call_agreement(bayes, other) == expected
@@ -153,7 +155,7 @@ def test_call_agreement_names_which_arms_made_the_call(bayes, other, expected):
 
 def test_agreeing_states_pool_the_two_opposite_ways_of_agreeing():
     """Both arms calling and neither calling are agreement; one-sided is not."""
-    assert AGREEING_STATES == {CALLED_BOTH, CALLED_NONE}
+    assert {CALLED_BOTH, CALLED_NONE} == AGREEING_STATES
     assert CALLED_BAYES not in AGREEING_STATES
     assert CALLED_FREQ not in AGREEING_STATES
 
@@ -188,8 +190,12 @@ def test_rope_decision_rejects_reversed_bounds():
 
 @pytest.mark.parametrize(
     ("mean", "sd", "half", "expected"),
-    [(0.0, 0.2, 2.6, "equivalent"), (1.0, 0.05, 0.1, "positive"),
-     (-1.0, 0.05, 0.1, "negative"), (0.02, 1.0, 0.01, "inconclusive")],
+    [
+        (0.0, 0.2, 2.6, "equivalent"),
+        (1.0, 0.05, 0.1, "positive"),
+        (-1.0, 0.05, 0.1, "negative"),
+        (0.02, 1.0, 0.01, "inconclusive"),
+    ],
 )
 def test_rope_decision_normal_buckets(mean, sd, half, expected):
     dec = rope_decision_normal(mean, sd, rope_low=-half, rope_high=half)
@@ -204,10 +210,11 @@ def test_rope_decision_normal_agrees_with_the_sample_based_rule():
     to the rung that was actually fitted.
     """
     rng = np.random.default_rng(11)
-    for mean, sd, half in [(0.0, 0.2, 0.5), (0.5, 0.1, 0.1), (-0.5, 0.1, 0.1),
-                           (0.05, 0.5, 0.05)]:
+    for mean, sd, half in [(0.0, 0.2, 0.5), (0.5, 0.1, 0.1), (-0.5, 0.1, 0.1), (0.05, 0.5, 0.05)]:
         sampled = rope_decision(
-            rng.normal(mean, sd, size=200_000), rope_low=-half, rope_high=half,
+            rng.normal(mean, sd, size=200_000),
+            rope_low=-half,
+            rope_high=half,
         )
         closed = rope_decision_normal(mean, sd, rope_low=-half, rope_high=half)
         assert closed.decision == sampled.decision
@@ -234,8 +241,12 @@ def test_rope_comparison_table_shape_and_columns():
     assert isinstance(table, pd.DataFrame)
     assert list(table.index) == ["stat", "pct", "biz"]
     expected_cols = {
-        "rope_low", "rope_high",
-        "prob_gt_high", "prob_in_rope", "prob_lt_low", "decision",
+        "rope_low",
+        "rope_high",
+        "prob_gt_high",
+        "prob_in_rope",
+        "prob_lt_low",
+        "decision",
     }
     assert expected_cols.issubset(table.columns)
     assert table.loc["biz", "decision"] == "undefined"
@@ -246,6 +257,7 @@ def test_rope_comparison_table_shape_and_columns():
 # Slow tests (real PyMC fit)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.slow
 def test_best_two_sample_smoke_recovers_shift():
     """Two samples with a known 1σ gap → posterior HDI excludes zero."""
@@ -253,10 +265,14 @@ def test_best_two_sample_smoke_recovers_shift():
     y_control = rng.normal(loc=0.0, scale=1.0, size=60)
     y_treatment = rng.normal(loc=1.0, scale=1.0, size=60)
     result = best_two_sample(
-        y_control, y_treatment,
+        y_control,
+        y_treatment,
         prior="kruschke",
-        draws=500, tune=500, chains=2,
-        random_seed=0, progressbar=False,
+        draws=500,
+        tune=500,
+        chains=2,
+        random_seed=0,
+        progressbar=False,
     )
     assert isinstance(result, BestResult)
     assert result.n_control == 60
@@ -271,14 +287,22 @@ def test_prior_sensitivity_returns_shift_table():
     y_control = rng.normal(0.0, 1.0, size=40)
     y_treatment = rng.normal(0.5, 1.0, size=40)
     results, shift = prior_sensitivity(
-        y_control, y_treatment,
+        y_control,
+        y_treatment,
         priors=("kruschke", "weakly_informative"),
-        draws=300, tune=300, chains=2,
-        random_seed=0, progressbar=False,
+        draws=300,
+        tune=300,
+        chains=2,
+        random_seed=0,
+        progressbar=False,
     )
     assert set(results) == {"kruschke", "weakly_informative"}
     assert list(shift.columns) == [
-        "prior", "mean_delta", "lcl", "ucl", "shift_from_primary",
+        "prior",
+        "mean_delta",
+        "lcl",
+        "ucl",
+        "shift_from_primary",
     ]
     assert len(shift) == 2
     # Primary row (first prior) has zero shift by construction.
@@ -288,6 +312,7 @@ def test_prior_sensitivity_returns_shift_table():
 # ---------------------------------------------------------------------------
 # Beta-Binomial primitive
 # ---------------------------------------------------------------------------
+
 
 def test_beta_binomial_rejects_bad_trials():
     with pytest.raises(ValueError, match="trials_control"):
@@ -302,7 +327,14 @@ def test_beta_binomial_rejects_successes_above_trials():
 def test_beta_binomial_rejects_unknown_prior():
     with pytest.raises(ValueError, match="Unknown prior spec"):
         beta_binomial_two_sample(
-            50, 1000, 60, 1000, prior="haldane", draws=100, tune=100, chains=1,
+            50,
+            1000,
+            60,
+            1000,
+            prior="haldane",
+            draws=100,
+            tune=100,
+            chains=1,
         )
 
 
@@ -310,11 +342,16 @@ def test_beta_binomial_rejects_unknown_prior():
 def test_beta_binomial_recovers_known_lift():
     """4pp positive lift with large N → posterior HDI comfortably above 0."""
     result = beta_binomial_two_sample(
-        successes_control=500, trials_control=10_000,     # 5.00%
-        successes_treatment=610, trials_treatment=10_000,  # 6.10%
+        successes_control=500,
+        trials_control=10_000,  # 5.00%
+        successes_treatment=610,
+        trials_treatment=10_000,  # 6.10%
         prior="uniform",
-        draws=1000, tune=500, chains=2,
-        random_seed=0, progressbar=False,
+        draws=1000,
+        tune=500,
+        chains=2,
+        random_seed=0,
+        progressbar=False,
     )
     assert isinstance(result, BetaBinomialResult)
     assert result.trials_control == 10_000
@@ -332,11 +369,16 @@ def test_beta_binomial_recovers_known_lift():
 def test_beta_binomial_null_effect_hdi_straddles_zero():
     """Equal rates → posterior of delta should be centered near 0."""
     result = beta_binomial_two_sample(
-        successes_control=500, trials_control=10_000,
-        successes_treatment=505, trials_treatment=10_000,
+        successes_control=500,
+        trials_control=10_000,
+        successes_treatment=505,
+        trials_treatment=10_000,
         prior="uniform",
-        draws=1000, tune=500, chains=2,
-        random_seed=1, progressbar=False,
+        draws=1000,
+        tune=500,
+        chains=2,
+        random_seed=1,
+        progressbar=False,
     )
     assert abs(result.posterior_mean_delta) < 0.005
     # HDI must contain zero when the true effect is negligible.
@@ -347,10 +389,15 @@ def test_beta_binomial_null_effect_hdi_straddles_zero():
 def test_beta_binomial_uniform_vs_jeffreys_close():
     """With N=1000+, uniform and Jeffreys priors should give near-identical δ."""
     kw = dict(
-        successes_control=50, trials_control=1000,
-        successes_treatment=70, trials_treatment=1000,
-        draws=500, tune=500, chains=2,
-        random_seed=2, progressbar=False,
+        successes_control=50,
+        trials_control=1000,
+        successes_treatment=70,
+        trials_treatment=1000,
+        draws=500,
+        tune=500,
+        chains=2,
+        random_seed=2,
+        progressbar=False,
     )
     uni = beta_binomial_two_sample(prior="uniform", **kw)
     jef = beta_binomial_two_sample(prior="jeffreys", **kw)
@@ -360,6 +407,7 @@ def test_beta_binomial_uniform_vs_jeffreys_close():
 # ---------------------------------------------------------------------------
 # Custom Beta priors (baseline-anchored)
 # ---------------------------------------------------------------------------
+
 
 def test_beta_prior_from_baseline_splits_weight():
     """Beta(5, 95) — a 5% baseline carrying 100 pseudo-observations."""
@@ -414,11 +462,16 @@ def test_resolve_beta_prior_rejects_unknown_name():
 def test_beta_binomial_accepts_custom_prior_and_keeps_label():
     prior = beta_prior_from_baseline(0.05, 100, name="weakly_informative")
     result = beta_binomial_two_sample(
-        successes_control=50, trials_control=1000,
-        successes_treatment=70, trials_treatment=1000,
+        successes_control=50,
+        trials_control=1000,
+        successes_treatment=70,
+        trials_treatment=1000,
         prior=prior,
-        draws=500, tune=500, chains=2,
-        random_seed=4, progressbar=False,
+        draws=500,
+        tune=500,
+        chains=2,
+        random_seed=4,
+        progressbar=False,
     )
     assert result.prior_spec == "weakly_informative"
 
@@ -427,14 +480,20 @@ def test_beta_binomial_accepts_custom_prior_and_keeps_label():
 def test_heavy_prior_shrinks_delta_toward_zero():
     """A stubborn baseline prior on both arms pulls δ back toward no-change."""
     kw = dict(
-        successes_control=5, trials_control=100,      # 5%
-        successes_treatment=15, trials_treatment=100,  # 15%
-        draws=500, tune=500, chains=2,
-        random_seed=5, progressbar=False,
+        successes_control=5,
+        trials_control=100,  # 5%
+        successes_treatment=15,
+        trials_treatment=100,  # 15%
+        draws=500,
+        tune=500,
+        chains=2,
+        random_seed=5,
+        progressbar=False,
     )
     reference = beta_binomial_two_sample(prior="jeffreys", **kw)
     skeptical = beta_binomial_two_sample(
-        prior=beta_prior_from_baseline(0.05, 500, name="informative"), **kw,
+        prior=beta_prior_from_baseline(0.05, 500, name="informative"),
+        **kw,
     )
     assert abs(skeptical.posterior_mean_delta) < abs(reference.posterior_mean_delta)
 
@@ -443,95 +502,118 @@ def test_heavy_prior_shrinks_delta_toward_zero():
 # Prior-sensitivity verdict (HDI overlap)
 # ---------------------------------------------------------------------------
 
+
 def _shift_table(rows: list[tuple[str, float, float]]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [{"prior": n, "lcl": lo, "ucl": hi} for n, lo, hi in rows]
-    )
+    return pd.DataFrame([{"prior": n, "lcl": lo, "ucl": hi} for n, lo, hi in rows])
 
 
 def test_verdict_prior_robust_when_all_hdis_overlap():
-    table = _shift_table([
-        ("noninformative", -0.010, 0.030),
-        ("weakly_informative", -0.005, 0.025),
-        ("informative", -0.002, 0.012),
-    ])
+    table = _shift_table(
+        [
+            ("noninformative", -0.010, 0.030),
+            ("weakly_informative", -0.005, 0.025),
+            ("informative", -0.002, 0.012),
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_ROBUST"
 
 
 def test_verdict_prior_driven_when_an_hdi_separates():
-    table = _shift_table([
-        ("noninformative", 0.020, 0.050),
-        ("informative", -0.030, -0.005),
-    ])
+    table = _shift_table(
+        [
+            ("noninformative", 0.020, 0.050),
+            ("informative", -0.030, -0.005),
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_DRIVEN"
 
 
 def test_verdict_touching_bounds_are_sensitive_not_driven():
     """Intervals that meet at a point still overlap, but they agree on nothing."""
-    table = _shift_table([
-        ("noninformative", 0.000, 0.020),
-        ("informative", -0.020, 0.000),
-    ])
+    table = _shift_table(
+        [
+            ("noninformative", 0.000, 0.020),
+            ("informative", -0.020, 0.000),
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_SENSITIVE"
 
 
 def test_verdict_sensitive_when_the_mean_travels_far():
     """Overlapping intervals whose centres drift are not robust."""
-    table = pd.DataFrame([
-        {"prior": "noninformative", "lcl": -0.010, "ucl": 0.030,
-         "mean_delta": 0.010},
-        {"prior": "informative", "lcl": -0.005, "ucl": 0.035,
-         "mean_delta": 0.026},
-    ])
+    table = pd.DataFrame(
+        [
+            {"prior": "noninformative", "lcl": -0.010, "ucl": 0.030, "mean_delta": 0.010},
+            {"prior": "informative", "lcl": -0.005, "ucl": 0.035, "mean_delta": 0.026},
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_SENSITIVE"
 
 
 def test_verdict_sensitive_when_the_conclusion_flips():
     """Same data, different prior, different call: report the range, not a number."""
-    table = pd.DataFrame([
-        {"prior": "noninformative", "lcl": 0.001, "ucl": 0.030,
-         "mean_delta": 0.015, "prob_delta_gt_0": 0.99},
-        {"prior": "informative", "lcl": -0.002, "ucl": 0.028,
-         "mean_delta": 0.013, "prob_delta_gt_0": 0.90},
-    ])
+    table = pd.DataFrame(
+        [
+            {
+                "prior": "noninformative",
+                "lcl": 0.001,
+                "ucl": 0.030,
+                "mean_delta": 0.015,
+                "prob_delta_gt_0": 0.99,
+            },
+            {
+                "prior": "informative",
+                "lcl": -0.002,
+                "ucl": 0.028,
+                "mean_delta": 0.013,
+                "prob_delta_gt_0": 0.90,
+            },
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_SENSITIVE"
 
 
 def test_overlap_table_scores_a_contained_interval_as_full_overlap():
     """A prior that only sharpens the estimate has not changed the answer."""
-    table = _shift_table([
-        ("noninformative", -0.010, 0.030),
-        ("informative", -0.002, 0.012),
-    ])
+    table = _shift_table(
+        [
+            ("noninformative", -0.010, 0.030),
+            ("informative", -0.002, 0.012),
+        ]
+    )
     graded = prior_overlap_table(table)
     assert list(graded["hdi_overlap"]) == [1.0, 1.0]
     assert list(graded["is_primary"]) == [True, False]
 
 
 def test_overlap_table_reports_the_shift_in_reference_widths():
-    table = pd.DataFrame([
-        {"prior": "noninformative", "lcl": 0.0, "ucl": 0.040,
-         "mean_delta": 0.020},
-        {"prior": "informative", "lcl": 0.0, "ucl": 0.040,
-         "mean_delta": 0.024},
-    ])
+    table = pd.DataFrame(
+        [
+            {"prior": "noninformative", "lcl": 0.0, "ucl": 0.040, "mean_delta": 0.020},
+            {"prior": "informative", "lcl": 0.0, "ucl": 0.040, "mean_delta": 0.024},
+        ]
+    )
     assert prior_overlap_table(table)["shift_hdi_frac"].iloc[1] == pytest.approx(0.1)
 
 
 def test_verdict_honours_explicit_primary():
-    table = _shift_table([
-        ("informative", -0.030, -0.005),
-        ("noninformative", 0.020, 0.050),
-    ])
+    table = _shift_table(
+        [
+            ("informative", -0.030, -0.005),
+            ("noninformative", 0.020, 0.050),
+        ]
+    )
     assert prior_sensitivity_verdict(table, primary="noninformative") == "PRIOR_DRIVEN"
 
 
 def test_verdict_robust_intervals_may_still_straddle_zero():
     """PRIOR_ROBUST reports prior influence, not whether the effect is conclusive."""
-    table = _shift_table([
-        ("noninformative", -0.010, 0.026),
-        ("informative", -0.009, 0.021),
-    ])
+    table = _shift_table(
+        [
+            ("noninformative", -0.010, 0.026),
+            ("informative", -0.009, 0.021),
+        ]
+    )
     assert prior_sensitivity_verdict(table) == "PRIOR_ROBUST"
 
 
@@ -548,4 +630,3 @@ def test_verdict_rejects_unknown_primary():
 def test_verdict_rejects_missing_columns():
     with pytest.raises(ValueError, match="missing columns"):
         prior_sensitivity_verdict(pd.DataFrame({"prior": ["jeffreys"]}))
-

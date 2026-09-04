@@ -26,7 +26,7 @@ class MeanBaseline(BaseEstimator, RegressorMixin):
     def __init__(self, date_col: str = "ts") -> None:
         self.date_col = date_col
 
-    def fit(self, X: pd.DataFrame, y) -> "MeanBaseline":  # noqa: ARG002
+    def fit(self, X: pd.DataFrame, y) -> MeanBaseline:  # noqa: ARG002
         self._mean_ = float(np.nanmean(np.asarray(y, dtype=float)))
         return self
 
@@ -63,7 +63,7 @@ class SeasonalNaive(BaseEstimator, RegressorMixin):
         self.season_length = season_length
         self.freq = freq
 
-    def fit(self, X: pd.DataFrame, y) -> "SeasonalNaive":
+    def fit(self, X: pd.DataFrame, y) -> SeasonalNaive:
         series = train_series(X, y, self.date_col)
         self._history_ = series.to_numpy()
         self._last_train_ = series.index.max()
