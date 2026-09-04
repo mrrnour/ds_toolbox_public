@@ -122,8 +122,8 @@ def test_welch_without_clusters_reports_identical_variances(daily_rates):
     res = welch_t_two_sample(pre, post)
     assert res.se_cluster == pytest.approx(res.se_naive, rel=1e-12)
     assert res.design_effect == pytest.approx(1.0, rel=1e-12)
-    assert res.n_clusters_pre == pre.size
-    assert res.n_clusters_post == post.size
+    assert res.n_clusters_control == pre.size
+    assert res.n_clusters_treatment == post.size
 
 
 def test_welch_singleton_cluster_ids_match_the_no_cluster_path(daily_rates):
@@ -131,8 +131,8 @@ def test_welch_singleton_cluster_ids_match_the_no_cluster_path(daily_rates):
     explicit = welch_t_two_sample(
         pre,
         post,
-        cluster_pre=np.arange(pre.size),
-        cluster_post=np.arange(post.size),
+        cluster_control=np.arange(pre.size),
+        cluster_treatment=np.arange(post.size),
     )
     implicit = welch_t_two_sample(pre, post)
     assert explicit.se_cluster == pytest.approx(implicit.se_cluster, rel=1e-12)
@@ -141,32 +141,38 @@ def test_welch_singleton_cluster_ids_match_the_no_cluster_path(daily_rates):
 
 def test_clustering_inflates_the_standard_error():
     """Repeat visitors must widen the SE — this is the whole point of the correction."""
-    y_pre, c_pre = _clustered_events(n_clusters=400, reps=10, rate=0.20, seed=1)
-    y_post, c_post = _clustered_events(n_clusters=400, reps=10, rate=0.24, seed=2)
-    res = welch_t_two_sample(y_pre, y_post, cluster_pre=c_pre, cluster_post=c_post)
+    y_control, c_control = _clustered_events(n_clusters=400, reps=10, rate=0.20, seed=1)
+    y_treatment, c_treatment = _clustered_events(n_clusters=400, reps=10, rate=0.24, seed=2)
+    res = welch_t_two_sample(
+        y_control, y_treatment, cluster_control=c_control, cluster_treatment=c_treatment,
+    )
     assert res.se_cluster > res.se_naive
     # 10 identical rows per cluster ⇒ variance inflated by ~10x.
     assert res.design_effect == pytest.approx(10.0, rel=0.15)
-    assert res.n_clusters_pre == 400
-    assert res.n_pre == 4000
+    assert res.n_clusters_control == 400
+    assert res.n_control == 4000
 
 
 def test_point_estimate_is_event_weighted_and_ignores_clustering():
-    y_pre, c_pre = _clustered_events(n_clusters=50, reps=4, rate=0.30, seed=3)
-    y_post, c_post = _clustered_events(n_clusters=50, reps=7, rate=0.40, seed=4)
-    res = welch_t_two_sample(y_pre, y_post, cluster_pre=c_pre, cluster_post=c_post)
-    assert res.mean_pre == pytest.approx(float(np.mean(y_pre)), rel=1e-12)
-    assert res.mean_post == pytest.approx(float(np.mean(y_post)), rel=1e-12)
+    y_control, c_control = _clustered_events(n_clusters=50, reps=4, rate=0.30, seed=3)
+    y_treatment, c_treatment = _clustered_events(n_clusters=50, reps=7, rate=0.40, seed=4)
+    res = welch_t_two_sample(
+        y_control, y_treatment, cluster_control=c_control, cluster_treatment=c_treatment,
+    )
+    assert res.mean_control == pytest.approx(float(np.mean(y_control)), rel=1e-12)
+    assert res.mean_treatment == pytest.approx(float(np.mean(y_treatment)), rel=1e-12)
 
 
 def test_variance_choice_changes_inference_but_not_the_effect():
-    y_pre, c_pre = _clustered_events(n_clusters=300, reps=8, rate=0.20, seed=5)
-    y_post, c_post = _clustered_events(n_clusters=300, reps=8, rate=0.26, seed=6)
+    y_control, c_control = _clustered_events(n_clusters=300, reps=8, rate=0.20, seed=5)
+    y_treatment, c_treatment = _clustered_events(n_clusters=300, reps=8, rate=0.26, seed=6)
     naive = welch_t_two_sample(
-        y_pre, y_post, cluster_pre=c_pre, cluster_post=c_post, variance="naive"
+        y_control, y_treatment,
+        cluster_control=c_control, cluster_treatment=c_treatment, variance="naive",
     )
     clustered = welch_t_two_sample(
-        y_pre, y_post, cluster_pre=c_pre, cluster_post=c_post, variance="cluster"
+        y_control, y_treatment,
+        cluster_control=c_control, cluster_treatment=c_treatment, variance="cluster",
     )
     assert naive.delta_mean == pytest.approx(clustered.delta_mean, rel=1e-12)
     assert abs(clustered.t_stat) < abs(naive.t_stat)
@@ -236,19 +242,19 @@ def test_permutation_stays_silent_on_an_aa_split():
 
 def test_permutation_permutes_whole_clusters():
     """Cluster labels must travel with their rows, so the null keeps the inflation."""
-    y_pre, c_pre = _clustered_events(n_clusters=120, reps=6, rate=0.20, seed=8)
-    y_post, c_post = _clustered_events(n_clusters=120, reps=6, rate=0.22, seed=9)
+    y_control, c_control = _clustered_events(n_clusters=120, reps=6, rate=0.20, seed=8)
+    y_treatment, c_treatment = _clustered_events(n_clusters=120, reps=6, rate=0.22, seed=9)
     res = permutation_welch_two_sample(
-        y_pre,
-        y_post,
-        cluster_pre=c_pre,
-        cluster_post=c_post,
+        y_control,
+        y_treatment,
+        cluster_control=c_control,
+        cluster_treatment=c_treatment,
         n_perm=400,
         n_boot=0,
         seed=0,
     )
-    assert res.n_clusters_pre == 120
-    assert res.n_clusters_post == 120
+    assert res.n_clusters_control == 120
+    assert res.n_clusters_treatment == 120
     assert res.se_cluster > res.se_naive
     assert 0.0 < res.p_value_perm <= 1.0
 
@@ -287,7 +293,8 @@ def test_rejects_samples_shorter_than_two():
 def test_rejects_cluster_length_mismatch():
     with pytest.raises(ValueError, match="same length"):
         welch_t_two_sample(
-            [1.0, 2.0, 3.0], [1.0, 2.0, 3.0], cluster_pre=[1, 2], cluster_post=[1, 2, 3]
+            [1.0, 2.0, 3.0], [1.0, 2.0, 3.0],
+            cluster_control=[1, 2], cluster_treatment=[1, 2, 3],
         )
 
 
@@ -296,8 +303,8 @@ def test_rejects_a_single_cluster_per_arm():
         welch_t_two_sample(
             [1.0, 2.0, 3.0],
             [1.0, 2.0, 3.0],
-            cluster_pre=[1, 1, 1],
-            cluster_post=[1, 2, 3],
+            cluster_control=[1, 1, 1],
+            cluster_treatment=[1, 2, 3],
         )
 
 
@@ -342,16 +349,19 @@ def _gettyab_var_delta(y: np.ndarray, ids: np.ndarray) -> float:
 def test_delta_method_reproduces_run_delta_steps():
     """est_diff, var_diff, z and the 1.96 interval, exactly as gettyab does them."""
     rng = np.random.default_rng(7)
-    ids_pre = np.repeat(np.arange(300), 4)
-    ids_post = np.repeat(np.arange(300, 650), 4)
-    y_pre = np.repeat(rng.binomial(1, 0.20, 300), 4).astype(float)
-    y_post = np.repeat(rng.binomial(1, 0.26, 350), 4).astype(float)
+    ids_control = np.repeat(np.arange(300), 4)
+    ids_treatment = np.repeat(np.arange(300, 650), 4)
+    y_control = np.repeat(rng.binomial(1, 0.20, 300), 4).astype(float)
+    y_treatment = np.repeat(rng.binomial(1, 0.26, 350), 4).astype(float)
 
-    res = delta_method_two_sample(y_pre, y_post, cluster_pre=ids_pre, cluster_post=ids_post)
+    res = delta_method_two_sample(
+        y_control, y_treatment,
+        cluster_control=ids_control, cluster_treatment=ids_treatment,
+    )
 
-    est_diff = y_post.mean() - y_pre.mean()
-    var_diff = _delta_var(*_collapse_clusters(y_pre, ids_pre)[:2]) + _delta_var(
-        *_collapse_clusters(y_post, ids_post)[:2]
+    est_diff = y_treatment.mean() - y_control.mean()
+    var_diff = _delta_var(*_collapse_clusters(y_control, ids_control)[:2]) + _delta_var(
+        *_collapse_clusters(y_treatment, ids_treatment)[:2]
     )
     se = np.sqrt(var_diff)
 
@@ -367,12 +377,15 @@ def test_delta_method_uses_the_normal_not_the_t():
     from scipy.stats import norm
 
     rng = np.random.default_rng(8)
-    ids_pre = np.repeat(np.arange(200), 5)
-    ids_post = np.repeat(np.arange(200, 400), 5)
-    y_pre = np.repeat(rng.normal(10.0, 2.0, 200), 5)
-    y_post = np.repeat(rng.normal(10.4, 2.0, 200), 5)
+    ids_control = np.repeat(np.arange(200), 5)
+    ids_treatment = np.repeat(np.arange(200, 400), 5)
+    y_control = np.repeat(rng.normal(10.0, 2.0, 200), 5)
+    y_treatment = np.repeat(rng.normal(10.4, 2.0, 200), 5)
 
-    res = delta_method_two_sample(y_pre, y_post, cluster_pre=ids_pre, cluster_post=ids_post)
+    res = delta_method_two_sample(
+        y_control, y_treatment,
+        cluster_control=ids_control, cluster_treatment=ids_treatment,
+    )
     assert res.dof == float("inf")
     assert res.p_value == pytest.approx(2.0 * norm.sf(abs(res.t_stat)), rel=1e-12)
     assert res.ci_method == "normal"
@@ -381,12 +394,15 @@ def test_delta_method_uses_the_normal_not_the_t():
 def test_delta_method_se_tracks_the_clustered_se_not_the_naive_one():
     """The whole point: it must inherit the cluster-robust variance."""
     rng = np.random.default_rng(9)
-    ids_pre = np.repeat(np.arange(150), 6)
-    ids_post = np.repeat(np.arange(150, 300), 6)
-    y_pre = np.repeat(rng.binomial(1, 0.3, 150), 6).astype(float)
-    y_post = np.repeat(rng.binomial(1, 0.3, 150), 6).astype(float)
+    ids_control = np.repeat(np.arange(150), 6)
+    ids_treatment = np.repeat(np.arange(150, 300), 6)
+    y_control = np.repeat(rng.binomial(1, 0.3, 150), 6).astype(float)
+    y_treatment = np.repeat(rng.binomial(1, 0.3, 150), 6).astype(float)
 
-    res = delta_method_two_sample(y_pre, y_post, cluster_pre=ids_pre, cluster_post=ids_post)
+    res = delta_method_two_sample(
+        y_control, y_treatment,
+        cluster_control=ids_control, cluster_treatment=ids_treatment,
+    )
     assert res.se == pytest.approx(res.se_cluster, rel=1e-12)
     assert res.se > res.se_naive
     assert res.variance == "cluster"
@@ -395,19 +411,25 @@ def test_delta_method_se_tracks_the_clustered_se_not_the_naive_one():
 def test_delta_method_matches_gettyab_within_the_ddof_gap():
     """Parity with gettyab is exact up to its mixed-ddof quirk (~1/k)."""
     rng = np.random.default_rng(10)
-    ids_pre = np.repeat(np.arange(500), 3)
-    ids_post = np.repeat(np.arange(500, 1000), 3)
-    y_pre = np.repeat(rng.binomial(1, 0.25, 500), 3).astype(float)
-    y_post = np.repeat(rng.binomial(1, 0.28, 500), 3).astype(float)
+    ids_control = np.repeat(np.arange(500), 3)
+    ids_treatment = np.repeat(np.arange(500, 1000), 3)
+    y_control = np.repeat(rng.binomial(1, 0.25, 500), 3).astype(float)
+    y_treatment = np.repeat(rng.binomial(1, 0.28, 500), 3).astype(float)
 
-    res = delta_method_two_sample(y_pre, y_post, cluster_pre=ids_pre, cluster_post=ids_post)
-    se_gettyab = np.sqrt(_gettyab_var_delta(y_pre, ids_pre) + _gettyab_var_delta(y_post, ids_post))
+    res = delta_method_two_sample(
+        y_control, y_treatment,
+        cluster_control=ids_control, cluster_treatment=ids_treatment,
+    )
+    se_gettyab = np.sqrt(
+        _gettyab_var_delta(y_control, ids_control)
+        + _gettyab_var_delta(y_treatment, ids_treatment)
+    )
     assert res.se == pytest.approx(se_gettyab, rel=5e-3)
 
 
 def test_delta_method_without_clusters_is_the_naive_z_test():
-    y_pre = np.array([1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0])
-    y_post = np.array([1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0])
-    res = delta_method_two_sample(y_pre, y_post)
+    y_control = np.array([1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0])
+    y_treatment = np.array([1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0])
+    res = delta_method_two_sample(y_control, y_treatment)
     assert res.se == pytest.approx(res.se_naive, rel=1e-12)
     assert res.se == pytest.approx(res.se_cluster, rel=1e-12)

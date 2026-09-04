@@ -30,6 +30,10 @@ dependencies = [
     "scikit-learn>=1.2",
     "matplotlib>=3.6",
     "seaborn>=0.12",
+    # Imported eagerly by ml_funcs/__init__ -> assumptions.py, so the package
+    # cannot be imported without it. Not optional despite only one module
+    # using it.
+    "statsmodels>=0.14",
     "plotly>=5.13",
     "pyyaml>=6.0",
     "tqdm>=4.65",
@@ -98,7 +102,7 @@ ml = [
     "shap>=0.42",
     "hyperopt>=0.2.7",
     "researchpy>=0.3",
-    "statsmodels>=0.14",
+    "statsmodels>=0.14",  # also a base dependency; kept here for clarity
 ]
 dev = [
     "pre-commit>=3.5",
@@ -112,6 +116,7 @@ test = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "pytest-mock>=3.11",
+    "requests>=2.31",  # test_data_sources exercises the PI OAuth POST path
 ]
 docs = [
     "pdoc>=15",
@@ -137,6 +142,9 @@ webreader-scrape = "dstoolbox.web_reader.scraper:main"
 webreader-harvest = "dstoolbox.web_reader.harvest:main"
 webreader-convert = "dstoolbox.web_reader.convert:main"
 webreader-pipeline = "dstoolbox.web_reader.run_pipeline:main"
+
+# Pre/post conversion verdict from an event-level CSV.
+dsbayes-group = "dstoolbox.ml_funcs.stat_bayes_group_cli:main"
 
 # ---------------------------------------------------------------------------
 # Tooling

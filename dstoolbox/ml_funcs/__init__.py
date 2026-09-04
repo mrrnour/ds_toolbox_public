@@ -218,14 +218,23 @@ from .intervention_plots import (
 )
 
 from .stat_bayes import (
+    AGREEING_STATES,
+    CALLED_BAYES,
+    CALLED_BOTH,
+    CALLED_FREQ,
+    CALLED_NONE,
+    INCONCLUSIVE_PROB_THRESHOLD,
+    VERDICTS,
     BestResult,
     BetaBinomialResult,
     BetaPrior,
     RopeDecision,
     best_two_sample,
-    beta_binomial_prior_sensitivity,
     beta_binomial_two_sample,
     beta_prior_from_baseline,
+    call_agreement,
+    is_call,
+    is_flagged,
     plot_beta_binomial_report,
     plot_kruschke_report,
     plot_prior_sensitivity,
@@ -235,6 +244,44 @@ from .stat_bayes import (
     prior_sensitivity_verdict,
     rope_comparison_table,
     rope_decision,
+    rope_decision_normal,
+)
+
+from .stat_bayes_hier import (
+    DEFAULT_KAPPA_PRIOR,
+    HierBetaBinomialFit,
+    hier_beta_binomial_fit,
+    verdict_without_rope,
+)
+
+from .stat_bayes_group import (
+    ROPE_BANDS,
+    GroupCounts,
+    GroupEffect,
+    PrePostWindow,
+    aggregate_counts,
+    fit_group_comparison,
+    fit_prepost,
+    rope_from_control,
+    rope_from_control_se,
+    split_by_window,
+)
+
+from .stat_bayes_group_tools import (
+    prior_forest_rows,
+    prior_shape_table,
+    matched_sequential_windows,
+    prior_sensitivity_groups,
+    sequential_scan,
+)
+
+from .stat_bayes_group_plots import (
+    plot_prior_forest,
+    plot_convergence,
+    plot_effect,
+    plot_forest,
+    plot_summary,
+    verdict_style,
 )
 
 from .stat_freq import (
