@@ -116,6 +116,7 @@ test = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "pytest-mock>=3.11",
+    "requests>=2.31",  # test_data_sources exercises the PI OAuth POST path
 ]
 docs = [
     "pdoc>=15",
