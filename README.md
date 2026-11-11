@@ -40,7 +40,7 @@ The intent is small: a new project starts with `import dstoolbox` and goes.
 | --------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🧰[`utils`](dstoolbox/utils)                 | *(base)*                       | Lists, text/regex, datetime, paths, logging, SQL parsing, encoding, dataframe ops, stats (incl. Statistical Process Control sigma / I-MR limits), plotly/matplotlib helpers (incl. I-MR and series-overlay charts).                                                 |
 | 🗄️[`io_funcs`](dstoolbox/io_funcs)         | `[azure]` `[mssql]` `[pi]` | Azure (Synapse, Blob, ADLS, Key Vault), Databricks Delta, PI Web API, MSSQL, Postgres, named SQL templates, Colab/Kaggle bootstrap. All credentials flow through`data_sources.get(target_id)`.                                                                    |
-| 🤖[`ml_funcs`](dstoolbox/ml_funcs)           | `[ml]` `[bayes]`               | Model templates, training (incl. nested CV), scoring, performance plots (ROC / PR / gain / lift / reliability / confusion), tuning, PCA/CCA, SHAP/PDP/feature importance, multilabel, regression assumption checks, time-series EDA / forecasters / backtest plots, and Bayesian two-sample estimation ([`stat_bayes`](dstoolbox/ml_funcs/stat_bayes.py): BEST + ROPE via PyMC — install `dstoolbox[bayes]`).
+| 🤖[`ml_funcs`](dstoolbox/ml_funcs)           | `[ml]` `[bayes]`               | Model templates, training (incl. nested CV), scoring, performance plots (ROC / PR / gain / lift / reliability / confusion), tuning, PCA/CCA, SHAP/PDP/feature importance, multilabel, regression assumption checks, time-series EDA / forecasters / backtest plots, and time-series EDA / forecasters / backtest plots. Bayesian A/B analysis and sample-size determination live in `gettyab`.
 | ⚡[`spark_funcs`](dstoolbox/spark_funcs)     | `[spark]`                      | Asof joins, dataframe reshape utils, column finder, incremental ETL pipelines, rolling / tumbling time-series features.                                                                                                                                             |
 | 📝[`nlp_llm_funcs`](dstoolbox/nlp_llm_funcs) | `[nlp]`                        | Text cleaning + anonymization, fuzzy / embedding similarity, LLM tagging chains.                                                                                                                                                                                    |
 | 📚[`rag_funcs`](dstoolbox/rag_funcs)         | `[rag]`                        | RAG library helpers: docling-based document conversion, chunking, vector store.                                                                                                                                                                                     |
@@ -241,6 +241,25 @@ dstoolbox/
 Each package's `__init__.py` re-exports its public names — both `from dstoolbox.io_funcs import blob2pd` and `from dstoolbox.io_funcs.blob import blob2pd` work.
 
 ---
+
+## Bayesian analysis — moved to `gettyab`
+
+All Bayesian A/B code now lives in
+[`gettyab`](https://gitlab.getty.cloud/search-aiml/python-packages/gettyab),
+the package that owns the A/B analysis contract:
+
+| Was in `dstoolbox` | Now in `gettyab` |
+|---|---|
+| `stat_bayes` | `gettyab.bayes_estimation` |
+| `stat_bayes_group` | `gettyab.bayes_groups` |
+| `stat_bayes_group_plots` | `gettyab.bayes_plots` |
+| `stat_bayes_group_tools` | `gettyab.bayes_tools` |
+| `stat_bayes_group_cli` | `gettyab.bayes_cli` |
+| `stat_bayes_hier` | `gettyab.analyzers.bayes` (reconciled — one model) |
+| `stat_bayes_assurance`, `stat_bayes_sample_size` | `gettyab.ssd` |
+
+`gettyab` previously **vendored** (copied) these primitives from `dstoolbox`.
+That duplication is now resolved: there is one implementation, in `gettyab`.
 
 ## Samples
 
